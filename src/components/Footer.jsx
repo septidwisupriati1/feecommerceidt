@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { 
   MapPinIcon, 
   PhoneIcon, 
@@ -10,22 +9,26 @@ export default function Footer() {
   return (
     <footer className="bg-gray-50 mt-auto">
       {/* Map Section - Full Width at Top */}
-      <div className="w-full mb-0 relative">
-        {/* Top gradient overlay */}
-        <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-gray-50 to-transparent z-10 pointer-events-none"></div>
-        
-        <iframe
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3955.0827775845807!2d110.85876931477576!3d-7.556388594555682!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e7a16eee85c16e1%3A0x5a5cc31f3f97b1aa!2sSolo%20Technopark!5e0!3m2!1sen!2sid!4v1635000000000!5m2!1sen!2sid"
-          width="100%"
-          height="400"
-          style={{ border: 0 }}
-          allowFullScreen=""
-          loading="lazy"
-          title="Solo Technopark Location"
-        ></iframe>
-        
-        {/* Bottom gradient overlay */}
-        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-gray-50 to-transparent z-10 pointer-events-none"></div>
+      <div className="w-full bg-gray-50">
+        <div className="max-w-7xl mx-auto px-0">
+          <div className="w-full mb-0 relative">
+            {/* Top gradient overlay */}
+            <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-gray-50 to-transparent z-10 pointer-events-none"></div>
+            
+            <iframe
+              src="https://maps.google.com/maps?q=loc:-7.555972568075667, 110.85383603307423&z=17&output=embed&hl=id"
+              width="100%"
+              height="400"
+              style={{ border: 0 }}
+              allowFullScreen=""
+              loading="lazy"
+              title="Solo Technopark Location"
+            ></iframe>
+            
+            {/* Bottom gradient overlay */}
+            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-gray-50 to-transparent z-10 pointer-events-none"></div>
+          </div>
+        </div>
       </div>
 
       {/* Main Footer Content */}
