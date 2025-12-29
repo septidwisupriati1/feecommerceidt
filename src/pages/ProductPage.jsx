@@ -1,0 +1,366 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import BuyerNavbar from "../components/BuyerNavbar";
+import Footer from "../components/Footer";
+import { Card, CardContent } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { Button } from "../components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+import { Search, Loader2 } from "lucide-react";
+import { browseProducts, getCategories, formatCurrency } from "../services/productAPI";
+
+export default function ProductPage() {
+  const navigate = useNavigate();
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [sortBy, setSortBy] = useState("created_at");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 12,
+    total: 0,
+    totalPages: 1,
+    hasNext: false,
+    hasPrev: false
+  });
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  // Fetch products when filters change
+  useEffect(() => {
+    fetchProducts();
+  }, [pagination.page, selectedCategory, minPrice, maxPrice, sortBy, sortOrder]);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (pagination.page === 1) {
+        fetchProducts();
+      } else {
+        setPagination(prev => ({ ...prev, page: 1 }));
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const fetchCategories = async () => {
+    const response = await getCategories();
+    if (response.success) {
+      setCategories(response.data);
+    }
+  };
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    const response = await browseProducts({
+      page: pagination.page,
+      limit: pagination.limit,
+      search: searchQuery || undefined,
+      category_id: (selectedCategory && selectedCategory !== 'all') ? selectedCategory : undefined,
+      min_price: minPrice || undefined,
+      max_price: maxPrice || undefined,
+      sort_by: sortBy,
+      sort_order: sortOrder
+    });
+
+    if (response.success) {
+      setProducts(response.data);
+      setPagination(response.pagination);
+    }
+    setLoading(false);
+  };
+
+  const handleFilter = () => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+    fetchProducts();
+  };
+
+  const handleClear = () => {
+    setMinPrice("");
+    setMaxPrice("");
+    setSearchQuery("");
+    setSelectedCategory("all");
+    setSortBy("created_at");
+    setSortOrder("desc");
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleSortChange = (value) => {
+    const sortMap = {
+      'terbaru': { sort_by: 'created_at', sort_order: 'desc' },
+      'termurah': { sort_by: 'price', sort_order: 'asc' },
+      'termahal': { sort_by: 'price', sort_order: 'desc' },
+      'rating': { sort_by: 'rating_average', sort_order: 'desc' },
+      'terpopuler': { sort_by: 'total_views', sort_order: 'desc' }
+    };
+    const sort = sortMap[value];
+    setSortBy(sort.sort_by);
+    setSortOrder(sort.sort_order);
+  };
+
+  const getCategoryGradient = (categoryName) => {
+    const gradients = {
+      'Elektronik': 'from-blue-400 to-blue-600',
+      'Fashion': 'from-pink-400 to-pink-600',
+      'Makanan & Minuman': 'from-green-400 to-green-600',
+      'Kesehatan': 'from-red-400 to-red-600',
+      'Rumah Tangga': 'from-yellow-400 to-yellow-600'
+    };
+    return gradients[categoryName] || 'from-gray-400 to-gray-600';
+  };
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(180deg, rgba(219, 234, 254, 0.4) 0%, rgba(239, 246, 255, 0.3) 20%, rgba(255, 255, 255, 1) 40%, rgba(255, 255, 255, 1) 100%)',
+      backgroundAttachment: 'fixed'
+    }}>
+      {/* Navbar */}
+      <BuyerNavbar />
+
+      {/* Hero Section with Gradient */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(219, 234, 254, 0.5) 0%, rgba(239, 246, 255, 0.3) 50%, rgba(255, 255, 255, 0.1) 100%)',
+        padding: '3rem 0',
+        borderBottom: '1px solid rgba(147, 197, 253, 0.2)'
+      }}>
+        <div className="container mx-auto px-4">
+          <h1 className="text-4xl md:text-5xl font-bold text-center mb-4" style={{ color: '#1e40af' }}>
+            Katalog Produk
+          </h1>
+          <p className="text-lg text-center mb-6" style={{ color: '#6b7280' }}>
+            Temukan berbagai produk pilihan dengan harga terbaik
+          </p>
+          
+          {/* Search Bar */}
+          <div className="max-w-2xl mx-auto">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <Input
+                type="text"
+                placeholder="Cari produk, kategori..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 h-14 text-lg bg-white shadow-lg border-none"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Sidebar Filter */}
+          <aside className="lg:w-1/4">
+            <Card className="sticky top-20">
+              <CardContent className="p-6">
+                <h2 className="text-xl font-bold mb-6">Filter</h2>
+
+                {/* Kategori */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold mb-2">Kategori</label>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Semua Kategori" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Kategori</SelectItem>
+                      {categories.map(cat => (
+                        <SelectItem key={cat.category_id} value={cat.category_id.toString()}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Harga */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold mb-2">Harga</label>
+                  <div className="space-y-2">
+                    <Input
+                      type="number"
+                      placeholder="Harga Min"
+                      value={minPrice}
+                      onChange={(e) => setMinPrice(e.target.value)}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Harga Max"
+                      value={maxPrice}
+                      onChange={(e) => setMaxPrice(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Clear Button */}
+                <Button 
+                  variant="outline" 
+                  onClick={handleClear}
+                  className="w-full"
+                >
+                  Clear Filter
+                </Button>
+              </CardContent>
+            </Card>
+          </aside>
+
+          {/* Product Grid */}
+          <main className="lg:w-3/4">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <p className="text-gray-600">
+                Menampilkan <span className="font-semibold">{products.length}</span> dari {pagination.total} produk
+              </p>
+              <Select defaultValue="terbaru" onValueChange={handleSortChange}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Urutkan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="terbaru">Terbaru</SelectItem>
+                  <SelectItem value="terpopuler">Terpopuler</SelectItem>
+                  <SelectItem value="termurah">Harga Terendah</SelectItem>
+                  <SelectItem value="termahal">Harga Tertinggi</SelectItem>
+                  <SelectItem value="rating">Rating Tertinggi</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Loading State */}
+            {loading && (
+              <div className="flex justify-center items-center py-20">
+                <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+                <span className="ml-3 text-gray-600">Memuat produk...</span>
+              </div>
+            )}
+
+            {/* Product Cards Grid */}
+            {!loading && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {products.map((product) => (
+                    <Card 
+                      key={product.product_id} 
+                      onClick={() => navigate(`/produk/${product.product_id}`)}
+                      className="hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden group"
+                    >
+                      <div className="relative">
+                        <div className={`aspect-square bg-gradient-to-br ${getCategoryGradient(product.category.name)} flex items-center justify-center overflow-hidden`}>
+                          {product.primary_image ? (
+                            <img 
+                              src={product.primary_image} 
+                              alt={product.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              onError={(e) => {
+                                // Fallback ke placeholder jika gambar error
+                                e.target.src = 'https://via.placeholder.com/400x400?text=No+Image';
+                              }}
+                            />
+                          ) : (
+                            // Gambar default jika tidak ada - bisa diubah icon/emoji di sini
+                            <div className="text-6xl">🛍️</div>
+                          )}
+                        </div>
+                        {product.stock === 0 && (
+                          <span className="absolute top-2 right-2 text-xs bg-red-600 text-white px-2 py-1 rounded-full font-semibold shadow-md">
+                            Habis
+                          </span>
+                        )}
+                        {product.stock > 0 && product.stock < 10 && (
+                          <span className="absolute top-2 right-2 text-xs bg-yellow-600 text-white px-2 py-1 rounded-full font-semibold shadow-md">
+                            Stok Terbatas
+                          </span>
+                        )}
+                      </div>
+                      <CardContent className="p-4">
+                        <div className="text-xs text-gray-500 mb-1">{product.category.name}</div>
+                        <h3 className="font-semibold text-base mb-1 line-clamp-2 h-12 group-hover:text-blue-600 transition-colors">
+                          {product.name}
+                        </h3>
+                        <div className="flex items-center gap-1 mb-2">
+                          <span className="text-yellow-400 text-sm">
+                            {'⭐'.repeat(Math.floor(product.rating_average || 0))}
+                          </span>
+                          <span className="text-xs text-gray-500">({product.rating_average?.toFixed(1) || '0.0'})</span>
+                          <span className="text-xs text-gray-400 ml-1">
+                            | {product.total_reviews || 0} ulasan
+                          </span>
+                        </div>
+                        <div className="mb-2">
+                          <span className="text-lg font-bold text-blue-600">
+                            {formatCurrency(product.price)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-500">{product.seller?.store_name || 'Toko'}</span>
+                          <span className="text-gray-400">
+                            {product.total_views || 0} views
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {pagination.totalPages > 1 && (
+                  <div className="mt-8 flex justify-center items-center gap-2">
+                    <Button
+                      variant="outline"
+                      disabled={!pagination.hasPrev}
+                      onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                    >
+                      ← Sebelumnya
+                    </Button>
+                    <span className="text-gray-600">
+                      Halaman {pagination.page} dari {pagination.totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      disabled={!pagination.hasNext}
+                      onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                    >
+                      Selanjutnya →
+                    </Button>
+                  </div>
+                )}
+
+                {/* No Results */}
+                {products.length === 0 && (
+                  <div className="text-center py-20">
+                    <div className="text-6xl mb-4">🔍</div>
+                    <h3 className="text-2xl font-bold text-gray-700 mb-2">
+                      Produk Tidak Ditemukan
+                    </h3>
+                    <p className="text-gray-500 mb-4">
+                      Coba ubah filter atau kata kunci pencarian Anda
+                    </p>
+                    <Button onClick={handleClear} className="bg-blue-600 hover:bg-blue-700">
+                      Reset Filter
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </main>
+        </div>
+      </div>
+      <Footer />
+    </div>
+  );
+}

@@ -1,42 +1,66 @@
-# FE E-Commerce (React + Vite)
+# Talent Hub - Platform Pencarian Kerja
 
-Proyek frontend e-commerce sederhana menggunakan React, Vite, dan React Router. Termasuk keranjang belanja dengan penyimpanan di localStorage dan data produk dummy.
+Platform digital untuk talenta muda menemukan peluang kerja di dunia teknologi dan industri kreatif.
 
-## Fitur
-- Routing: Home, Products, Product Detail, Cart, Checkout
-- Keranjang belanja (add/remove/update/clear) tersimpan di localStorage
-- Komponen UI sederhana (Navbar, ProductCard)
-- Data produk dummy di `src/shared/data/products.js`
- - Seller area: Dasbor, Produk, Pesanan (untuk penjual)
+## Tech Stack
 
-## Jalankan di lokal (Windows PowerShell)
-1. Install dependencies
-```powershell
+- **React 19.1.1** - UI Library
+- **Vite** - Build Tool & Dev Server
+- **Tailwind CSS 4** - Styling Framework
+- **Radix UI** - Headless UI Components
+- **React Router DOM** - Routing
+- **Lucide React** - Icons
+
+## Installation
+
+```bash
 npm install
 ```
-2. Jalankan server dev
-```powershell
+
+## Development
+
+```bash
 npm run dev
 ```
-3. Build produksi
-```powershell
+
+Aplikasi akan berjalan di `http://localhost:3000`
+
+## Build
+
+```bash
 npm run build
+```
+
+## Preview Production Build
+
+```bash
 npm run preview
 ```
 
-## Struktur Folder
-- `src/App.jsx` - Routing dan shell aplikasi
-- `src/context/CartContext.jsx` - State keranjang
-- `src/context/ProductsContext.jsx` - State produk + CRUD
-- `src/pages/*` - Halaman
-- `src/components/*` - Komponen UI
-- `src/shared/data/products.js` - Data dummy
- - `src/seller/*` - Halaman area penjual
+## Features
 
-## Catatan
-- Ganti data produk dengan API asli ketika siap. Buat service di `src/shared/services` dan panggil di halaman Products/ProductDetail.
-- Tambahkan styling/komponen sesuai kebutuhan (Tailwind, Chakra UI, dsb).
+- ✅ Hero section dengan gradient background
+- ✅ Search bar dengan filter lengkap
+- ✅ Job cards dengan informasi detail
+- ✅ Responsive design
+- ✅ Modern UI dengan Radix UI components
+- ✅ Tailwind CSS untuk styling
 
-### Seller
- - URL: `/seller`
- - Orders muncul setelah melakukan checkout; tersimpan di `localStorage` (`orders:v1`).
+## Project Structure
+
+```
+src/
+├── components/
+│   └── ui/           # Reusable UI components
+│       ├── button.jsx
+│       ├── input.jsx
+│       ├── select.jsx
+│       └── card.jsx
+├── pages/
+│   └── HomePage.jsx  # Main landing page
+├── lib/
+│   └── utils.js      # Utility functions
+├── App.jsx           # Root component
+├── main.jsx          # Entry point
+└── index.css         # Global styles
+```

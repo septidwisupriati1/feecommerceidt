@@ -1,0 +1,31 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="600" fill="#005eb8"/>
+  <rect x="50" y="50" width="700" height="500" fill="white" rx="10"/>
+  
+  <!-- Mandiri Logo Area -->
+  <rect x="70" y="70" width="140" height="40" fill="#005eb8" rx="5"/>
+  <text x="140" y="95" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">MANDIRI</text>
+  
+  <!-- Title -->
+  <text x="400" y="140" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#333" text-anchor="middle">BUKTI TRANSFER</text>
+  
+  <!-- Transfer Details -->
+  <text x="100" y="200" font-family="Arial, sans-serif" font-size="16" fill="#666">ID Transaksi:</text>
+  <text x="100" y="230" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#005eb8">MDR2025121900789</text>
+  
+  <text x="100" y="280" font-family="Arial, sans-serif" font-size="16" fill="#666">Rekening Sumber:</text>
+  <text x="100" y="310" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#333">1234567890 - Jane Smith</text>
+  
+  <text x="100" y="360" font-family="Arial, sans-serif" font-size="16" fill="#666">Rekening Tujuan:</text>
+  <text x="100" y="390" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#333">9876543210 - Toko Elektronik</text>
+  
+  <text x="100" y="440" font-family="Arial, sans-serif" font-size="16" fill="#666">Nominal:</text>
+  <text x="100" y="470" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#28a745">Rp 155.462</text>
+  
+  <text x="100" y="520" font-family="Arial, sans-serif" font-size="14" fill="#999">19 Des 2025 09:24 WIB</text>
+  
+  <!-- Success Badge -->
+  <circle cx="650" cy="150" r="40" fill="#28a745"/>
+  <text x="650" y="158" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="white" text-anchor="middle">✓</text>
+  <text x="650" y="210" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#28a745" text-anchor="middle">SUKSES</text>
+</svg>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Debug Tool</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        button.danger:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔐 Authentication Debug Tool</h1>
+        <p>Tool untuk debug masalah authentication</p>
+    </div>
+
+    <div class="card">
+        <h2>Current Status</h2>
+        <div id="status"></div>
+    </div>
+
+    <div class="card">
+        <h2>Actions</h2>
+        <button onclick="checkAuth()">🔍 Check Auth Status</button>
+        <button onclick="showToken()">🎫 Show Token</button>
+        <button onclick="showUser()">👤 Show User Data</button>
+        <button class="danger" onclick="clearAuth()">🗑️ Clear Auth & Reload</button>
+    </div>
+
+    <div class="card">
+        <h2>Debug Info</h2>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            const userStr = localStorage.getItem('user');
+            
+            let user = null;
+            try {
+                user = JSON.parse(userStr);
+            } catch (e) {
+                console.error('Failed to parse user:', e);
+            }
+
+            const isAuth = !!(token && user);
+            
+            const statusHtml = `
+                <div class="status ${isAuth ? 'success' : 'error'}">
+                    ${isAuth ? '✅ AUTHENTICATED' : '❌ NOT AUTHENTICATED'}
+                </div>
+                <p><strong>Has Token:</strong> ${!!token ? '✅ Yes' : '❌ No'}</p>
+                <p><strong>Has User:</strong> ${!!user ? '✅ Yes' : '❌ No'}</p>
+                ${user ? `
+                    <p><strong>Username:</strong> ${user.username || 'N/A'}</p>
+                    <p><strong>Email:</strong> ${user.email || 'N/A'}</p>
+                    <p><strong>Role:</strong> ${user.role || user.roles?.[0] || 'N/A'}</p>
+                    <p><strong>User ID:</strong> ${user.user_id || 'N/A'}</p>
+                ` : ''}
+            `;
+            
+            document.getElementById('status').innerHTML = statusHtml;
+            console.log('Auth Status:', { isAuth, token, user });
+        }
+
+        function showToken() {
+            const token = localStorage.getItem('token');
+            const output = document.getElementById('output');
+            
+            if (token) {
+                output.innerHTML = `
+                    <h3>Token:</h3>
+                    <pre>${token}</pre>
+                    <p><strong>Length:</strong> ${token.length} characters</p>
+                    <p><strong>Type:</strong> ${token.startsWith('fallback_token_') ? 'Fallback Token' : 'JWT Token'}</p>
+                `;
+            } else {
+                output.innerHTML = '<p class="error">No token found</p>';
+            }
+            
+            console.log('Token:', token);
+        }
+
+        function showUser() {
+            const userStr = localStorage.getItem('user');
+            const output = document.getElementById('output');
+            
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    output.innerHTML = `
+                        <h3>User Data:</h3>
+                        <pre>${JSON.stringify(user, null, 2)}</pre>
+                    `;
+                    console.log('User:', user);
+                } catch (e) {
+                    output.innerHTML = `<p class="error">Failed to parse user data: ${e.message}</p>`;
+                }
+            } else {
+                output.innerHTML = '<p class="error">No user data found</p>';
+            }
+        }
+
+        function clearAuth() {
+            if (confirm('Are you sure you want to clear authentication and reload?')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                console.log('Auth cleared');
+                window.location.reload();
+            }
+        }
+
+        // Auto-check on load
+        checkAuth();
+    </script>
+</body>
+</html>

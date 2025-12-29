@@ -1,0 +1,31 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="600" fill="#003d7a"/>
+  <rect x="50" y="50" width="700" height="500" fill="white" rx="10"/>
+  
+  <!-- BCA Logo Area -->
+  <rect x="70" y="70" width="120" height="40" fill="#003d7a" rx="5"/>
+  <text x="130" y="95" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white" text-anchor="middle">BCA</text>
+  
+  <!-- Title -->
+  <text x="400" y="140" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#333" text-anchor="middle">BUKTI TRANSFER</text>
+  
+  <!-- Transfer Details -->
+  <text x="100" y="200" font-family="Arial, sans-serif" font-size="16" fill="#666">Nomor Referensi:</text>
+  <text x="100" y="230" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#003d7a">TRF2025121900123456</text>
+  
+  <text x="100" y="280" font-family="Arial, sans-serif" font-size="16" fill="#666">Dari Rekening:</text>
+  <text x="100" y="310" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#333">1234567890 - John Doe</text>
+  
+  <text x="100" y="360" font-family="Arial, sans-serif" font-size="16" fill="#666">Ke Rekening:</text>
+  <text x="100" y="390" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#333">9876543210 - Toko Elektronik</text>
+  
+  <text x="100" y="440" font-family="Arial, sans-serif" font-size="16" fill="#666">Jumlah Transfer:</text>
+  <text x="100" y="470" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#00a651">Rp 155.462</text>
+  
+  <text x="100" y="520" font-family="Arial, sans-serif" font-size="14" fill="#999">Tanggal: 19 Desember 2025, 09:24</text>
+  
+  <!-- Success Badge -->
+  <circle cx="650" cy="150" r="40" fill="#00a651"/>
+  <text x="650" y="158" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="white" text-anchor="middle">✓</text>
+  <text x="650" y="210" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#00a651" text-anchor="middle">BERHASIL</text>
+</svg>

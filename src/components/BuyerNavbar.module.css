@@ -1,0 +1,313 @@
+/* Navbar Container */
+.navbar {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(30, 64, 175, 0.08);
+  border-bottom: 1px solid rgba(147, 197, 253, 0.3);
+}
+
+.navbarContainer {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0.75rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+}
+
+/* Logo Section */
+.navbarBrand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.navbarBrand:hover {
+  opacity: 0.9;
+}
+
+.navbarLogo {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+}
+
+.navbarTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e40af;
+  white-space: nowrap;
+}
+
+/* Navigation Links - Center */
+.navbarLinks {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex: 1;
+  justify-content: center;
+}
+
+.navLink {
+  padding: 0.5rem 0;
+  background: transparent;
+  border: none;
+  color: #4b5563;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  position: relative;
+}
+
+.navLink:hover {
+  color: #1e40af;
+}
+
+.navLink.active {
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.navLink.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #fbbf24;
+  border-radius: 2px 2px 0 0;
+}
+
+/* Right Side Actions */
+.navbarActions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/* Icon Buttons with Badge */
+.iconButton {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.iconButton:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.icon {
+  width: 22px;
+  height: 22px;
+  color: #4b5563;
+}
+
+/* Red Badge for Notifications */
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid white;
+}
+
+/* User Profile Avatar */
+.userProfile {
+  cursor: pointer;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.avatarIcon {
+  width: 20px;
+  height: 20px;
+  color: white;
+}
+
+/* Auth Buttons */
+.btnOutline,
+.btnPrimary {
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  white-space: nowrap;
+}
+
+.btnOutline {
+  background: transparent;
+  color: #1e40af;
+  border: 1.5px solid #93c5fd;
+}
+
+.btnOutline:hover {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1e40af;
+}
+
+.btnPrimary {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  border: 1.5px solid transparent;
+  font-weight: 700;
+}
+
+.btnPrimary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .navbarContainer {
+    padding: 0.75rem 1.5rem;
+    gap: 1.5rem;
+  }
+
+  .navbarLinks {
+    gap: 1.5rem;
+  }
+
+  .navLink {
+    font-size: 0.9rem;
+  }
+
+  .navbarTitle {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbarContainer {
+    padding: 0.75rem 1rem;
+    gap: 1rem;
+  }
+
+  .navbarLinks {
+    gap: 1rem;
+  }
+
+  .navLink {
+    font-size: 0.85rem;
+  }
+
+  .navbarLogo {
+    height: 32px;
+  }
+
+  .navbarTitle {
+    font-size: 1rem;
+  }
+
+  .navbarActions {
+    gap: 1rem;
+  }
+
+  .iconButton {
+    width: 36px;
+    height: 36px;
+  }
+
+  .icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .avatarIcon {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  .navbarLinks {
+    display: none;
+  }
+
+  .navbarContainer {
+    padding: 0.5rem 1rem;
+  }
+
+  .navbarLogo {
+    height: 28px;
+  }
+
+  .navbarTitle {
+    font-size: 0.9rem;
+  }
+
+  .navbarActions {
+    gap: 0.75rem;
+  }
+
+  .iconButton {
+    width: 32px;
+    height: 32px;
+  }
+
+  .icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .badge {
+    font-size: 0.65rem;
+    min-width: 16px;
+    height: 16px;
+  }
+
+  .btnOutline,
+  .btnPrimary {
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+  }
+}

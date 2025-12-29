@@ -1,0 +1,236 @@
+/* Shared Buyer Pages Styles */
+
+/* Page Container */
+.pageContainer {
+  min-height: 100vh;
+  background: linear-gradient(
+    180deg,
+    rgba(219, 234, 254, 0.4) 0%,
+    rgba(239, 246, 255, 0.3) 20%,
+    rgba(255, 255, 255, 1) 40%,
+    rgba(255, 255, 255, 1) 100%
+  );
+  background-attachment: fixed;
+}
+
+/* Hero Section */
+.heroSection {
+  background: linear-gradient(
+    135deg,
+    rgba(219, 234, 254, 0.5) 0%,
+    rgba(239, 246, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  padding: 3rem 0;
+  border-bottom: 1px solid rgba(147, 197, 253, 0.2);
+}
+
+.heroTitle {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1e40af;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.heroSubtitle {
+  font-size: 1.125rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* Cards */
+.card {
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+/* Buttons */
+.btnPrimary {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btnPrimary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+}
+
+.btnSecondary {
+  background: white;
+  color: #1e40af;
+  padding: 0.75rem 1.5rem;
+  border: 2px solid #93c5fd;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btnSecondary:hover {
+  background: #dbeafe;
+  border-color: #3b82f6;
+}
+
+.btnOutline {
+  background: transparent;
+  color: #1e40af;
+  padding: 0.625rem 1.25rem;
+  border: 2px solid #93c5fd;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btnOutline:hover {
+  background: #dbeafe;
+  border-color: #3b82f6;
+}
+
+/* Filter Buttons */
+.filterBtn {
+  padding: 0.5rem 1rem;
+  border: 2px solid #93c5fd;
+  background: white;
+  color: #1e40af;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.filterBtn:hover {
+  border-color: #fbbf24;
+  color: #1e40af;
+  background: #fef3c7;
+  transform: translateY(-2px);
+}
+
+.filterBtn.active {
+  background-color: #fbbf24;
+  color: white;
+  border-color: #fbbf24;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}
+
+/* Status Badges */
+.badge {
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.badgeBlue {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.badgeYellow {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badgeGreen {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badgeRed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Loading State */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4rem 0;
+}
+
+.spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 4px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Empty State */
+.emptyState {
+  text-align: center;
+  padding: 4rem 1rem;
+}
+
+.emptyStateIcon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.emptyStateText {
+  color: #6b7280;
+  font-size: 1.125rem;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding: 1.5rem 0;
+}
+
+.paginationBtn {
+  padding: 0.625rem 1.25rem;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  min-width: 100px;
+}
+
+.paginationBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+}
+
+.paginationBtn:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.paginationInfo {
+  color: #6b7280;
+  font-weight: 500;
+}

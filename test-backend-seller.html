@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Backend Seller API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #1d4ed8;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9fafb;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            border-left: 4px solid #10b981;
+        }
+        .error {
+            border-left: 4px solid #ef4444;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Backend Seller API</h1>
+    
+    <div class="test-box">
+        <h2>1. Test Backend Connection</h2>
+        <button onclick="testConnection()">Test Connection</button>
+        <div id="connectionResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-box">
+        <h2>2. Login as Seller</h2>
+        <input type="email" id="email" placeholder="Email" value="sellertest123@gmail.com">
+        <input type="password" id="password" placeholder="Password" value="password123">
+        <button onclick="loginSeller()">Login</button>
+        <div id="loginResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-box">
+        <h2>3. Test Get Products</h2>
+        <button onclick="getProducts()">Get Products</button>
+        <div id="productsResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-box">
+        <h2>4. Test Create Product (FormData)</h2>
+        <input type="text" id="productName" placeholder="Product Name" value="Test Product">
+        <input type="number" id="productPrice" placeholder="Price" value="50000">
+        <button onclick="testCreateProduct()">Create Product</button>
+        <div id="createResult" class="result" style="display:none;"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let authToken = localStorage.getItem('token');
+
+        async function testConnection() {
+            const resultDiv = document.getElementById('connectionResult');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Testing connection...';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/ecommerce/health`, {
+                    method: 'GET'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✓ Backend Connected!\n\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `✗ Backend responded with status: ${response.status}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `✗ Connection Failed!\n\nError: ${error.message}\n\nPastikan backend berjalan di ${API_URL}`;
+            }
+        }
+
+        async function loginSeller() {
+            const resultDiv = document.getElementById('loginResult');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Logging in...';
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/ecommerce/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    authToken = data.data.token;
+                    localStorage.setItem('token', authToken);
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✓ Login Success!\n\nToken: ${authToken.substring(0, 50)}...\n\nUser: ${JSON.stringify(data.data.user, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `✗ Login Failed!\n\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `✗ Login Error!\n\n${error.message}`;
+            }
+        }
+
+        async function getProducts() {
+            const resultDiv = document.getElementById('productsResult');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Fetching products...';
+            
+            if (!authToken) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '✗ Please login first!';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/api/ecommerce/products?page=1&limit=5`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✓ Products Retrieved!\n\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `✗ Failed!\n\nStatus: ${response.status}\n\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `✗ Error!\n\n${error.message}`;
+            }
+        }
+
+        async function testCreateProduct() {
+            const resultDiv = document.getElementById('createResult');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Creating product...';
+            
+            if (!authToken) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '✗ Please login first!';
+                return;
+            }
+
+            const productName = document.getElementById('productName').value;
+            const productPrice = document.getElementById('productPrice').value;
+            
+            try {
+                const formData = new FormData();
+                formData.append('name', productName);
+                formData.append('description', 'Test product description');
+                formData.append('price', productPrice);
+                formData.append('stock', 10);
+                formData.append('category', 'Elektronik');
+                formData.append('weight', 500);
+                formData.append('condition', 'new');
+                
+                console.log('Sending request to:', `${API_URL}/api/ecommerce/products`);
+                console.log('Token:', authToken.substring(0, 30) + '...');
+                
+                const response = await fetch(`${API_URL}/api/ecommerce/products`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                        // No Content-Type for FormData
+                    },
+                    body: formData
+                });
+                
+                console.log('Response status:', response.status);
+                
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✓ Product Created!\n\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `✗ Failed!\n\nStatus: ${response.status}\n\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `✗ Error!\n\n${error.message}\n\nStack: ${error.stack}`;
+            }
+        }
+
+        // Auto-load token on page load
+        window.onload = function() {
+            if (authToken) {
+                document.getElementById('loginResult').style.display = 'block';
+                document.getElementById('loginResult').className = 'result success';
+                document.getElementById('loginResult').textContent = `Token found in localStorage:\n${authToken.substring(0, 50)}...`;
+            }
+        }
+    </script>
+</body>
+</html>

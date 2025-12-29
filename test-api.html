@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Authentication & API Connection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .input-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            max-height: 400px;
+        }
+        .endpoint {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .endpoint h3 {
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 Test Authentication & API Connection</h1>
+        
+        <div class="input-group">
+            <label for="apiUrl">API Base URL:</label>
+            <input type="text" id="apiUrl" value="http://localhost:5000">
+        </div>
+        
+        <div id="connectionStatus" class="status info">
+            Status: Belum melakukan test
+        </div>
+
+        <!-- Auth Test Section -->
+        <div class="endpoint">
+            <h2>🔐 Authentication Testing</h2>
+            
+            <h3>1. Register</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <input type="text" id="regUsername" placeholder="Username" style="width: 100%;">
+                <input type="email" id="regEmail" placeholder="Email" style="width: 100%;">
+                <input type="password" id="regPassword" placeholder="Password (min 8 chars)" style="width: 100%;">
+                <input type="text" id="regFullName" placeholder="Full Name" style="width: 100%;">
+                <input type="tel" id="regPhone" placeholder="Phone (optional)" style="width: 100%;">
+                <select id="regRole" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="seller">Seller</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <button onclick="testRegister()">Register New User</button>
+            
+            <h3>2. Login</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <input type="email" id="loginEmail" placeholder="Email" style="width: 100%;">
+                <input type="password" id="loginPassword" placeholder="Password" style="width: 100%;">
+            </div>
+            <button onclick="testLogin()">Login</button>
+            <button onclick="testQuickLogin('seller')">Quick Login (Seller)</button>
+            <button onclick="testQuickLogin('admin')">Quick Login (Admin)</button>
+            
+            <h3>3. Current User Info</h3>
+            <button onclick="showCurrentUser()">Show Current User</button>
+            <button onclick="testLogout()">Logout</button>
+        </div>
+
+        <!-- Category API Section -->
+        <div class="endpoint">
+            <h2>📦 Category Management API</h2>
+            <h3>1. Test Connection</h3>
+            <button onclick="testConnection()">Test Basic Connection</button>
+        </div>
+        
+        <div class="endpoint">
+            <h3>2. Get All Categories</h3>
+            <button onclick="testGetCategories()">GET /api/ecommerce/admin/categories</button>
+            <button onclick="testGetCategories('?status=active')">GET with Filter (Active)</button>
+            <button onclick="testGetCategories('?search=elektronik')">GET with Search</button>
+        </div>
+        
+        <div class="endpoint">
+            <h3>3. Create Category</h3>
+            <button onclick="testCreateCategory()">POST /api/ecommerce/admin/categories</button>
+        </div>
+        
+        <div class="endpoint">
+            <h3>4. Update Category</h3>
+            <input type="text" id="updateId" placeholder="Category ID" style="width: 200px; margin-right: 10px;">
+            <button onclick="testUpdateCategory()">PUT /api/ecommerce/admin/categories/:id</button>
+        </div>
+        
+        <div class="endpoint">
+            <h3>5. Get Single Category</h3>
+            <input type="text" id="getSingleId" placeholder="Category ID" style="width: 200px; margin-right: 10px;">
+            <button onclick="testGetSingleCategory()">GET /api/ecommerce/admin/categories/:id</button>
+        </div>
+        
+        <div class="endpoint">
+            <h3>6. Delete Category</h3>
+            <input type="text" id="deleteId" placeholder="Category ID" style="width: 200px; margin-right: 10px;">
+            <button onclick="testDeleteCategory()">DELETE /api/ecommerce/admin/categories/:id</button>
+        </div>
+        
+        <h3>Response:</h3>
+        <pre id="response">Hasil akan ditampilkan di sini...</pre>
+    </div>
+
+    <script>
+        const API_BASE_URL = () => document.getElementById('apiUrl').value;
+        const AUTH_TOKEN = () => localStorage.getItem('token') || '';
+        
+        // Quick login credentials (matching test accounts from docs)
+        const TEST_ACCOUNTS = {
+            seller: { email: 'seller1@ecommerce.com', password: 'Seller123!' },
+            admin: { email: 'admin@ecommerce.com', password: 'Admin123!' }
+        };
+        
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = message;
+        }
+        
+        function displayResponse(data, status, url, method) {
+            const responseDiv = document.getElementById('response');
+            responseDiv.textContent = JSON.stringify({
+                request: {
+                    method: method,
+                    url: url,
+                    status: status,
+                    timestamp: new Date().toLocaleString()
+                },
+                response: data
+            }, null, 2);
+        }
+        
+        // ===== AUTHENTICATION TESTS =====
+        
+        async function testRegister() {
+            updateStatus('🔄 Registering new user...', 'info');
+            
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const full_name = document.getElementById('regFullName').value;
+            const phone = document.getElementById('regPhone').value;
+            const role = document.getElementById('regRole').value;
+            
+            if (!username || !email || !password) {
+                updateStatus('❌ Username, email, and password are required', 'error');
+                return;
+            }
+            
+            const data = { username, email, password, full_name, phone, role };
+            
+            try {
+                const url = `${API_BASE_URL()}/api/ecommerce/auth/register`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    updateStatus(`✅ Registration Success! Check email for verification. Token saved.`, 'success');
+                    if (result.data?.token) {
+                        localStorage.setItem('token', result.data.token);
+                        localStorage.setItem('user', JSON.stringify(result.data.user));
+                    }
+                } else {
+                    updateStatus(`❌ Registration Failed: ${result.error || result.message}`, 'error');
+                }
+                
+                displayResponse(result, response.status, url, 'POST');
+            } catch (error) {
+                updateStatus(`❌ Request Failed: ${error.message}`, 'error');
+                displayResponse({ error: error.message }, 'N/A', API_BASE_URL(), 'POST');
+            }
+        }
+        
+        async function testLogin() {
+            updateStatus('🔄 Logging in...', 'info');
+            
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                updateStatus('❌ Email and password are required', 'error');
+                return;
+            }
+            
+            await performLogin(email, password);
+        }
+        
+        async function testQuickLogin(role) {
+            updateStatus(`🔄 Quick login as ${role}...`, 'info');
+            const { email, password } = TEST_ACCOUNTS[role];
+            await performLogin(email, password);
+        }
+        
+        async function performLogin(email, password) {
+            try {
+                const url = `${API_BASE_URL()}/api/ecommerce/auth/login`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    updateStatus(`✅ Login Success! Welcome ${result.data.user.username}`, 'success');
+                    localStorage.setItem('token', result.data.token);
+                    localStorage.setItem('user', JSON.stringify(result.data.user));
+                } else {
+                    updateStatus(`❌ Login Failed: ${result.error || result.message}`, 'error');
+                }
+                
+                displayResponse(result, response.status, url, 'POST');
+            } catch (error) {
+                updateStatus(`❌ Request Failed: ${error.message}`, 'error');
+                displayResponse({ error: error.message }, 'N/A', API_BASE_URL(), 'POST');
+            }
+        }
+        
+        async function testLogout() {
+            updateStatus('🔄 Logging out...', 'info');
+            
+            try {
+                const url = `${API_BASE_URL()}/api/ecommerce/auth/logout`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${AUTH_TOKEN()}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                
+                updateStatus('✅ Logout Success! Token cleared.', 'success');
+                displayResponse(result, response.status, url, 'POST');
+            } catch (error) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                updateStatus('✅ Logout Success! (Offline)', 'success');
+                displayResponse({ message: 'Logged out locally' }, 'N/A', API_BASE_URL(), 'POST');
+            }
+        }
+        
+        function showCurrentUser() {
+            const user = localStorage.getItem('user');
+            const token = localStorage.getItem('token');
+            
+            if (!user || !token) {
+                updateStatus('⚠️ No user logged in', 'error');
+                displayResponse({ message: 'No user in localStorage' }, 'N/A', 'localStorage', 'GET');
+                return;
+            }
+            
+            try {
+                const userData = JSON.parse(user);
+                updateStatus(`✅ Logged in as: ${userData.username} (${userData.roles?.join(', ')})`, 'success');
+                displayResponse({ 
+                    user: userData, 
+                    token: token.substring(0, 20) + '...' 
+                }, 200, 'localStorage', 'GET');
+            } catch (error) {
+                updateStatus('❌ Invalid user data in localStorage', 'error');
+            }
+        }
+        
+        // ===== CATEGORY API TESTS =====
+        
+        async function testConnection() {
+            updateStatus('🔄 Testing connection...', 'info');
+            try {
+                const response = await fetch(`${API_BASE_URL()}/api/ecommerce/admin/categories`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${AUTH_TOKEN()}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateStatus(`✅ Connection Success! Status: ${response.status} ${response.statusText}`, 'success');
+                } else {
+                    updateStatus(`⚠️ Connection OK, but API returned error: ${data.error || data.message}`, 'error');
+                }
+                
+                displayResponse(data, response.status, response.url, 'GET');
+            } catch (error) {
+                updateStatus(`❌ Connection Failed: ${error.message}`, 'error');
+                displayResponse({ error: error.message }, 'N/A', API_BASE_URL(), 'GET');
+            }
+        }
+        
+        async function testGetCategories(params = '') {
+            updateStatus('🔄 Fetching categories...', 'info');
+            try {
+                const url = `${API_BASE_URL()}/api/ecommerce/admin/categories${params}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${AUTH_TOKEN()}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateStatus(`✅ Get Categories Success! Found ${data.data?.categories?.length || 0} categories`, 'success');
+                } else {
+                    updateStatus(`❌ Get Categories Failed: ${data.error || data.message}`, 'error');
+                }
+                
+                displayResponse(data, response.status, url, 'GET');
+            } catch (error) {
+                updateStatus(`❌ Request Failed: ${error.message}`, 'error');
+                displayResponse({ error: error.message }, 'N/A', API_BASE_URL(), 'GET');
+            }
+        }
+        
+        async function testCreateCategory() {
+            updateStatus('🔄 Creating category...', 'info');
+            
+            const testData = {
+                name: 'Test Category ' + Date.now(),
+                description: 'Category created from API test at ' + new Date().toLocaleString(),
+                icon: 'https://via.placeholder.com/50',
+                status: 'active'
+            };
+            
+            try {
+                const url = `${API_BASE_URL()}/api/ecommerce/admin/categories`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${AUTH_TOKEN()}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateStatus(`✅ Create Category Success! ID: ${data.data?.category?.id || 'N/A'}`, 'success');
+                } else {
+                    updateStatus(`❌ Create Category Failed: ${data.error || data.message}`, 'error');
+                }
+                
+                displayResponse(data, response.status, url, 'POST');
+            } catch (error) {
+                updateStatus(`❌ Request Failed: ${error.message}`, 'error');
+                displayResponse({ error: error.message }, 'N/A', API_BASE_URL(), 'POST');
+            }
+        }
+        
+        async function testUpdateCategory() {
+            const categoryId = document.getElementById('updateId').value;
+            if (!categoryId) {
+                alert('Masukkan Category ID terlebih dahulu!');
+                return;
+            }
+            
+            updateStatus('🔄 Updating category...', 'info');
+            
+            const updateData = {
+                name: 'Updated Category ' + Date.now(),
+                description: 'Updated at ' + new Date().toLocaleString(),
+                status: 'active'
+            };
+            
+            try {
+                const url = `${API_BASE_URL()}/api/ecommerce/admin/categories/${categoryId}`;
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${AUTH_TOKEN()}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateStatus(`✅ Update Category Success!`, 'success');
+                } else {
+                    updateStatus(`❌ Update Category Failed: ${data.error || data.message}`, 'error');
+                }
+                
+                displayResponse(data, response.status, url, 'PUT');
+            } catch (error) {
+                updateStatus(`❌ Request Failed: ${error.message}`, 'error');
+                displayResponse({ error: error.message }, 'N/A', API_BASE_URL(), 'PUT');
+            }
+        }
+        
+        async function testGetSingleCategory() {
+            const categoryId = document.getElementById('getSingleId').value;
+            if (!categoryId) {
+                alert('Masukkan Category ID terlebih dahulu!');
+                return;
+            }
+            
+            updateStatus('🔄 Fetching category detail...', 'info');
+            
+            try {
+                const url = `${API_BASE_URL()}/api/ecommerce/admin/categories/${categoryId}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${AUTH_TOKEN()}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateStatus(`✅ Get Category Detail Success!`, 'success');
+                } else {
+                    updateStatus(`❌ Get Category Failed: ${data.error || data.message}`, 'error');
+                }
+                
+                displayResponse(data, response.status, url, 'GET');
+            } catch (error) {
+                updateStatus(`❌ Request Failed: ${error.message}`, 'error');
+                displayResponse({ error: error.message }, 'N/A', API_BASE_URL(), 'GET');
+            }
+        }
+        
+        async function testDeleteCategory() {
+            const categoryId = document.getElementById('deleteId').value;
+            if (!categoryId) {
+                alert('Masukkan Category ID terlebih dahulu!');
+                return;
+            }
+            
+            if (!confirm(`Yakin ingin menghapus kategori ID: ${categoryId}?`)) {
+                return;
+            }
+            
+            updateStatus('🔄 Deleting category...', 'info');
+            
+            try {
+                const url = `${API_BASE_URL()}/api/ecommerce/admin/categories/${categoryId}`;
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${AUTH_TOKEN()}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateStatus(`✅ Delete Category Success!`, 'success');
+                } else {
+                    updateStatus(`❌ Delete Category Failed: ${data.error || data.message}`, 'error');
+                }
+                
+                displayResponse(data, response.status, url, 'DELETE');
+            } catch (error) {
+                updateStatus(`❌ Request Failed: ${error.message}`, 'error');
+                displayResponse({ error: error.message }, 'N/A', API_BASE_URL(), 'DELETE');
+            }
+        }
+        
+        // Auto-load user info on page load
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            
+            if (token && user) {
+                try {
+                    const userData = JSON.parse(user);
+                    updateStatus(`✅ Logged in as: ${userData.username} (${userData.roles?.join(', ')})`, 'success');
+                } catch (e) {
+                    updateStatus('⚠️ Invalid session data', 'error');
+                }
+            } else {
+                updateStatus('⚠️ No user logged in. Please login first.', 'info');
+            }
+        });
+    </script>
+</body>
+</html>

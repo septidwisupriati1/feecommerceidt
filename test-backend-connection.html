@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Backend Connection</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 { color: #333; }
+    .section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #f9f9f9;
+      border-left: 4px solid #4CAF50;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+    button:hover { background: #45a049; }
+    input {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      background: #e8f5e9;
+      border-radius: 5px;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .error {
+      background: #ffebee;
+      color: #c62828;
+    }
+    .success {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Test Koneksi Backend Laragon</h1>
+    
+    <div class="section">
+      <h3>1. Test Koneksi Backend</h3>
+      <button onclick="testConnection()">Test Backend Status</button>
+      <div id="connectionResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="section">
+      <h3>2. Login Admin</h3>
+      <input type="email" id="email" placeholder="Email Admin" value="admin@example.com">
+      <input type="password" id="password" placeholder="Password" value="admin123">
+      <button onclick="loginAdmin()">Login</button>
+      <div id="loginResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="section">
+      <h3>3. Test Payment Verification API</h3>
+      <button onclick="testPaymentAPI()">Get Pending Payments</button>
+      <div id="paymentResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="section">
+      <h3>4. Test Order Management API</h3>
+      <button onclick="testOrderAPI()">Get Orders</button>
+      <div id="orderResult" class="result" style="display:none;"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:5000';
+    let token = localStorage.getItem('token') || '';
+
+    // Test koneksi backend
+    async function testConnection() {
+      const result = document.getElementById('connectionResult');
+      result.style.display = 'block';
+      result.textContent = 'Testing connection...';
+      
+      try {
+        const response = await fetch(`${API_URL}/api/ecommerce/health`, {
+          method: 'GET',
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          result.className = 'result success';
+          result.textContent = '✅ Backend Connected!\n\n' + JSON.stringify(data, null, 2);
+        } else {
+          result.className = 'result error';
+          result.textContent = `❌ Backend response error: ${response.status}`;
+        }
+      } catch (error) {
+        result.className = 'result error';
+        result.textContent = `❌ Connection Failed!\n\nError: ${error.message}\n\nPastikan backend Laragon sudah berjalan di http://localhost:5000`;
+      }
+    }
+
+    // Login admin
+    async function loginAdmin() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const result = document.getElementById('loginResult');
+      
+      result.style.display = 'block';
+      result.textContent = 'Logging in...';
+      
+      try {
+        const response = await fetch(`${API_URL}/api/ecommerce/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          token = data.data.token;
+          localStorage.setItem('token', token);
+          
+          result.className = 'result success';
+          result.textContent = '✅ Login Berhasil!\n\n' + 
+            `User: ${data.data.user.name}\n` +
+            `Role: ${data.data.user.role}\n` +
+            `Token: ${token.substring(0, 50)}...\n\n` +
+            'Token sudah disimpan, silakan test API lainnya!';
+        } else {
+          result.className = 'result error';
+          result.textContent = '❌ Login Gagal!\n\n' + JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        result.className = 'result error';
+        result.textContent = `❌ Login Error!\n\n${error.message}`;
+      }
+    }
+
+    // Test Payment Verification API
+    async function testPaymentAPI() {
+      const result = document.getElementById('paymentResult');
+      result.style.display = 'block';
+      
+      if (!token) {
+        result.className = 'result error';
+        result.textContent = '❌ Please login first to get token!';
+        return;
+      }
+      
+      result.textContent = 'Fetching payments...';
+      
+      try {
+        const response = await fetch(`${API_URL}/api/ecommerce/admin/payments/pending?status=pending_verification&page=1&limit=10`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          result.className = 'result success';
+          result.textContent = '✅ Payment API Working!\n\n' + JSON.stringify(data, null, 2);
+        } else {
+          result.className = 'result error';
+          result.textContent = '❌ API Error!\n\n' + JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        result.className = 'result error';
+        result.textContent = `❌ Request Failed!\n\n${error.message}`;
+      }
+    }
+
+    // Test Order Management API
+    async function testOrderAPI() {
+      const result = document.getElementById('orderResult');
+      result.style.display = 'block';
+      
+      if (!token) {
+        result.className = 'result error';
+        result.textContent = '❌ Please login first to get token!';
+        return;
+      }
+      
+      result.textContent = 'Fetching orders...';
+      
+      try {
+        const response = await fetch(`${API_URL}/api/ecommerce/admin/orders?page=1&limit=10`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          result.className = 'result success';
+          result.textContent = '✅ Order API Working!\n\n' + JSON.stringify(data, null, 2);
+        } else {
+          result.className = 'result error';
+          result.textContent = '❌ API Error!\n\n' + JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        result.className = 'result error';
+        result.textContent = `❌ Request Failed!\n\n${error.message}`;
+      }
+    }
+
+    // Auto-load token saat halaman dibuka
+    window.onload = function() {
+      if (token) {
+        console.log('Token found in localStorage:', token);
+      }
+    }
+  </script>
+</body>
+</html>

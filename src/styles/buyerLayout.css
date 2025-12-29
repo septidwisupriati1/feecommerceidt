@@ -1,0 +1,84 @@
+/* Buyer Pages Layout - White Background with Blue Gradient */
+
+.buyerPageLayout {
+  min-height: 100vh;
+  background: linear-gradient(
+    180deg,
+    rgba(191, 219, 254, 0.3) 0%,
+    rgba(219, 234, 254, 0.2) 25%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(255, 255, 255, 1) 100%
+  );
+  background-attachment: fixed;
+}
+
+/* Alternative gradient - subtle blue overlay */
+.buyerPageGradient {
+  min-height: 100vh;
+  background: linear-gradient(
+    to bottom,
+    rgba(59, 130, 246, 0.05) 0%,
+    rgba(147, 197, 253, 0.03) 30%,
+    rgba(255, 255, 255, 1) 60%,
+    rgba(255, 255, 255, 1) 100%
+  );
+}
+
+/* Page container with max width */
+.buyerContainer {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Card styles for buyer pages */
+.buyerCard {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.1);
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.buyerCard:hover {
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+/* Section headers */
+.buyerSectionHeader {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid rgba(59, 130, 246, 0.1);
+}
+
+/* Hero sections for pages */
+.buyerHeroSection {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.08) 0%,
+    rgba(147, 197, 253, 0.05) 50%,
+    rgba(191, 219, 254, 0.03) 100%
+  );
+  padding: 2.5rem 0;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+  margin-bottom: 2rem;
+}
+
+.buyerHeroTitle {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.buyerHeroSubtitle {
+  font-size: 1rem;
+  color: #6b7280;
+  text-align: center;
+}
