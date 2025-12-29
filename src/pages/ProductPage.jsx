@@ -14,6 +14,7 @@ import {
 } from "../components/ui/select";
 import { Search, Loader2 } from "lucide-react";
 import { browseProducts, getCategories, formatCurrency } from "../services/productAPI";
+import { products as staticProducts } from "../data/products";
 
 export default function ProductPage() {
   const navigate = useNavigate();
@@ -66,21 +67,52 @@ export default function ProductPage() {
 
   const fetchProducts = async () => {
     setLoading(true);
-    const response = await browseProducts({
-      page: pagination.page,
-      limit: pagination.limit,
-      search: searchQuery || undefined,
-      category_id: (selectedCategory && selectedCategory !== 'all') ? selectedCategory : undefined,
-      min_price: minPrice || undefined,
-      max_price: maxPrice || undefined,
-      sort_by: sortBy,
-      sort_order: sortOrder
+
+    // Offline/static fallback: gunakan data lokal agar gambar dan ID konsisten
+    const filtered = staticProducts
+      .filter(p => selectedCategory === 'all' || p.category === selectedCategory)
+      .filter(p => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      .filter(p => !minPrice || p.price >= parseInt(minPrice))
+      .filter(p => !maxPrice || p.price <= parseInt(maxPrice));
+
+    // Sorting sederhana sesuai sortBy/sortOrder
+    const sorted = [...filtered].sort((a, b) => {
+      const order = sortOrder === 'asc' ? 1 : -1;
+      if (sortBy === 'price') return order * (a.price - b.price);
+      if (sortBy === 'rating_average' || sortBy === 'rating') return order * ((a.rating || 0) - (b.rating || 0));
+      if (sortBy === 'total_views') return order * ((a.views || 0) - (b.views || 0));
+      // default created_at not available; keep original order
+      return 0;
     });
 
-    if (response.success) {
-      setProducts(response.data);
-      setPagination(response.pagination);
-    }
+    const pageSize = pagination.limit;
+    const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+    const currentPage = Math.min(pagination.page, totalPages);
+    const start = (currentPage - 1) * pageSize;
+    const paged = sorted.slice(start, start + pageSize);
+
+    const mapped = paged.map(p => ({
+      ...p,
+      product_id: p.id,
+      rating_average: p.rating,
+      total_reviews: p.reviews,
+      primary_image: p.image,
+      stock: p.stock ?? 100,
+      total_views: p.views || 0,
+      category: { name: p.category },
+      seller: { store_name: "Toko" }
+    }));
+
+    setProducts(mapped);
+    setPagination(prev => ({
+      ...prev,
+      page: currentPage,
+      total: sorted.length,
+      totalPages,
+      hasNext: currentPage < totalPages,
+      hasPrev: currentPage > 1
+    }));
+
     setLoading(false);
   };
 
