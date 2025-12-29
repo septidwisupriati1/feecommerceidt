@@ -13,6 +13,7 @@ import { isAuthenticated } from "../utils/auth";
 import { browseProducts, getCategories } from "../services/productAPI";
 import { getImageUrl } from "../utils/imageHelper";
 import BuyerNavbar from "../components/BuyerNavbar";
+import CartSuccessToast from "../components/CartSuccessToast";
 import styles from "./HomePage.module.css";
 
 export default function HomePage() {
@@ -25,6 +26,7 @@ export default function HomePage() {
   const [loginAction, setLoginAction] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [cartToast, setCartToast] = useState({ show: false, message: "" });
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 12,
@@ -114,7 +116,7 @@ export default function HomePage() {
     } else {
       // Add to cart logic
       console.log("Adding to cart:", productId);
-      alert("Produk ditambahkan ke keranjang!");
+      setCartToast({ show: true, message: `${productName} berhasil masuk ke keranjang.` });
     }
   };
 
@@ -349,6 +351,12 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      <CartSuccessToast
+        show={cartToast.show}
+        message={cartToast.message || "Produk ditambahkan ke keranjang"}
+        onClose={() => setCartToast(prev => ({ ...prev, show: false }))}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import BuyerNavbar from "../components/BuyerNavbar";
 import Footer from "../components/Footer";
+import CartSuccessToast from "../components/CartSuccessToast";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { products, formatPrice, getCategoryGradient } from "../data/products";
@@ -18,12 +19,12 @@ export default function ProductDetailPage() {
   
   const [quantity, setQuantity] = useState(1);
   const [selectedTab, setSelectedTab] = useState('deskripsi');
+  const [cartToast, setCartToast] = useState({ show: false, message: '' });
 
   const handleAddToCart = () => {
     if (!product) return;
     addToCart(product, quantity);
-    // Show success message or redirect
-    alert(`${product.name} berhasil ditambahkan ke keranjang!`);
+    setCartToast({ show: true, message: `${product.name} berhasil ditambahkan ke keranjang.` });
   };
 
   const handleBuyNow = () => {
@@ -349,6 +350,12 @@ export default function ProductDetailPage() {
         )}
       </div>
       <Footer />
+
+      <CartSuccessToast
+        show={cartToast.show}
+        message={cartToast.message || "Produk ditambahkan ke keranjang"}
+        onClose={() => setCartToast(prev => ({ ...prev, show: false }))}
+      />
     </div>
   );
 }
