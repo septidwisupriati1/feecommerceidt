@@ -14,6 +14,7 @@ import {
   Bars3Icon
 } from '@heroicons/react/24/outline';
 import sellerProductAPI from '../../services/sellerProductAPI';
+import CartSuccessToast from '../../components/CartSuccessToast';
 
 export default function AddProductPage() {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ export default function AddProductPage() {
     description: '',
     price: '',
     stock: '',
-    category: '',
+    category: [],
     weight: '',
     length: '',
     width: '',
@@ -37,6 +38,7 @@ export default function AddProductPage() {
   });
 
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [productToast, setProductToast] = useState({ show: false, message: '' });
 
   const categories = [
     'Elektronik',
@@ -53,6 +55,14 @@ export default function AddProductPage() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    // support multiple select for categories
+    if (name === 'category' && e.target.multiple) {
+      const values = Array.from(e.target.selectedOptions).map(o => o.value);
+      setFormData(prev => ({ ...prev, category: values }));
+      if (errors.category) setErrors(prev => ({ ...prev, category: '' }));
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -61,6 +71,17 @@ export default function AddProductPage() {
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
+  };
+
+  const handleCategoryToggle = (value) => {
+    setFormData(prev => {
+      const current = Array.isArray(prev.category) ? [...prev.category] : [];
+      const idx = current.indexOf(value);
+      if (idx === -1) current.push(value);
+      else current.splice(idx, 1);
+      return { ...prev, category: current };
+    });
+    if (errors.category) setErrors(prev => ({ ...prev, category: '' }));
   };
 
   const handleImageSelect = (e) => {
@@ -117,6 +138,8 @@ export default function AddProductPage() {
     }
 
     if (!formData.category) {
+      newErrors.category = 'Kategori harus dipilih';
+    } else if (Array.isArray(formData.category) && formData.category.length === 0) {
       newErrors.category = 'Kategori harus dipilih';
     }
 
@@ -175,8 +198,8 @@ export default function AddProductPage() {
       // Simulasi delay API
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      alert('Produk berhasil ditambahkan!');
-      navigate('/seller/product');
+      // Tampilkan toast sukses lalu navigasi setelah toast tertutup
+      setProductToast({ show: true, message: 'Produk berhasil ditambahkan!' });
     } catch (error) {
       console.error('Error creating product:', error);
       alert(error.message || 'Terjadi kesalahan saat menambahkan produk');
@@ -330,19 +353,38 @@ export default function AddProductPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Kategori <span className="text-red-600">*</span>
                       </label>
-                      <select
-                        name="category"
-                        value={formData.category}
-                        onChange={handleInputChange}
-                        className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                          errors.category ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                      >
-                        <option value="">Pilih Kategori</option>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {categories.map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
+                          <label
+                            key={cat}
+                            className="inline-flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50"
+                          >
+                            <input
+                              type="checkbox"
+                              name="category"
+                              value={cat}
+                              checked={Array.isArray(formData.category) && formData.category.includes(cat)}
+                              onChange={() => handleCategoryToggle(cat)}
+                              className="sr-only peer"
+                              aria-checked={Array.isArray(formData.category) && formData.category.includes(cat)}
+                            />
+
+                            <span className="w-5 h-5 flex items-center justify-center rounded-full border border-gray-300 transition-colors transform peer-checked:bg-blue-600 peer-checked:border-blue-600 peer-focus:ring-2 peer-focus:ring-blue-300 active:scale-95">
+                              <span className="w-2 h-2 rounded-full bg-white opacity-0 peer-checked:opacity-100 transition-opacity"></span>
+                            </span>
+
+                            <span className="text-sm select-none">{cat}</span>
+                          </label>
                         ))}
-                      </select>
+                      </div>
+                      {/* show selected as tags */}
+                      {Array.isArray(formData.category) && formData.category.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {formData.category.map(cat => (
+                            <span key={cat} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full">{cat}</span>
+                          ))}
+                        </div>
+                      )}
                       {errors.category && (
                         <p className="text-sm text-red-600 mt-1">{errors.category}</p>
                       )}
@@ -557,6 +599,14 @@ export default function AddProductPage() {
       </div>
       </div>
       <Footer />
+      <CartSuccessToast
+        show={productToast.show}
+        message={productToast.message}
+        onClose={() => {
+          setProductToast({ show: false, message: '' });
+          navigate('/seller/product');
+        }}
+      />
     </SellerSidebar>
   );
 }
