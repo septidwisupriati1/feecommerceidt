@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BuyerNavbar from "../components/BuyerNavbar";
 import Footer from "../components/Footer";
+import CartSuccessToast from "../components/CartSuccessToast";
 import { getCurrentUser } from '../services/authAPI';
 import authAPI from '../services/authAPI';
 import buyerTransactionAPI from '../services/buyerTransactionAPI';
@@ -44,6 +45,7 @@ export default function ProfilePage() {
     }
   });
   const [recentOrders, setRecentOrders] = useState([]);
+  const [profileToast, setProfileToast] = useState({ show: false, message: '' });
   
   useEffect(() => {
     const currentUser = getCurrentUser();
@@ -129,7 +131,7 @@ export default function ProfilePage() {
   const handleSave = () => {
     setProfileData({ ...editData });
     setIsEditing(false);
-    alert('Profil berhasil diperbarui!');
+    setProfileToast({ show: true, message: 'Profil berhasil diperbarui.' });
   };
 
   const handleCancel = () => {
@@ -657,6 +659,11 @@ export default function ProfilePage() {
         </div>
       </div>
       <Footer />
+      <CartSuccessToast
+        show={profileToast.show}
+        message={profileToast.message || "Profil berhasil diperbarui"}
+        onClose={() => setProfileToast(prev => ({ ...prev, show: false }))}
+      />
     </div>
   );
 }
