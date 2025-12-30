@@ -6,8 +6,9 @@ import CartSuccessToast from "../components/CartSuccessToast";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { products, formatPrice, getCategoryGradient } from "../data/products";
-import { ShoppingCartIcon, ChatBubbleLeftIcon, StarIcon } from '@heroicons/react/24/outline';
+import { ShoppingCartIcon, ChatBubbleLeftIcon, StarIcon, HeartIcon } from '@heroicons/react/24/outline';
 import { MinusIcon, PlusIcon } from '@heroicons/react/24/solid';
+import { isInWishlist, toggleWishlist } from '../utils/wishlist';
 import { useCart } from '../context/CartContext';
 
 export default function ProductDetailPage() {
@@ -25,6 +26,14 @@ export default function ProductDetailPage() {
     if (!product) return;
     addToCart(product, quantity);
     setCartToast({ show: true, message: `${product.name} berhasil ditambahkan ke keranjang.` });
+  };
+
+  const [inWishlist, setInWishlist] = useState(isInWishlist(product.id));
+
+  const handleToggleWishlist = (e) => {
+    e.stopPropagation && e.stopPropagation();
+    toggleWishlist(product.id);
+    setInWishlist(isInWishlist(product.id));
   };
 
   const handleBuyNow = () => {
@@ -205,6 +214,14 @@ export default function ProductDetailPage() {
                   >
                     BELI SEKARANG
                   </Button>
+                  <button
+                    onClick={handleToggleWishlist}
+                    className={`ml-2 inline-flex items-center justify-center px-4 h-12 rounded-md border ${inWishlist ? 'bg-red-500 text-white border-red-500' : 'bg-white text-red-600 border-gray-200'}`}
+                    title={inWishlist ? 'Hapus dari Wishlist' : 'Tambah ke Wishlist'}
+                  >
+                    <HeartIcon className="h-5 w-5 mr-2" />
+                    {inWishlist ? 'Disimpan' : 'Simpan'}
+                  </button>
                 </div>
 
                 {/* Seller Info */}

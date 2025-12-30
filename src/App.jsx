@@ -30,6 +30,7 @@ import OrderDetailPage from './pages/OrderDetailPage';
 import ChatPage from './pages/ChatPage';
 import ProfilePage from './pages/ProfilePage';
 import NotificationPage from './pages/buyer/NotificationPage';
+import WishlistPage from './pages/buyer/Wishlist';
 
 // Seller Pages
 import SellerChatPage from './pages/seller/SellerChatPage';
@@ -101,6 +102,7 @@ function App() {
           <Route path="/pesanan/:id" element={<OrderDetailPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/profil" element={<ProfilePage />} />
+          <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="/notifikasi" element={<NotificationPage />} />
           
           {/* Seller Routes */}

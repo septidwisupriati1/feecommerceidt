@@ -288,6 +288,7 @@ export default function ProfilePage() {
                     Pesan
                   </Button>
                   <Button
+                    onClick={() => navigate('/wishlist')}
                     variant="outline"
                     className="w-full justify-start"
                   >
