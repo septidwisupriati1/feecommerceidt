@@ -13,7 +13,7 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto px-0">
           <div className="w-full mb-0 relative">
             {/* Top gradient overlay */}
-            <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-gray-50 to-transparent z-10 pointer-events-none"></div>
+            <div className="absolute top-0 left-0 right-0 h-16 bg-linear-to-b from-gray-50 to-transparent z-10 pointer-events-none"></div>
             
             <iframe
               src="https://maps.google.com/maps?q=loc:-7.555972568075667, 110.85383603307423&z=17&output=embed&hl=id"
@@ -26,7 +26,7 @@ export default function Footer() {
             ></iframe>
             
             {/* Bottom gradient overlay */}
-            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-gray-50 to-transparent z-10 pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 right-0 h-16 bg-linear-to-t from-gray-50 to-transparent z-10 pointer-events-none"></div>
           </div>
         </div>
       </div>
@@ -96,7 +96,7 @@ export default function Footer() {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Hubungi Kami</h3>
             <ul className="space-y-3">
               <li className="flex items-start gap-2">
-                <MapPinIcon className="h-5 w-5 text-gray-600 flex-shrink-0 mt-1" />
+                <MapPinIcon className="h-5 w-5 text-gray-600 shrink-0 mt-1" />
                 <span className="text-gray-600 text-sm">
                   Kawasan Solo Techno Park – Solo Technopark, 
                   Jl. Mojo Klanggru, Kecamatan Kebakkramat, Kec. Jebres, 
@@ -104,13 +104,13 @@ export default function Footer() {
                 </span>
               </li>
               <li className="flex items-center gap-2">
-                <PhoneIcon className="h-5 w-5 text-gray-600 flex-shrink-0" />
+                <PhoneIcon className="h-5 w-5 text-gray-600 shrink-0" />
                 <a href="tel:+6282127166662" className="text-gray-600 hover:text-blue-600 transition-colors text-sm">
                   (+62) 21 7166662
                 </a>
               </li>
               <li className="flex items-center gap-2">
-                <EnvelopeIcon className="h-5 w-5 text-gray-600 flex-shrink-0" />
+                <EnvelopeIcon className="h-5 w-5 text-gray-600 shrink-0" />
                 <a href="mailto:info.solotechnopark@gmail.com" className="text-gray-600 hover:text-blue-600 transition-colors text-sm">
                   info.solotechnopark@gmail.com
                 </a>
