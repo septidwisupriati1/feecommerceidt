@@ -72,7 +72,7 @@ export const getDashboardPath = (user) => {
     case 'seller':
       return '/seller/dashboard';
     case 'buyer':
-      return '/buyer/dashboard';
+      return '/home';
     default:
       return '/';
   }
