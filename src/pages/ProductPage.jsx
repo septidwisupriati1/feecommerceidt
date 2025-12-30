@@ -36,6 +36,36 @@ export default function ProductPage() {
     hasPrev: false
   });
 
+  const CATEGORY_CACHE_KEY = 'categories_cache_v1';
+
+  const getLocalCategories = () => {
+    const map = new Map();
+    staticProducts.forEach(p => {
+      if (p.category_id && p.category) {
+        map.set(p.category_id, { category_id: p.category_id, name: p.category });
+      }
+    });
+    return Array.from(map.values());
+  };
+
+  const loadCachedCategories = () => {
+    try {
+      const cached = JSON.parse(localStorage.getItem(CATEGORY_CACHE_KEY));
+      if (Array.isArray(cached) && cached.length) return cached;
+    } catch (err) {
+      console.warn('Category cache parse error', err);
+    }
+    return null;
+  };
+
+  const saveCachedCategories = (cats) => {
+    try {
+      localStorage.setItem(CATEGORY_CACHE_KEY, JSON.stringify(cats));
+    } catch (err) {
+      console.warn('Category cache save error', err);
+    }
+  };
+
   // Fetch categories on mount
   useEffect(() => {
     fetchCategories();
@@ -59,9 +89,23 @@ export default function ProductPage() {
   }, [searchQuery]);
 
   const fetchCategories = async () => {
-    const response = await getCategories();
-    if (response.success) {
-      setCategories(response.data);
+    const localCats = getLocalCategories();
+    const cachedCats = loadCachedCategories();
+    if (cachedCats?.length) {
+      setCategories(cachedCats);
+    } else {
+      setCategories(localCats);
+    }
+
+    try {
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('categories-timeout')), 2000));
+      const response = await Promise.race([getCategories(), timeoutPromise]);
+      if (response?.success && Array.isArray(response.data)) {
+        setCategories(response.data);
+        saveCachedCategories(response.data);
+      }
+    } catch (err) {
+      console.warn('Using fallback categories', err.message);
     }
   };
 
@@ -70,7 +114,7 @@ export default function ProductPage() {
 
     // Offline/static fallback: gunakan data lokal agar gambar dan ID konsisten
     const filtered = staticProducts
-      .filter(p => selectedCategory === 'all' || p.category === selectedCategory)
+      .filter(p => selectedCategory === 'all' || p.category_id === Number(selectedCategory))
       .filter(p => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()))
       .filter(p => !minPrice || p.price >= parseInt(minPrice))
       .filter(p => !maxPrice || p.price <= parseInt(maxPrice));
@@ -99,7 +143,7 @@ export default function ProductPage() {
       primary_image: p.image,
       stock: p.stock ?? 100,
       total_views: p.views || 0,
-      category: { name: p.category },
+      category: { category_id: p.category_id, name: p.category },
       seller: { store_name: "Toko" }
     }));
 

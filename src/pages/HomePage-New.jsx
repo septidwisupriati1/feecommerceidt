@@ -37,6 +37,36 @@ export default function HomePage() {
     totalPages: 1
   });
 
+  const CATEGORY_CACHE_KEY = 'categories_cache_v1';
+
+  const getLocalCategories = () => {
+    const map = new Map();
+    staticProducts.forEach(p => {
+      if (p.category_id && p.category) {
+        map.set(p.category_id, { category_id: p.category_id, name: p.category });
+      }
+    });
+    return Array.from(map.values());
+  };
+
+  const loadCachedCategories = () => {
+    try {
+      const cached = JSON.parse(localStorage.getItem(CATEGORY_CACHE_KEY));
+      if (Array.isArray(cached) && cached.length) return cached;
+    } catch (err) {
+      console.warn('Category cache parse error', err);
+    }
+    return null;
+  };
+
+  const saveCachedCategories = (cats) => {
+    try {
+      localStorage.setItem(CATEGORY_CACHE_KEY, JSON.stringify(cats));
+    } catch (err) {
+      console.warn('Category cache save error', err);
+    }
+  };
+
   // Fetch categories on mount
   useEffect(() => {
     fetchCategories();
@@ -58,12 +88,24 @@ export default function HomePage() {
   }, [pagination.page, selectedCategory, searchQuery]);
 
   const fetchCategories = async () => {
-    const response = await getCategories();
-    if (response.success) {
-      setCategories([
-        { category_id: 'all', name: 'Semua' },
-        ...response.data
-      ]);
+    const localCats = getLocalCategories();
+    const cachedCats = loadCachedCategories();
+    if (cachedCats?.length) {
+      setCategories([{ category_id: 'all', name: 'Semua' }, ...cachedCats]);
+    } else {
+      setCategories([{ category_id: 'all', name: 'Semua' }, ...localCats]);
+    }
+
+    try {
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('categories-timeout')), 2000));
+      const response = await Promise.race([getCategories(), timeoutPromise]);
+      if (response?.success && Array.isArray(response.data)) {
+        const merged = [{ category_id: 'all', name: 'Semua' }, ...response.data];
+        setCategories(merged);
+        saveCachedCategories(response.data);
+      }
+    } catch (err) {
+      console.warn('Using fallback categories', err.message);
     }
   };
 
@@ -72,7 +114,7 @@ export default function HomePage() {
 
     // Offline fallback: gunakan data statis lokal agar ID dan gambar konsisten dengan halaman detail
     const filtered = staticProducts
-      .filter(p => selectedCategory === 'all' || p.category === selectedCategory)
+      .filter(p => selectedCategory === 'all' || p.category_id === Number(selectedCategory))
       .filter(p => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / pagination.limit));
@@ -88,7 +130,8 @@ export default function HomePage() {
       total_reviews: p.reviews,
       primary_image: p.image,
       stock: p.stock ?? 100,
-      category_name: p.category
+      category_name: p.category,
+      category: { category_id: p.category_id, name: p.category }
     }));
 
     setProducts(mapped);
@@ -185,9 +228,9 @@ export default function HomePage() {
               {categories.map(cat => (
                 <button
                   key={cat.category_id || cat.name}
-                  className={`${styles.filterBtn} ${selectedCategory === (cat.category_id || cat.name) ? styles.active : ''}`}
+                  className={`${styles.filterBtn} ${selectedCategory === (cat.category_id?.toString() || cat.name) ? styles.active : ''}`}
                   onClick={() => {
-                    setSelectedCategory(cat.category_id || cat.name);
+                    setSelectedCategory((cat.category_id || cat.name).toString());
                     setPagination(prev => ({ ...prev, page: 1 }));
                   }}
                 >

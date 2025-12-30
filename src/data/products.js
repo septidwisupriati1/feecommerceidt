@@ -18,6 +18,7 @@ export const products = [
     location: "Jakarta Pusat",
     image: androidImg,
     badge: { text: "-25%", color: "bg-red-500" },
+    category_id: 1,
     category: "Elektronik",
     condition: "Baru",
     shipping: "Gratis Ongkir"
@@ -34,6 +35,7 @@ export const products = [
     location: "Bandung",
     image: kemejaImg,
     badge: { text: "Best Seller", color: "bg-yellow-400 text-gray-900" },
+    category_id: 2,
     category: "Fashion",
     condition: "Baru",
     shipping: "Same Day"
@@ -50,6 +52,7 @@ export const products = [
     location: "Surabaya",
     image: laptopImg,
     badge: { text: "New", color: "bg-blue-500" },
+    category_id: 1,
     category: "Elektronik",
     condition: "Baru",
     shipping: "Gratis Ongkir"
@@ -66,6 +69,7 @@ export const products = [
     location: "Semarang",
     image: smartwatchImg,
     badge: { text: "Flash Sale", color: "bg-purple-500" },
+    category_id: 1,
     category: "Elektronik",
     condition: "Baru",
     shipping: "Regular"
@@ -82,6 +86,7 @@ export const products = [
     location: "Jakarta Selatan",
     image: sepatuImg,
     badge: { text: "-27%", color: "bg-red-500" },
+    category_id: 2,
     category: "Fashion",
     condition: "Baru",
     shipping: "Gratis Ongkir"
@@ -98,6 +103,7 @@ export const products = [
     location: "Yogyakarta",
     image: androidImg,
     badge: { text: "Popular", color: "bg-green-500" },
+    category_id: 1,
     category: "Elektronik",
     condition: "Baru",
     shipping: "Same Day"
@@ -114,6 +120,7 @@ export const products = [
     location: "Malang",
     image: kemejaImg,
     badge: { text: "Official Store", color: "bg-blue-600" },
+    category_id: 2,
     category: "Fashion",
     condition: "Baru",
     shipping: "Instant"
@@ -130,6 +137,7 @@ export const products = [
     location: "Surabaya",
     image: laptopImg,
     badge: { text: "-37%", color: "bg-red-500" },
+    category_id: 1,
     category: "Elektronik",
     condition: "Baru",
     shipping: "Gratis Ongkir"
@@ -146,6 +154,7 @@ export const products = [
     location: "Bali",
     image: sepatuImg,
     badge: { text: "Trending", color: "bg-pink-500" },
+    category_id: 2,
     category: "Fashion",
     condition: "Baru",
     shipping: "Regular"
@@ -162,6 +171,7 @@ export const products = [
     location: "Jakarta Barat",
     image: smartwatchImg,
     badge: { text: "Flash Sale", color: "bg-purple-500" },
+    category_id: 1,
     category: "Elektronik",
     condition: "Baru",
     shipping: "Same Day"
@@ -178,6 +188,7 @@ export const products = [
     location: "Medan",
     image: smartwatchImg,
     badge: { text: "New Arrival", color: "bg-indigo-500" },
+    category_id: 2,
     category: "Fashion",
     condition: "Baru",
     shipping: "Gratis Ongkir"
@@ -194,6 +205,7 @@ export const products = [
     location: "Bandung",
     image: laptopImg,
     badge: { text: "Best Choice", color: "bg-yellow-400 text-gray-900" },
+    category_id: 1,
     category: "Elektronik",
     condition: "Baru",
     shipping: "Instant"
