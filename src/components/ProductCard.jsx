@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShoppingCart, MessageCircle, Star } from "lucide-react";
+import { ShoppingCart, MessageCircle, Star, Heart } from "lucide-react";
 import { isAuthenticated } from "../utils/auth";
 import styles from "./ProductCard.module.css";
+import { isInWishlist, addToWishlist, removeFromWishlist, toggleWishlist } from "../utils/wishlist";
 
 export default function ProductCard({ product, onCartClick, onChatClick, onLoginRequired }) {
   const navigate = useNavigate();
@@ -38,6 +39,19 @@ export default function ProductCard({ product, onCartClick, onChatClick, onLogin
     } else {
       onCartClick && onCartClick(product.id);
     }
+  };
+
+  const [liked, setLiked] = useState(false);
+
+  useEffect(() => {
+    setLiked(Boolean(product && isInWishlist(product.id)));
+  }, [product]);
+
+  const handleWishlistClick = (e) => {
+    e.stopPropagation();
+    if (!product) return;
+    const next = toggleWishlist(product.id);
+    setLiked(next.includes(product.id));
   };
 
   const handleChatClick = (e) => {
@@ -116,6 +130,13 @@ export default function ProductCard({ product, onCartClick, onChatClick, onLogin
         </div>
         
         <div className={styles.productActions}>
+          <button
+            className={`${styles.btnIcon} ${liked ? styles.btnLiked : ''}`}
+            onClick={handleWishlistClick}
+            title={liked ? "Hapus dari Wishlist" : "Tambah ke Wishlist"}
+          >
+            <Heart className={styles.icon} />
+          </button>
           <button 
             className={styles.btnIcon}
             onClick={handleCartClick}

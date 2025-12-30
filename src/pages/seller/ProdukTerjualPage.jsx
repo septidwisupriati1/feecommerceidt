@@ -18,6 +18,7 @@ import {
   ChevronRightIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
+import CartSuccessToast from '../../components/CartSuccessToast';
 
 // Generate dummy sales data based on products
 const generateSalesData = (products) => {
@@ -90,6 +91,7 @@ export default function ProdukTerjualPage() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [soldProducts, setSoldProducts] = useState([]);
+  const [toast, setToast] = useState({ show: false, message: '' });
   const itemsPerPage = 10;
 
   // Load products and generate sales data
@@ -183,10 +185,10 @@ export default function ProdukTerjualPage() {
         const salesData = generateSalesData(products);
         setSoldProducts(salesData);
         localStorage.setItem('seller_sales_data', JSON.stringify(salesData));
-        alert('Data penjualan berhasil dibuat ulang!');
+        setToast({ show: true, message: 'Data penjualan berhasil dibuat ulang!' });
         setCurrentPage(1);
       } else {
-        alert('Tidak ada produk untuk membuat data penjualan. Silakan tambahkan produk terlebih dahulu.');
+        setToast({ show: true, message: 'Tidak ada produk untuk membuat data penjualan. Silakan tambahkan produk terlebih dahulu.' });
       }
     }
   };
@@ -495,7 +497,12 @@ export default function ProdukTerjualPage() {
           </CardContent>
         </Card>
       </div>
-      <Footer />
+        <Footer />
+        <CartSuccessToast
+          show={toast.show}
+          message={toast.message}
+          onClose={() => setToast({ show: false, message: '' })}
+        />
     </SellerSidebar>
   );
 }

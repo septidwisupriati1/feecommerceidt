@@ -14,6 +14,7 @@ import {
 } from "../components/ui/select";
 import { Search, Loader2 } from "lucide-react";
 import { browseProducts, getCategories, formatCurrency } from "../services/productAPI";
+import { products as staticProducts } from "../data/products";
 
 export default function ProductPage() {
   const navigate = useNavigate();
@@ -34,6 +35,36 @@ export default function ProductPage() {
     hasNext: false,
     hasPrev: false
   });
+
+  const CATEGORY_CACHE_KEY = 'categories_cache_v1';
+
+  const getLocalCategories = () => {
+    const map = new Map();
+    staticProducts.forEach(p => {
+      if (p.category_id && p.category) {
+        map.set(p.category_id, { category_id: p.category_id, name: p.category });
+      }
+    });
+    return Array.from(map.values());
+  };
+
+  const loadCachedCategories = () => {
+    try {
+      const cached = JSON.parse(localStorage.getItem(CATEGORY_CACHE_KEY));
+      if (Array.isArray(cached) && cached.length) return cached;
+    } catch (err) {
+      console.warn('Category cache parse error', err);
+    }
+    return null;
+  };
+
+  const saveCachedCategories = (cats) => {
+    try {
+      localStorage.setItem(CATEGORY_CACHE_KEY, JSON.stringify(cats));
+    } catch (err) {
+      console.warn('Category cache save error', err);
+    }
+  };
 
   // Fetch categories on mount
   useEffect(() => {
@@ -58,29 +89,74 @@ export default function ProductPage() {
   }, [searchQuery]);
 
   const fetchCategories = async () => {
-    const response = await getCategories();
-    if (response.success) {
-      setCategories(response.data);
+    const localCats = getLocalCategories();
+    const cachedCats = loadCachedCategories();
+    if (cachedCats?.length) {
+      setCategories(cachedCats);
+    } else {
+      setCategories(localCats);
+    }
+
+    try {
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('categories-timeout')), 2000));
+      const response = await Promise.race([getCategories(), timeoutPromise]);
+      if (response?.success && Array.isArray(response.data)) {
+        setCategories(response.data);
+        saveCachedCategories(response.data);
+      }
+    } catch (err) {
+      console.warn('Using fallback categories', err.message);
     }
   };
 
   const fetchProducts = async () => {
     setLoading(true);
-    const response = await browseProducts({
-      page: pagination.page,
-      limit: pagination.limit,
-      search: searchQuery || undefined,
-      category_id: (selectedCategory && selectedCategory !== 'all') ? selectedCategory : undefined,
-      min_price: minPrice || undefined,
-      max_price: maxPrice || undefined,
-      sort_by: sortBy,
-      sort_order: sortOrder
+
+    // Offline/static fallback: gunakan data lokal agar gambar dan ID konsisten
+    const filtered = staticProducts
+      .filter(p => selectedCategory === 'all' || p.category_id === Number(selectedCategory))
+      .filter(p => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      .filter(p => !minPrice || p.price >= parseInt(minPrice))
+      .filter(p => !maxPrice || p.price <= parseInt(maxPrice));
+
+    // Sorting sederhana sesuai sortBy/sortOrder
+    const sorted = [...filtered].sort((a, b) => {
+      const order = sortOrder === 'asc' ? 1 : -1;
+      if (sortBy === 'price') return order * (a.price - b.price);
+      if (sortBy === 'rating_average' || sortBy === 'rating') return order * ((a.rating || 0) - (b.rating || 0));
+      if (sortBy === 'total_views') return order * ((a.views || 0) - (b.views || 0));
+      // default created_at not available; keep original order
+      return 0;
     });
 
-    if (response.success) {
-      setProducts(response.data);
-      setPagination(response.pagination);
-    }
+    const pageSize = pagination.limit;
+    const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+    const currentPage = Math.min(pagination.page, totalPages);
+    const start = (currentPage - 1) * pageSize;
+    const paged = sorted.slice(start, start + pageSize);
+
+    const mapped = paged.map(p => ({
+      ...p,
+      product_id: p.id,
+      rating_average: p.rating,
+      total_reviews: p.reviews,
+      primary_image: p.image,
+      stock: p.stock ?? 100,
+      total_views: p.views || 0,
+      category: { category_id: p.category_id, name: p.category },
+      seller: { store_name: "Toko" }
+    }));
+
+    setProducts(mapped);
+    setPagination(prev => ({
+      ...prev,
+      page: currentPage,
+      total: sorted.length,
+      totalPages,
+      hasNext: currentPage < totalPages,
+      hasPrev: currentPage > 1
+    }));
+
     setLoading(false);
   };
 

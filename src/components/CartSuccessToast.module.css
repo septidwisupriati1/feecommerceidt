@@ -1,0 +1,104 @@
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%) translateY(120%);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 260px;
+  max-width: 90vw;
+  padding: 0.9rem 1rem;
+  background: linear-gradient(135deg, #ecfdf3 0%, #e0f2fe 100%);
+  border: 1px solid #bbf7d0;
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.15);
+  opacity: 0;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  z-index: 120;
+}
+
+.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.iconWrap {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  background: #dcfce7;
+  display: grid;
+  place-items: center;
+}
+
+.icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: #16a34a;
+}
+
+.textWrap {
+  flex: 1;
+}
+
+.title {
+  font-weight: 700;
+  color: #065f46;
+  margin-bottom: 0.15rem;
+  letter-spacing: 0.01em;
+}
+
+.message {
+  color: #0f172a;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: #334155;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.2rem 0.3rem;
+  border-radius: 0.35rem;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.closeBtn:hover {
+  background: rgba(15, 23, 42, 0.08);
+  color: #0f172a;
+}
+
+.progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+  border-radius: 0 0 0.75rem 0.75rem;
+  animation: progressShrink 2.5s linear forwards;
+}
+
+@keyframes progressShrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .toast {
+    left: 50%;
+    bottom: 1rem;
+    padding: 0.8rem 0.9rem;
+  }
+
+  .message {
+    font-size: 0.9rem;
+  }
+}

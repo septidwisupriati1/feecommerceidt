@@ -5,6 +5,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { useCart } from "../context/CartContext";
 import { formatPrice, getCategoryGradient } from "../data/products";
+import { getProductImageUrl, handleImageError } from "../utils/imageHelper";
 import { TrashIcon, MinusIcon, PlusIcon } from '@heroicons/react/24/outline';
 
 export default function CartPage() {
@@ -138,9 +139,14 @@ export default function CartPage() {
                       {/* Product Image */}
                       <div
                         onClick={() => navigate(`/produk/${item.id}`)}
-                        className={`w-24 h-24 flex-shrink-0 bg-gradient-to-br ${getCategoryGradient(item.category)} rounded-lg flex items-center justify-center cursor-pointer hover:scale-105 transition-transform`}
+                        className="w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform"
                       >
-                        <span className="text-4xl">{item.image}</span>
+                        <img 
+                          src={item.image || item.primary_image || getProductImageUrl(item.image_url)} 
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => handleImageError(e, 'https://via.placeholder.com/96x96?text=No+Image')}
+                        />
                       </div>
 
                       {/* Product Info */}

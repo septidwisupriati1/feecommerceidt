@@ -28,6 +28,7 @@ import {
   Package,
   Circle
 } from 'lucide-react';
+import CartSuccessToast from '../../components/CartSuccessToast';
 
 // Initialize dummy data for chat
 const initializeDummyChats = () => {
@@ -118,6 +119,7 @@ export default function SellerChatPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedChat, setSelectedChat] = useState(null);
   const [message, setMessage] = useState('');
+  const [toast, setToast] = useState({ show: false, message: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [chatMode, setChatMode] = useState('buyer'); // 'buyer' or 'admin'
@@ -236,7 +238,7 @@ export default function SellerChatPage() {
     
     // Prevent sending message if chat is reported
     if (selectedChat.isReported) {
-      alert('Tidak dapat mengirim pesan. Percakapan ini telah dilaporkan.');
+      setToast({ show: true, message: 'Tidak dapat mengirim pesan. Percakapan ini telah dilaporkan.' });
       return;
     }
 
@@ -302,7 +304,7 @@ export default function SellerChatPage() {
       }, 2500);
     } catch (error) {
       console.error('Error sending message:', error);
-      alert('Gagal mengirim pesan. Silakan coba lagi.');
+      setToast({ show: true, message: 'Gagal mengirim pesan. Silakan coba lagi.' });
     } finally {
       setSendingMessage(false);
     }
@@ -714,7 +716,7 @@ export default function SellerChatPage() {
                                   setAllChats(chatsData);
                                   setSelectedChat({ ...selectedChat, isReported: true });
                                   
-                                  alert('Laporan telah dikirim. Tim kami akan meninjau percakapan ini.');
+                                  setToast({ show: true, message: 'Laporan telah dikirim. Tim kami akan meninjau percakapan ini.' });
                                   setShowOptionsMenu(false);
                                 }
                               }}
@@ -927,6 +929,11 @@ export default function SellerChatPage() {
         </Card>
       </div>
       <Footer />
+      <CartSuccessToast
+        show={toast.show}
+        message={toast.message}
+        onClose={() => setToast({ show: false, message: '' })}
+      />
     </SellerSidebar>
   );
 }

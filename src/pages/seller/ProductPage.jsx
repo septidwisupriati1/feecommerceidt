@@ -20,6 +20,7 @@ import {
   CheckCircleIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
+import CartSuccessToast from '../../components/CartSuccessToast';
 import {
   getProducts,
   getCategories,
@@ -40,6 +41,7 @@ export default function ProductPage() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [toast, setToast] = useState({ show: false, message: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
@@ -180,7 +182,7 @@ export default function ProductPage() {
       const updatedProducts = localProducts.filter(p => p.id !== productId);
       localStorage.setItem('seller_products', JSON.stringify(updatedProducts));
       
-      alert('Produk berhasil dihapus');
+      setToast({ show: true, message: 'Produk berhasil dihapus' });
       fetchProducts();
 
       // TODO: Uncomment when backend ready
@@ -188,14 +190,14 @@ export default function ProductPage() {
       const response = await deleteProduct(productId);
       
       if (response.success) {
-        alert('Produk berhasil dihapus');
+        setToast({ show: true, message: 'Produk berhasil dihapus' });
         fetchProducts();
       } else {
-        alert('Gagal menghapus produk: ' + response.error);
+        setToast({ show: true, message: 'Gagal menghapus produk: ' + response.error });
       }
       */
     } catch (err) {
-      alert('Error: ' + err.message);
+      setToast({ show: true, message: 'Error: ' + err.message });
     } finally {
       setLoading(false);
     }
@@ -569,6 +571,11 @@ export default function ProductPage() {
         )}
       </div>
       <Footer />
+      <CartSuccessToast
+        show={toast.show}
+        message={toast.message}
+        onClose={() => setToast({ show: false, message: '' })}
+      />
     </SellerSidebar>
   );
 }

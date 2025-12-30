@@ -12,11 +12,15 @@ import {
 import { isAuthenticated } from "../utils/auth";
 import { browseProducts, getCategories } from "../services/productAPI";
 import { getImageUrl } from "../utils/imageHelper";
+import { useCart } from "../context/CartContext";
 import BuyerNavbar from "../components/BuyerNavbar";
+import CartSuccessToast from "../components/CartSuccessToast";
+import { products as staticProducts } from "../data/products";
 import styles from "./HomePage.module.css";
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,12 +29,43 @@ export default function HomePage() {
   const [loginAction, setLoginAction] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [cartToast, setCartToast] = useState({ show: false, message: "" });
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 12,
     total: 0,
     totalPages: 1
   });
+
+  const CATEGORY_CACHE_KEY = 'categories_cache_v1';
+
+  const getLocalCategories = () => {
+    const map = new Map();
+    staticProducts.forEach(p => {
+      if (p.category_id && p.category) {
+        map.set(p.category_id, { category_id: p.category_id, name: p.category });
+      }
+    });
+    return Array.from(map.values());
+  };
+
+  const loadCachedCategories = () => {
+    try {
+      const cached = JSON.parse(localStorage.getItem(CATEGORY_CACHE_KEY));
+      if (Array.isArray(cached) && cached.length) return cached;
+    } catch (err) {
+      console.warn('Category cache parse error', err);
+    }
+    return null;
+  };
+
+  const saveCachedCategories = (cats) => {
+    try {
+      localStorage.setItem(CATEGORY_CACHE_KEY, JSON.stringify(cats));
+    } catch (err) {
+      console.warn('Category cache save error', err);
+    }
+  };
 
   // Fetch categories on mount
   useEffect(() => {
@@ -53,34 +88,60 @@ export default function HomePage() {
   }, [pagination.page, selectedCategory, searchQuery]);
 
   const fetchCategories = async () => {
-    const response = await getCategories();
-    if (response.success) {
-      setCategories([
-        { category_id: 'all', name: 'Semua' },
-        ...response.data
-      ]);
+    const localCats = getLocalCategories();
+    const cachedCats = loadCachedCategories();
+    if (cachedCats?.length) {
+      setCategories([{ category_id: 'all', name: 'Semua' }, ...cachedCats]);
+    } else {
+      setCategories([{ category_id: 'all', name: 'Semua' }, ...localCats]);
+    }
+
+    try {
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('categories-timeout')), 2000));
+      const response = await Promise.race([getCategories(), timeoutPromise]);
+      if (response?.success && Array.isArray(response.data)) {
+        const merged = [{ category_id: 'all', name: 'Semua' }, ...response.data];
+        setCategories(merged);
+        saveCachedCategories(response.data);
+      }
+    } catch (err) {
+      console.warn('Using fallback categories', err.message);
     }
   };
 
   const fetchProducts = async () => {
     setLoading(true);
-    
-    const params = {
-      page: pagination.page,
-      limit: pagination.limit,
-      search: searchQuery || undefined,
-      category_id: selectedCategory !== 'all' ? selectedCategory : undefined,
-      sort_by: 'created_at',
-      sort_order: 'desc'
-    };
 
-    const response = await browseProducts(params);
-    
-    if (response.success) {
-      setProducts(response.data);
-      setPagination(response.pagination);
-    }
-    
+    // Offline fallback: gunakan data statis lokal agar ID dan gambar konsisten dengan halaman detail
+    const filtered = staticProducts
+      .filter(p => selectedCategory === 'all' || p.category_id === Number(selectedCategory))
+      .filter(p => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / pagination.limit));
+    const currentPage = Math.min(pagination.page, totalPages);
+    const start = (currentPage - 1) * pagination.limit;
+    const paged = filtered.slice(start, start + pagination.limit);
+
+    const mapped = paged.map(p => ({
+      ...p,
+      id: p.id,
+      product_id: p.id,
+      rating_average: p.rating,
+      total_reviews: p.reviews,
+      primary_image: p.image,
+      stock: p.stock ?? 100,
+      category_name: p.category,
+      category: { category_id: p.category_id, name: p.category }
+    }));
+
+    setProducts(mapped);
+    setPagination(prev => ({
+      ...prev,
+      total: filtered.length,
+      totalPages,
+      page: currentPage
+    }));
+
     setLoading(false);
   };
 
@@ -107,14 +168,13 @@ export default function HomePage() {
     return stars;
   };
 
-  const handleCartClick = (productId, productName) => {
+  const handleCartClick = (product) => {
     if (!isAuthenticated()) {
-      setLoginAction(`menambahkan "${productName}" ke keranjang`);
+      setLoginAction(`menambahkan "${product.name}" ke keranjang`);
       setShowLoginModal(true);
     } else {
-      // Add to cart logic
-      console.log("Adding to cart:", productId);
-      alert("Produk ditambahkan ke keranjang!");
+      addToCart(product, 1);
+      setCartToast({ show: true, message: `${product.name} berhasil masuk ke keranjang.` });
     }
   };
 
@@ -168,9 +228,9 @@ export default function HomePage() {
               {categories.map(cat => (
                 <button
                   key={cat.category_id || cat.name}
-                  className={`${styles.filterBtn} ${selectedCategory === (cat.category_id || cat.name) ? styles.active : ''}`}
+                  className={`${styles.filterBtn} ${selectedCategory === (cat.category_id?.toString() || cat.name) ? styles.active : ''}`}
                   onClick={() => {
-                    setSelectedCategory(cat.category_id || cat.name);
+                    setSelectedCategory((cat.category_id || cat.name).toString());
                     setPagination(prev => ({ ...prev, page: 1 }));
                   }}
                 >
@@ -186,7 +246,7 @@ export default function HomePage() {
             </div>
           ) : products.length > 0 ? (
             <div className={styles.productsGrid}>
-              {products.map(product => (
+              {products.map((product) => (
                 <div 
                   key={product.product_id} 
                   className={styles.productCard}
@@ -195,27 +255,15 @@ export default function HomePage() {
                     className={styles.productImageContainer}
                     onClick={() => handleProductClick(product.product_id)}
                   >
-                    {product.primary_image ? (
-                      <img 
-                        src={getImageUrl(product.primary_image)} 
-                        alt={product.name}
-                        className={styles.productImage}
-                        onError={(e) => {
-                          console.log('Image load error:', product.primary_image);
-                          e.target.src = 'https://via.placeholder.com/400x400?text=No+Image';
-                        }}
-                      />
-                    ) : (
-                      <div className={styles.productImage} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: '#f3f4f6',
-                        fontSize: '4rem'
-                      }}>
-                        🛍️
-                      </div>
-                    )}
+                    <img 
+                      src={(product.primary_image || '').startsWith('http') ? product.primary_image : (product.primary_image || 'https://via.placeholder.com/400x400?text=No+Image')}
+                      alt={product.name}
+                      className={styles.productImage}
+                      onError={(e) => {
+                        console.log('Image load error:', product.primary_image);
+                        e.currentTarget.src = 'https://via.placeholder.com/400x400?text=No+Image';
+                      }}
+                    />
                     {product.stock === 0 && (
                       <div className={styles.productBadge}>Habis</div>
                     )}
@@ -245,7 +293,7 @@ export default function HomePage() {
                         className={styles.btnIcon}
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleCartClick(product.product_id, product.name);
+                          handleCartClick(product);
                         }}
                         title="Tambah ke Keranjang"
                       >
@@ -349,6 +397,12 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      <CartSuccessToast
+        show={cartToast.show}
+        message={cartToast.message || "Produk ditambahkan ke keranjang"}
+        onClose={() => setCartToast(prev => ({ ...prev, show: false }))}
+      />
     </div>
   );
 }

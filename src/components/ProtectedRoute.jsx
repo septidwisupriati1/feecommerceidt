@@ -44,8 +44,8 @@ export default function ProtectedRoute({
       console.log('🔄 [ProtectedRoute] Redirecting to seller dashboard');
       return <Navigate to="/seller/dashboard" replace />;
     } else if (hasRole('buyer')) {
-      console.log('🔄 [ProtectedRoute] Redirecting to buyer dashboard');
-      return <Navigate to="/buyer/dashboard" replace />;
+      console.log('🔄 [ProtectedRoute] Redirecting buyer to home');
+      return <Navigate to="/home" replace />;
     }
     
     // If no matching role, redirect to login

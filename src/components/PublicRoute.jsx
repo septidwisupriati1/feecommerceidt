@@ -16,7 +16,8 @@ export default function PublicRoute({ children }) {
     } else if (hasRole('seller')) {
       return <Navigate to="/seller/dashboard" replace />;
     } else if (hasRole('buyer')) {
-      return <Navigate to="/buyer/dashboard" replace />;
+      // Send buyers to main home, not buyer dashboard
+      return <Navigate to="/home" replace />;
     }
   }
 
