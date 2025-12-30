@@ -21,7 +21,8 @@ export default function DashboardRouter() {
   } else if (hasRole('seller')) {
     return <Navigate to="/seller/dashboard" replace />;
   } else if (hasRole('buyer')) {
-    return <Navigate to="/" replace />;
+    // Send buyers to the main home instead of root to avoid redirect loop
+    return <Navigate to="/home" replace />;
   }
 
   // If role not recognized, redirect to login
