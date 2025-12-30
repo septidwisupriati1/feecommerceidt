@@ -29,6 +29,7 @@ import {
   getStatusLabel,
   getStatusColor
 } from '../../services/sellerReviewAPI';
+import CartSuccessToast from '../../components/CartSuccessToast';
 
 export default function UlasanPage() {
   const navigate = useNavigate();
@@ -39,6 +40,7 @@ export default function UlasanPage() {
   const [sortBy, setSortBy] = useState('latest');
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [blockedReviews, setBlockedReviews] = useState([]);
+    const [toast, setToast] = useState({ show: false, message: '' });
   
   // State for API data
   const [reviews, setReviews] = useState([]);
@@ -151,12 +153,12 @@ export default function UlasanPage() {
         await new Promise(resolve => setTimeout(resolve, 500));
         // Add review ID to blocked list
         setBlockedReviews(prev => [...prev, reviewId]);
-        alert(`Pengguna "${customerName}" berhasil diblokir.\n\nMereka tidak akan bisa memberikan ulasan pada produk Anda lagi.`);
+        setToast({ show: true, message: `Pengguna "${customerName}" berhasil diblokir.\n\nMereka tidak akan bisa memberikan ulasan pada produk Anda lagi.` });
         setOpenDropdownId(null);
         // Refresh reviews
         // fetchReviews();
       } catch (error) {
-        alert('Gagal memblokir pengguna. Silakan coba lagi.');
+        setToast({ show: true, message: 'Gagal memblokir pengguna. Silakan coba lagi.' });
       }
     }
   };
@@ -170,12 +172,12 @@ export default function UlasanPage() {
       try {
         // Simulate API call - replace with actual API
         await new Promise(resolve => setTimeout(resolve, 500));
-        alert(`Ulasan dari "${customerName}" berhasil dihapus.`);
+        setToast({ show: true, message: `Ulasan dari "${customerName}" berhasil dihapus.` });
         // Refresh reviews
         fetchReviews();
         setOpenDropdownId(null);
       } catch (error) {
-        alert('Gagal menghapus ulasan. Silakan coba lagi.');
+        setToast({ show: true, message: 'Gagal menghapus ulasan. Silakan coba lagi.' });
       }
     }
   };
@@ -213,18 +215,16 @@ export default function UlasanPage() {
         try {
           // Simulate API call - replace with actual API
           await new Promise(resolve => setTimeout(resolve, 500));
-          alert(
-            `Laporan berhasil dikirim!\n\nTim kami akan meninjau ulasan ini dalam 1-2 hari kerja. Terima kasih atas laporan Anda.`
-          );
+          setToast({ show: true, message: `Laporan berhasil dikirim!\n\nTim kami akan meninjau ulasan ini dalam 1-2 hari kerja. Terima kasih atas laporan Anda.` });
           // Refresh reviews
           fetchReviews();
           setOpenDropdownId(null);
         } catch (error) {
-          alert('Gagal mengirim laporan. Silakan coba lagi.');
+          setToast({ show: true, message: 'Gagal mengirim laporan. Silakan coba lagi.' });
         }
       }
     } else if (selectedReason !== null) {
-      alert('Pilihan tidak valid. Silakan pilih nomor 1-' + reasons.length);
+      setToast({ show: true, message: 'Pilihan tidak valid. Silakan pilih nomor 1-' + reasons.length });
     }
   };
 
@@ -283,13 +283,13 @@ export default function UlasanPage() {
           console.log('Saved reply to localStorage:', reviewId, replyText.trim());
           console.log('All local replies:', localReplies);
           
-          alert(existingReply ? 'Balasan berhasil diupdate!' : 'Balasan berhasil dikirim!');
+          setToast({ show: true, message: existingReply ? 'Balasan berhasil diupdate!' : 'Balasan berhasil dikirim!' });
           fetchStats(); // Refresh stats
         } else {
-          alert('Gagal mengirim balasan: ' + result.message);
+          setToast({ show: true, message: 'Gagal mengirim balasan: ' + result.message });
         }
       } catch (err) {
-        alert('Terjadi kesalahan: ' + err.message);
+        setToast({ show: true, message: 'Terjadi kesalahan: ' + err.message });
       }
     }
   };
@@ -967,6 +967,11 @@ export default function UlasanPage() {
         )}
       </div>
       <Footer />
+      <CartSuccessToast
+        show={toast.show}
+        message={toast.message}
+        onClose={() => setToast({ show: false, message: '' })}
+      />
     </SellerSidebar>
   );
 }

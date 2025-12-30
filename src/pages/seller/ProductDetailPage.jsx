@@ -19,6 +19,7 @@ import {
   TruckIcon,
   Bars3Icon
 } from '@heroicons/react/24/outline';
+import CartSuccessToast from '../../components/CartSuccessToast';
 import { getProductImageUrl, handleImageError } from '../../utils/imageHelper';
 import {
   formatCurrency,
@@ -35,6 +36,8 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [toast, setToast] = useState({ show: false, message: '' });
+  const [navigateAfterToast, setNavigateAfterToast] = useState(false);
 
   useEffect(() => {
     loadProduct();
@@ -71,11 +74,11 @@ export default function ProductDetailPage() {
       );
       localStorage.setItem('seller_products', JSON.stringify(updatedProducts));
       
-      alert('Produk berhasil dihapus!');
-      navigate('/seller/product');
+      setNavigateAfterToast(true);
+      setToast({ show: true, message: 'Produk berhasil dihapus!' });
     } catch (error) {
       console.error('Error deleting product:', error);
-      alert('Terjadi kesalahan saat menghapus produk');
+      setToast({ show: true, message: 'Terjadi kesalahan saat menghapus produk' });
     }
   };
 
@@ -95,11 +98,11 @@ export default function ProductDetailPage() {
         };
         localStorage.setItem('seller_products', JSON.stringify(products));
         setProduct(products[productIndex]);
-        alert(`Produk berhasil ${newStatus === 'active' ? 'diaktifkan' : 'dinonaktifkan'}!`);
+        setToast({ show: true, message: `Produk berhasil ${newStatus === 'active' ? 'diaktifkan' : 'dinonaktifkan'}!` });
       }
     } catch (error) {
       console.error('Error toggling status:', error);
-      alert('Terjadi kesalahan saat mengubah status produk');
+      setToast({ show: true, message: 'Terjadi kesalahan saat mengubah status produk' });
     }
   };
 
@@ -468,6 +471,15 @@ export default function ProductDetailPage() {
         </div>
       </div>
       <Footer />
+      <CartSuccessToast
+        show={toast.show}
+        message={toast.message}
+        onClose={() => {
+          setToast({ show: false, message: '' });
+          if (navigateAfterToast) navigate('/seller/product');
+          setNavigateAfterToast(false);
+        }}
+      />
     </SellerSidebar>
   );
 }

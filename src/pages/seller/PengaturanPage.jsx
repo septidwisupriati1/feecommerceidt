@@ -14,6 +14,7 @@ import {
   EyeIcon,
   EyeSlashIcon
 } from '@heroicons/react/24/outline';
+import CartSuccessToast from '../../components/CartSuccessToast';
 
 export default function PengaturanPage() {
   const navigate = useNavigate();
@@ -56,36 +57,28 @@ export default function PengaturanPage() {
 
   const handleTokoSubmit = (e) => {
     e.preventDefault();
-    alert('Pengaturan toko berhasil disimpan!\n\n' +
-          `Nama Toko: ${tokoData.storeName}\n` +
-          `Email: ${tokoData.storeEmail}\n` +
-          `Telepon: ${tokoData.storePhone}`
-    );
+    setToast({ show: true, message: `Pengaturan toko berhasil disimpan!\nNama: ${tokoData.storeName}\nEmail: ${tokoData.storeEmail}` });
   };
 
   const handleProfileSubmit = (e) => {
     e.preventDefault();
-    alert('Profil berhasil diperbarui!\n\n' +
-          `Nama: ${profileData.fullName}\n` +
-          `Email: ${profileData.email}\n` +
-          `Telepon: ${profileData.phone}`
-    );
+    setToast({ show: true, message: `Profil berhasil diperbarui!\nNama: ${profileData.fullName}\nEmail: ${profileData.email}` });
   };
 
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
     
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert('Password baru dan konfirmasi password tidak cocok!');
+      setToast({ show: true, message: 'Password baru dan konfirmasi password tidak cocok!' });
       return;
     }
 
     if (passwordData.newPassword.length < 8) {
-      alert('Password minimal 8 karakter!');
+      setToast({ show: true, message: 'Password minimal 8 karakter!' });
       return;
     }
 
-    alert('Password berhasil diubah!\n\nSilakan login kembali dengan password baru.');
+    setToast({ show: true, message: 'Password berhasil diubah! Silakan login kembali dengan password baru.' });
     setPasswordData({
       oldPassword: '',
       newPassword: '',
@@ -96,16 +89,18 @@ export default function PengaturanPage() {
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      alert(`Logo toko akan diupload: ${file.name}`);
+      setToast({ show: true, message: `Logo toko akan diupload: ${file.name}` });
     }
   };
 
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      alert(`Foto profil akan diupload: ${file.name}`);
+      setToast({ show: true, message: `Foto profil akan diupload: ${file.name}` });
     }
   };
+
+  const [toast, setToast] = useState({ show: false, message: '' });
 
   return (
     <SellerSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen}>
@@ -620,6 +615,11 @@ export default function PengaturanPage() {
         </div>
       </div>
       <Footer />
+      <CartSuccessToast
+        show={toast.show}
+        message={toast.message}
+        onClose={() => setToast({ show: false, message: '' })}
+      />
     </SellerSidebar>
   );
 }

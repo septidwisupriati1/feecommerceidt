@@ -13,6 +13,7 @@ import {
   InformationCircleIcon,
   Bars3Icon
 } from '@heroicons/react/24/outline';
+import CartSuccessToast from '../../components/CartSuccessToast';
 
 export default function EditProductPage() {
   const navigate = useNavigate();
@@ -38,6 +39,8 @@ export default function EditProductPage() {
   });
 
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [toast, setToast] = useState({ show: false, message: '' });
+  const [navigateAfterToast, setNavigateAfterToast] = useState(false);
 
   const categories = [
     'Elektronik',
@@ -113,13 +116,13 @@ export default function EditProductPage() {
     const files = Array.from(e.target.files);
     
     if (imagePreviews.length + files.length > 5) {
-      alert('Maksimal 5 gambar');
+      setToast({ show: true, message: 'Maksimal 5 gambar' });
       return;
     }
 
     files.forEach(file => {
       if (file.size > 2 * 1024 * 1024) {
-        alert(`File ${file.name} terlalu besar. Maksimal 2MB`);
+        setToast({ show: true, message: `File ${file.name} terlalu besar. Maksimal 2MB` });
         return;
       }
 
@@ -159,13 +162,13 @@ export default function EditProductPage() {
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
     
     if (imagePreviews.length + imageFiles.length > 5) {
-      alert('Maksimal 5 gambar');
+      setToast({ show: true, message: 'Maksimal 5 gambar' });
       return;
     }
 
     imageFiles.forEach(file => {
       if (file.size > 2 * 1024 * 1024) {
-        alert(`File ${file.name} terlalu besar. Maksimal 2MB`);
+        setToast({ show: true, message: `File ${file.name} terlalu besar. Maksimal 2MB` });
         return;
       }
 
@@ -220,7 +223,7 @@ export default function EditProductPage() {
     e.preventDefault();
 
     if (!validateForm()) {
-      alert('Mohon lengkapi semua field yang wajib diisi');
+      setToast({ show: true, message: 'Mohon lengkapi semua field yang wajib diisi' });
       return;
     }
 
@@ -260,11 +263,11 @@ export default function EditProductPage() {
       // Simulasi delay API
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      alert('Produk berhasil diperbarui!');
-      navigate('/seller/product');
+      setToast({ show: true, message: 'Produk berhasil diperbarui!' });
+      setNavigateAfterToast(true);
     } catch (error) {
       console.error('Error updating product:', error);
-      alert(error.message || 'Terjadi kesalahan saat memperbarui produk');
+      setToast({ show: true, message: error.message || 'Terjadi kesalahan saat memperbarui produk' });
     } finally {
       setLoading(false);
     }
@@ -720,6 +723,17 @@ export default function EditProductPage() {
         </div>
       </div>
       <Footer />
+      <CartSuccessToast
+        show={toast.show}
+        message={toast.message}
+        onClose={() => {
+          setToast({ show: false, message: '' });
+          if (navigateAfterToast) {
+            setNavigateAfterToast(false);
+            navigate('/seller/product');
+          }
+        }}
+      />
     </SellerSidebar>
   );
 }

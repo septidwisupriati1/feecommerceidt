@@ -19,6 +19,7 @@ import {
   ClockIcon,
   BanknotesIcon
 } from '@heroicons/react/24/outline';
+import CartSuccessToast from '../../components/CartSuccessToast';
 
 export default function PengirimanPage() {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ export default function PengirimanPage() {
     coverageArea: '',
     description: ''
   });
+  const [toast, setToast] = useState({ show: false, message: '' });
 
   // Update data layanan pengiriman menggunakan COURIERS dari data
   const [shippingServices, setShippingServices] = useState([
@@ -142,13 +144,13 @@ export default function PengirimanPage() {
 
   const handleAddService = (e) => {
     e.preventDefault();
-    alert('Layanan pengiriman baru akan ditambahkan:\n' +
+    setToast({ show: true, message: 'Layanan pengiriman baru akan ditambahkan:\n' +
           `Kurir: ${formData.courierName}\n` +
           `Layanan: ${formData.serviceName}\n` +
           `Estimasi: ${formData.estimationDays} hari\n` +
           `Harga: Rp ${formData.price}\n` +
           `Area: ${formData.coverageArea}`
-    );
+    });
     setShowAddModal(false);
     setFormData({
       courierName: '',
@@ -161,16 +163,16 @@ export default function PengirimanPage() {
   };
 
   const handleToggleActive = (courierId, serviceId) => {
-    alert(`Status layanan akan diubah`);
+    setToast({ show: true, message: `Status layanan akan diubah` });
   };
 
   const handleEditService = (courierId, serviceId) => {
-    alert(`Edit layanan ID: ${serviceId}`);
+    setToast({ show: true, message: `Edit layanan ID: ${serviceId}` });
   };
 
   const handleDeleteService = (courierId, serviceId) => {
     if (confirm('Apakah Anda yakin ingin menghapus layanan ini?')) {
-      alert(`Layanan ID: ${serviceId} akan dihapus`);
+      setToast({ show: true, message: `Layanan ID: ${serviceId} akan dihapus` });
     }
   };
 
@@ -204,7 +206,12 @@ export default function PengirimanPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Layanan</p>
+                <Footer />
+                <CartSuccessToast
+                  show={toast.show}
+                  message={toast.message}
+                  onClose={() => setToast({ show: false, message: '' })}
+                />
                   <h3 className="text-3xl font-bold text-gray-900">{totalServices}</h3>
                   <p className="text-sm text-blue-600 mt-1">Semua kurir</p>
                 </div>

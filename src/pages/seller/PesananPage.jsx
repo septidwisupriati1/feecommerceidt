@@ -22,6 +22,7 @@ import {
   CreditCardIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
+import CartSuccessToast from '../../components/CartSuccessToast';
 
 // Generate dummy order data based on products
 const generateOrderData = (products) => {
@@ -126,6 +127,7 @@ export default function PesananPage() {
   const [orders, setOrders] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [toast, setToast] = useState({ show: false, message: '' });
 
   // Load orders data
   useEffect(() => {
@@ -232,13 +234,13 @@ export default function PesananPage() {
     if (confirm('Apakah Anda yakin ingin membuat ulang data pesanan? Data pesanan yang ada akan diganti dengan data baru.')) {
       const products = JSON.parse(localStorage.getItem('seller_products') || '[]');
       if (products.length > 0) {
-        const ordersData = generateOrderData(products);
-        setOrders(ordersData);
-        localStorage.setItem('seller_orders_data', JSON.stringify(ordersData));
-        alert('Data pesanan berhasil dibuat ulang!');
+          const ordersData = generateOrderData(products);
+          setOrders(ordersData);
+          localStorage.setItem('seller_orders_data', JSON.stringify(ordersData));
+          setToast({ show: true, message: 'Data pesanan berhasil dibuat ulang!' });
         setCurrentPage(1);
       } else {
-        alert('Tidak ada produk untuk membuat data pesanan. Silakan tambahkan produk terlebih dahulu.');
+          setToast({ show: true, message: 'Tidak ada produk untuk membuat data pesanan. Silakan tambahkan produk terlebih dahulu.' });
       }
     }
   };
@@ -569,7 +571,12 @@ export default function PesananPage() {
           </Card>
         )}
       </div>
-      <Footer />
+        <Footer />
+        <CartSuccessToast
+          show={toast.show}
+          message={toast.message}
+          onClose={() => setToast({ show: false, message: '' })}
+        />
     </SellerSidebar>
   );
 }
