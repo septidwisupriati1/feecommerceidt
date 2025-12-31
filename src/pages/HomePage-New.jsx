@@ -13,6 +13,7 @@ import { isAuthenticated } from "../utils/auth";
 import { browseProducts, getCategories } from "../services/productAPI";
 import { getImageUrl } from "../utils/imageHelper";
 import BuyerNavbar from "../components/BuyerNavbar";
+import Footer from "../components/Footer";
 import styles from "./HomePage.module.css";
 
 export default function HomePage() {
@@ -349,6 +350,7 @@ export default function HomePage() {
           </div>
         </div>
       )}
+      <Footer showMap />
     </div>
   );
 }
