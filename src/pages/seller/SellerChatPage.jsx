@@ -114,7 +114,7 @@ const initializeDummyChats = () => {
 
 export default function SellerChatPage() {
   const navigate = useNavigate();
-  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const dropdownRef = useRef(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedChat, setSelectedChat] = useState(null);
@@ -182,7 +182,9 @@ export default function SellerChatPage() {
   }, [showOptionsMenu]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
   };
 
   const loadMessages = (chatId) => {
@@ -748,7 +750,10 @@ export default function SellerChatPage() {
                   )}
 
                   {/* Messages Area */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  <div
+                    ref={messagesContainerRef}
+                    className="flex-1 overflow-y-auto p-4 space-y-4"
+                  >
                     <div className="text-center mb-4">
                       <span className="bg-white px-4 py-2 rounded-full text-xs text-gray-500 shadow-sm">
                         {currentChat?.lastTime}
@@ -785,7 +790,6 @@ export default function SellerChatPage() {
                         </div>
                       ))
                     )}
-                    <div ref={messagesEndRef} />
                   </div>
 
                   {/* Message Input */}

@@ -24,7 +24,7 @@ export default function HomePage() {
       <Navbar />
       
       {/* Main Content */}
-      <div className="bg-gradient-to-b from-blue-500 via-blue-300 via-30% to-white">
+      <div className="bg-linear-to-b from-blue-500 via-blue-300 via-30% to-white">
       {/* Hero Section */}
       <div className="relative overflow-hidden pb-10">
         {/* Decorative stars/sparkles effect */}
