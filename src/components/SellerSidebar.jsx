@@ -49,6 +49,11 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
       window.removeEventListener('chatUnreadCountChanged', handleUnreadCountChange);
     };
   }, []);
+
+  // Reset scroll position to top whenever route changes so new pages don't inherit previous scroll.
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location.pathname]);
   
   const updateUnreadCount = () => {
     const count = getTotalUnreadCount();
