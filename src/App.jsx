@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
@@ -70,10 +71,21 @@ import AdminFAQPage from './pages/admin/FAQPage';
 import ProfilSTPPage from './pages/admin/ProfilSTPPage';
 import AdminProfilePage from './pages/admin/ProfilePage';
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [pathname]);
+
+  return null;
+}
+
 function App() {
   return (
     <CartProvider>
       <Router>
+        <ScrollToTop />
         <Routes>
           {/* Root Route - Smart routing: Landing page if not logged in, Dashboard if logged in */}
           <Route path="/" element={<DashboardRouter />} />
