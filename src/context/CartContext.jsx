@@ -2,6 +2,49 @@ import { createContext, useContext, useState, useEffect } from 'react';
 
 const CartContext = createContext();
 
+// Normalisasi data produk yang disimpan di cart agar aman dirender
+const normalizeProductForCart = (product) => {
+  if (!product) return product;
+
+  const categoryName = typeof product.category === 'object'
+    ? product.category?.name
+      ?? product.category?.category_name
+      ?? product.category?.title
+      ?? product.category?.label
+      ?? ''
+    : product.category ?? '';
+
+  const productId = product.id ?? product.product_id ?? product.slug ?? product.sku;
+  const numericPrice = Number(product.price ?? 0);
+
+  return {
+    ...product,
+    id: productId ?? Date.now(),
+    product_id: product.product_id ?? productId ?? Date.now(),
+    name: product.name ?? product.title ?? product.product_name ?? 'Produk',
+    price: Number.isFinite(numericPrice) ? numericPrice : 0,
+    quantity: Number.isFinite(product.quantity) ? product.quantity : 1,
+    category: categoryName,
+    category_id: product.category_id ?? product.category?.category_id ?? null,
+    image: product.image || product.primary_image || product.image_url || product.picture || '',
+  };
+};
+
+const isValidCartItem = (item) => {
+  if (!item) return false;
+  if (!item.id) return false;
+  if (!Number.isFinite(item.price)) return false;
+  if (!Number.isFinite(item.quantity)) return false;
+  return true;
+};
+
+const sanitizeCartItems = (items) => {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map(normalizeProductForCart)
+    .filter(isValidCartItem);
+};
+
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
@@ -12,9 +55,14 @@ export const useCart = () => {
 
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState(() => {
-    // Load from localStorage
-    const savedCart = localStorage.getItem('cart');
-    return savedCart ? JSON.parse(savedCart) : [];
+    try {
+      const savedCart = localStorage.getItem('cart');
+      const parsed = savedCart ? JSON.parse(savedCart) : [];
+      return sanitizeCartItems(parsed);
+    } catch (err) {
+      console.warn('Cart parse error, resetting cart', err);
+      return [];
+    }
   });
 
   const [selectedItems, setSelectedItems] = useState(() => {
@@ -45,18 +93,21 @@ export const CartProvider = ({ children }) => {
   }, [orders]);
 
   const addToCart = (product, quantity = 1) => {
+    const normalizedProduct = normalizeProductForCart(product);
+    const normalizedQuantity = Number.isFinite(quantity) ? quantity : 1;
+
     setCartItems(prevItems => {
-      const existingItem = prevItems.find(item => item.id === product.id);
-      
+      const existingItem = prevItems.find(item => item.id === normalizedProduct.id);
       if (existingItem) {
-        return prevItems.map(item =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
+        const updated = prevItems.map(item =>
+          item.id === normalizedProduct.id
+            ? { ...item, quantity: item.quantity + normalizedQuantity }
             : item
         );
+        return sanitizeCartItems(updated);
       }
-      
-      return [...prevItems, { ...product, quantity }];
+
+      return sanitizeCartItems([...prevItems, { ...normalizedProduct, quantity: normalizedQuantity }]);
     });
   };
 
@@ -67,14 +118,15 @@ export const CartProvider = ({ children }) => {
   };
 
   const updateQuantity = (productId, quantity) => {
-    if (quantity <= 0) {
+    const safeQty = Number.isFinite(quantity) ? quantity : 1;
+    if (safeQty <= 0) {
       removeFromCart(productId);
       return;
     }
     
     setCartItems(prevItems =>
       prevItems.map(item =>
-        item.id === productId ? { ...item, quantity } : item
+        item.id === productId ? { ...item, quantity: safeQty } : item
       )
     );
   };

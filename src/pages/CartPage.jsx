@@ -4,7 +4,7 @@ import Footer from "../components/Footer";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { useCart } from "../context/CartContext";
-import { formatPrice, getCategoryGradient } from "../data/products";
+import { formatPrice } from "../data/products";
 import { getProductImageUrl, handleImageError } from "../utils/imageHelper";
 import { TrashIcon, MinusIcon, PlusIcon } from '@heroicons/react/24/outline';
 
@@ -15,7 +15,6 @@ export default function CartPage() {
     selectedItems,
     removeFromCart, 
     updateQuantity, 
-    getCartTotal,
     getSelectedTotal,
     getSelectedItemsCount,
     clearCart,
@@ -24,7 +23,15 @@ export default function CartPage() {
     removeSelectedItems
   } = useCart();
 
-  if (cartItems.length === 0) {
+  const getCategoryLabel = (category) => {
+    if (typeof category === 'string') return category;
+    return category?.name ?? category?.category_name ?? category?.title ?? category?.label ?? '';
+  };
+
+  const isValidItem = (item) => item && item.id && Number.isFinite(item.price) && Number.isFinite(item.quantity);
+  const displayItems = (cartItems || []).filter(isValidItem);
+
+  if (displayItems.length === 0) {
     return (
       <div style={{
         minHeight: '100vh',
@@ -74,7 +81,7 @@ export default function CartPage() {
             Keranjang Belanja
           </h1>
           <p className="text-lg text-center" style={{ color: '#6b7280' }}>
-            {cartItems.length} produk di keranjang Anda
+            {displayItems.length} produk di keranjang Anda
           </p>
         </div>
       </div>
@@ -90,11 +97,11 @@ export default function CartPage() {
                   <div className="flex items-center gap-4">
                     <input
                       type="checkbox"
-                      checked={selectedItems.length === cartItems.length && cartItems.length > 0}
+                      checked={selectedItems.length === displayItems.length && displayItems.length > 0}
                       onChange={toggleSelectAll}
                       className="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500 cursor-pointer"
                     />
-                    <h2 className="text-2xl font-bold">Pilih Semua ({cartItems.length})</h2>
+                    <h2 className="text-2xl font-bold">Pilih Semua ({displayItems.length})</h2>
                   </div>
                   <div className="flex gap-2">
                     {selectedItems.length > 0 && (
@@ -117,7 +124,7 @@ export default function CartPage() {
                 </div>
 
                 <div className="space-y-4">
-                  {cartItems.map((item) => (
+                  {displayItems.map((item) => (
                     <div
                       key={item.id}
                       className={`flex gap-4 p-4 border-2 rounded-lg transition-all ${
@@ -158,7 +165,7 @@ export default function CartPage() {
                           {item.name}
                         </h3>
                         <p className="text-sm text-gray-600 mb-2">
-                          Kategori: {item.category}
+                          Kategori: {getCategoryLabel(item.category)}
                         </p>
                         <div className="flex items-center gap-4">
                           <span className="text-xl font-bold text-blue-600">
@@ -231,7 +238,7 @@ export default function CartPage() {
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-gray-700">
                     <span>Total Produk</span>
-                    <span className="font-semibold">{cartItems.length} item</span>
+                    <span className="font-semibold">{displayItems.length} item</span>
                   </div>
                   <div className="flex justify-between text-gray-700">
                     <span>Dipilih untuk Checkout</span>
