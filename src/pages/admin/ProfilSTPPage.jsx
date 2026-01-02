@@ -149,9 +149,6 @@ Platform E-Commerce Solo Technopark hadir sebagai bagian dari upaya kami untuk m
               Profil Solo Technopark
             </h1>
           </div>
-          <p className="text-lg text-blue-50 text-center">
-            Informasi lengkap tentang Solo Technopark
-          </p>
         </div>
       </div>
 

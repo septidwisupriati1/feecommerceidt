@@ -146,9 +146,6 @@ const AdminDashboard = () => {
             <h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-2">
               Admin Dashboard
             </h1>
-            <p className="text-lg text-blue-50 text-center">
-              Kelola platform E-Commerce Anda
-            </p>
           </div>
         </div>
         <div className="container mx-auto px-4 py-8">
@@ -171,9 +168,6 @@ const AdminDashboard = () => {
           <h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-2">
             Admin Dashboard
           </h1>
-          <p className="text-lg text-blue-50 text-center">
-            Kelola platform E-Commerce Anda
-          </p>
         </div>
       </div>
 

@@ -229,9 +229,6 @@ const KelolaAkunPage = () => {
           <h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-2">
             Kelola Akun
           </h1>
-          <p className="text-lg text-blue-50 text-center">
-            Manajemen pengguna Admin, Penjual, dan Pembeli
-          </p>
         </div>
       </div>
 

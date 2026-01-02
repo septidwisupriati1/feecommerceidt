@@ -225,9 +225,6 @@ Kami akan menanggapi permintaan Anda dalam waktu 30 hari.`
               Kebijakan Privasi
             </h1>
           </div>
-          <p className="text-lg text-blue-50 text-center">
-            Komitmen kami untuk melindungi privasi dan data Anda
-          </p>
         </div>
       </div>
 

@@ -164,9 +164,6 @@ const FAQPage = () => {
               FAQ (Pertanyaan yang Sering Diajukan)
             </h1>
           </div>
-          <p className="text-lg text-blue-50 text-center">
-            Kelola pertanyaan dan jawaban untuk membantu pengguna
-          </p>
         </div>
       </div>
 

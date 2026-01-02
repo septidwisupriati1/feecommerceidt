@@ -172,9 +172,6 @@ const RekeningAdminPage = () => {
           <h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-2">
             Rekening Admin
           </h1>
-          <p className="text-lg text-blue-50 text-center">
-            Kelola rekening escrow untuk penerimaan pembayaran
-          </p>
         </div>
       </div>
 
