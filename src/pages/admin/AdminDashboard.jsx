@@ -1,14 +1,43 @@
 ﻿import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '../../components/AdminSidebar';
 import Footer from '../../components/Footer';
 import { UsersIcon, ShoppingBagIcon, CurrencyDollarIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon } from '@heroicons/react/24/outline';
 import { adminDashboardAPI, formatCurrency, formatNumber } from '../../services/adminAPI';
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [topSellers, setTopSellers] = useState([]);
+
+  const quickActions = [
+    {
+      label: 'Kelola Pengguna',
+      description: 'Tambah atau edit pengguna',
+      color: 'blue',
+      path: '/admin/kelola-user'
+    },
+    {
+      label: 'Lihat Laporan',
+      description: 'Analisis penjualan lengkap',
+      color: 'green',
+      path: '/admin/laporan'
+    },
+    {
+      label: 'Kelola Kategori',
+      description: 'Tambah atau edit kategori',
+      color: 'purple',
+      path: '/admin/kategori'
+    },
+    {
+      label: 'Pengaturan',
+      description: 'Konfigurasi platform',
+      color: 'yellow',
+      path: '/admin/profile'
+    }
+  ];
 
   // Fetch dashboard data on component mount
   useEffect(() => {
@@ -185,6 +214,30 @@ const AdminDashboard = () => {
           })}
         </div>
 
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {quickActions.map((action) => {
+            const colorMap = {
+              blue: { border: 'border-blue-500', text: 'text-blue-600' },
+              green: { border: 'border-green-500', text: 'text-green-600' },
+              purple: { border: 'border-purple-500', text: 'text-purple-600' },
+              yellow: { border: 'border-yellow-500', text: 'text-yellow-600' }
+            };
+            const accent = colorMap[action.color] || colorMap.blue;
+
+            return (
+              <button
+                key={action.label}
+                onClick={() => navigate(action.path)}
+                className={`bg-white p-6 rounded-xl shadow-sm hover:shadow-lg transition-all text-left border-t-4 hover:scale-105 ${accent.border}`}
+              >
+                <div className={`font-bold text-lg mb-2 ${accent.text}`}>{action.label}</div>
+                <div className="text-gray-600 text-sm">{action.description}</div>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Tables Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2 bg-white rounded-xl shadow-sm">
@@ -255,25 +308,7 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <button className="bg-white p-6 rounded-xl shadow-sm hover:shadow-lg transition-all text-left border-t-4 border-blue-500 hover:scale-105">
-            <div className="text-blue-600 font-bold text-lg mb-2">Kelola Pengguna</div>
-            <div className="text-gray-600 text-sm">Tambah atau edit pengguna</div>
-          </button>
-          <button className="bg-white p-6 rounded-xl shadow-sm hover:shadow-lg transition-all text-left border-t-4 border-green-500 hover:scale-105">
-            <div className="text-green-600 font-bold text-lg mb-2">Lihat Laporan</div>
-            <div className="text-gray-600 text-sm">Analisis penjualan lengkap</div>
-          </button>
-          <button className="bg-white p-6 rounded-xl shadow-sm hover:shadow-lg transition-all text-left border-t-4 border-purple-500 hover:scale-105">
-            <div className="text-purple-600 font-bold text-lg mb-2">Kelola Kategori</div>
-            <div className="text-gray-600 text-sm">Tambah atau edit kategori</div>
-          </button>
-          <button className="bg-white p-6 rounded-xl shadow-sm hover:shadow-lg transition-all text-left border-t-4 border-yellow-500 hover:scale-105">
-            <div className="text-yellow-600 font-bold text-lg mb-2">Pengaturan</div>
-            <div className="text-gray-600 text-sm">Konfigurasi platform</div>
-          </button>
-        </div>
+        
       </div>
       <Footer />
     </AdminSidebar>
