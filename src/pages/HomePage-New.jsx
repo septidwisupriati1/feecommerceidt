@@ -1,16 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { 
   ShoppingBag, 
   ShoppingCart, 
-  MessageCircle, 
   Star,
   X,
   Package
 } from "lucide-react";
 import { isAuthenticated } from "../utils/auth";
-import { browseProducts, getCategories } from "../services/productAPI";
-import { getImageUrl } from "../utils/imageHelper";
 import { useCart } from "../context/CartContext";
 import BuyerNavbar from "../components/BuyerNavbar";
 import CartSuccessToast from "../components/CartSuccessToast";
@@ -23,9 +20,7 @@ export default function HomePage() {
   const location = useLocation();
   const { addToCart } = useCart();
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState("all");
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginAction, setLoginAction] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,45 +28,12 @@ export default function HomePage() {
   const [cartToast, setCartToast] = useState({ show: false, message: "" });
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 12,
+    limit: 24,
     total: 0,
     totalPages: 1
   });
 
-  const CATEGORY_CACHE_KEY = 'categories_cache_v1';
-
-  const getLocalCategories = () => {
-    const map = new Map();
-    staticProducts.forEach(p => {
-      if (p.category_id && p.category) {
-        map.set(p.category_id, { category_id: p.category_id, name: p.category });
-      }
-    });
-    return Array.from(map.values());
-  };
-
-  const loadCachedCategories = () => {
-    try {
-      const cached = JSON.parse(localStorage.getItem(CATEGORY_CACHE_KEY));
-      if (Array.isArray(cached) && cached.length) return cached;
-    } catch (err) {
-      console.warn('Category cache parse error', err);
-    }
-    return null;
-  };
-
-  const saveCachedCategories = (cats) => {
-    try {
-      localStorage.setItem(CATEGORY_CACHE_KEY, JSON.stringify(cats));
-    } catch (err) {
-      console.warn('Category cache save error', err);
-    }
-  };
-
-  // Fetch categories on mount
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  const featuredRef = useRef(null);
 
   // Read search keyword from URL (?q=...)
   useEffect(() => {
@@ -95,36 +57,13 @@ export default function HomePage() {
   // Fetch products when filters change
   useEffect(() => {
     fetchProducts();
-  }, [pagination.page, selectedCategory, searchQuery]);
-
-  const fetchCategories = async () => {
-    const localCats = getLocalCategories();
-    const cachedCats = loadCachedCategories();
-    if (cachedCats?.length) {
-      setCategories([{ category_id: 'all', name: 'Semua' }, ...cachedCats]);
-    } else {
-      setCategories([{ category_id: 'all', name: 'Semua' }, ...localCats]);
-    }
-
-    try {
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('categories-timeout')), 2000));
-      const response = await Promise.race([getCategories(), timeoutPromise]);
-      if (response?.success && Array.isArray(response.data)) {
-        const merged = [{ category_id: 'all', name: 'Semua' }, ...response.data];
-        setCategories(merged);
-        saveCachedCategories(response.data);
-      }
-    } catch (err) {
-      console.warn('Using fallback categories', err.message);
-    }
-  };
+  }, [pagination.page, searchQuery]);
 
   const fetchProducts = async () => {
     setLoading(true);
 
     // Offline fallback: gunakan data statis lokal agar ID dan gambar konsisten dengan halaman detail
     const filtered = staticProducts
-      .filter(p => selectedCategory === 'all' || p.category_id === Number(selectedCategory))
       .filter(p => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / pagination.limit));
@@ -198,9 +137,113 @@ export default function HomePage() {
     }
   };
 
+  const scrollFeatured = (direction) => {
+    const container = featuredRef.current;
+    if (!container) return;
+    const scrollAmount = container.clientWidth * 0.8;
+    container.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+  };
+
   const handleProductClick = (productId) => {
     navigate(`/produk/${productId}`);
   };
+
+  // Auto-scroll featured carousel every 3s by one card, loop back to start
+  useEffect(() => {
+    const container = featuredRef.current;
+    if (!container || !container.firstElementChild) return;
+
+    const getStep = () => {
+      const card = container.firstElementChild;
+      const gap = parseFloat(getComputedStyle(container).columnGap || getComputedStyle(container).gap || '0');
+      return card.getBoundingClientRect().width + gap;
+    };
+
+    const scrollOnce = () => {
+      const step = getStep();
+      const maxScroll = container.scrollWidth - container.clientWidth;
+      const next = container.scrollLeft + step;
+      if (next >= maxScroll - 1) {
+        container.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+        container.scrollBy({ left: step, behavior: 'smooth' });
+      }
+    };
+
+    const id = setInterval(scrollOnce, 3000);
+    return () => clearInterval(id);
+  }, [products.length]);
+
+  const renderProductCard = (product, extraClass = '') => (
+    <div 
+      key={product.product_id}
+      className={`${styles.productCard} ${extraClass}`}
+    >
+      <div 
+        className={styles.productImageContainer}
+        onClick={() => handleProductClick(product.product_id)}
+      >
+        <img 
+          src={(product.primary_image || '').startsWith('http') ? product.primary_image : (product.primary_image || 'https://via.placeholder.com/400x400?text=No+Image')}
+          alt={product.name}
+          className={styles.productImage}
+          onError={(e) => {
+            console.log('Image load error:', product.primary_image);
+            e.currentTarget.src = 'https://via.placeholder.com/400x400?text=No+Image';
+          }}
+        />
+        {product.stock === 0 && (
+          <div className={styles.productBadge}>Habis</div>
+        )}
+        {product.stock > 0 && product.stock < 10 && (
+          <div className={styles.productBadge}>Stok Terbatas</div>
+        )}
+      </div>
+      
+      <div className={styles.productInfo}>
+        <h3 className={styles.productName}>{product.name}</h3>
+        
+        <div className={styles.productRating}>
+          <div className={styles.stars}>
+            {renderStars(product.rating_average || 0)}
+          </div>
+          <span className={styles.ratingText}>
+            {(product.rating_average || 0).toFixed(1)} ({product.total_reviews || 0})
+          </span>
+        </div>
+        
+        <div className={styles.productPrice}>
+          {formatPrice(product.price)}
+        </div>
+        
+        <div className={styles.productActions}>
+          <button 
+            className={styles.btnIcon}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCartClick(product);
+            }}
+            title="Tambah ke Keranjang"
+          >
+            <ShoppingCart className={styles.icon} />
+          </button>
+          <button 
+            className={`${styles.btnIcon} ${styles.btnIconPrimary}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleChatClick(product.product_id, product.name);
+            }}
+            title="Beli Sekarang"
+          >
+            <ShoppingBag className={styles.icon} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const featuredProducts = products.slice(0, 12);
+  const allProductsPreview = products.slice(0, 5);
 
   return (
     <div className={styles.homePage}>
@@ -224,20 +267,6 @@ export default function HomePage() {
         <div className={styles.productsContainer}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>Produk Pilihan</h2>
-            <div className={styles.filterButtons}>
-              {categories.map(cat => (
-                <button
-                  key={cat.category_id || cat.name}
-                  className={`${styles.filterBtn} ${selectedCategory === (cat.category_id?.toString() || cat.name) ? styles.active : ''}`}
-                  onClick={() => {
-                    setSelectedCategory((cat.category_id || cat.name).toString());
-                    setPagination(prev => ({ ...prev, page: 1 }));
-                  }}
-                >
-                  {cat.name}
-                </button>
-              ))}
-            </div>
           </div>
 
           {loading ? (
@@ -245,75 +274,38 @@ export default function HomePage() {
               <div className={styles.spinner}></div>
             </div>
           ) : products.length > 0 ? (
-            <div className={styles.productsGrid}>
-              {products.map((product) => (
-                <div 
-                  key={product.product_id} 
-                  className={styles.productCard}
-                >
-                  <div 
-                    className={styles.productImageContainer}
-                    onClick={() => handleProductClick(product.product_id)}
-                  >
-                    <img 
-                      src={(product.primary_image || '').startsWith('http') ? product.primary_image : (product.primary_image || 'https://via.placeholder.com/400x400?text=No+Image')}
-                      alt={product.name}
-                      className={styles.productImage}
-                      onError={(e) => {
-                        console.log('Image load error:', product.primary_image);
-                        e.currentTarget.src = 'https://via.placeholder.com/400x400?text=No+Image';
-                      }}
-                    />
-                    {product.stock === 0 && (
-                      <div className={styles.productBadge}>Habis</div>
-                    )}
-                    {product.stock > 0 && product.stock < 10 && (
-                      <div className={styles.productBadge}>Stok Terbatas</div>
-                    )}
-                  </div>
-                  
-                  <div className={styles.productInfo}>
-                    <h3 className={styles.productName}>{product.name}</h3>
-                    
-                    <div className={styles.productRating}>
-                      <div className={styles.stars}>
-                        {renderStars(product.rating_average || 0)}
-                      </div>
-                      <span className={styles.ratingText}>
-                        {(product.rating_average || 0).toFixed(1)} ({product.total_reviews || 0})
-                      </span>
-                    </div>
-                    
-                    <div className={styles.productPrice}>
-                      {formatPrice(product.price)}
-                    </div>
-                    
-                    <div className={styles.productActions}>
-                      <button 
-                        className={styles.btnIcon}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCartClick(product);
-                        }}
-                        title="Tambah ke Keranjang"
-                      >
-                        <ShoppingCart className={styles.icon} />
-                      </button>
-                      <button 
-                        className={`${styles.btnIcon} ${styles.btnIconPrimary}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleChatClick(product.product_id, product.name);
-                        }}
-                        title="Chat Penjual"
-                      >
-                        <MessageCircle className={styles.icon} />
-                      </button>
-                    </div>
-                  </div>
+            <>
+              {/* Featured Carousel */}
+              <div className={styles.featuredWrapper}>
+                <button className={`${styles.arrowBtn} ${styles.arrowLeft}`} onClick={() => scrollFeatured('left')} aria-label="Scroll kiri">
+                  ‹
+                </button>
+                <div className={styles.featuredScroll} ref={featuredRef}>
+                  {featuredProducts.map((product) => renderProductCard(product, styles.featuredCard))}
                 </div>
-              ))}
-            </div>
+                <button className={`${styles.arrowBtn} ${styles.arrowRight}`} onClick={() => scrollFeatured('right')} aria-label="Scroll kanan">
+                  ›
+                </button>
+              </div>
+
+              {/* All Products Preview */}
+              <div className={styles.sectionHeaderCompact}>
+                <h3 className={styles.sectionSubtitle}>Semua Produk</h3>
+              </div>
+              <div className={styles.previewGrid}>
+                {allProductsPreview.map((product) => renderProductCard(product))}
+                {products.length > 5 && (
+                  <button
+                    className={styles.viewAllCard}
+                    onClick={() => navigate('/produk')}
+                    aria-label="Lihat semua produk"
+                  >
+                    <span className={styles.viewAllLabel}>Lihat semua</span>
+                    <span className={styles.viewAllArrow}>→</span>
+                  </button>
+                )}
+              </div>
+            </>
           ) : (
             <div className={styles.emptyState}>
               <Package className={styles.emptyStateIcon} />
@@ -321,31 +313,6 @@ export default function HomePage() {
               <p className={styles.emptyStateText}>
                 Coba kata kunci atau kategori lain
               </p>
-            </div>
-          )}
-
-          {/* Pagination */}
-          {!loading && products.length > 0 && pagination.totalPages > 1 && (
-            <div className={styles.pagination}>
-              <button
-                className={styles.paginationBtn}
-                onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-                disabled={pagination.page === 1}
-              >
-                ← Sebelumnya
-              </button>
-              
-              <div className={styles.paginationInfo}>
-                Halaman {pagination.page} dari {pagination.totalPages}
-              </div>
-              
-              <button
-                className={styles.paginationBtn}
-                onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                disabled={pagination.page === pagination.totalPages}
-              >
-                Selanjutnya →
-              </button>
             </div>
           )}
         </div>
