@@ -1,5 +1,8 @@
 // API Base Configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/ecommerce';
+const USE_MOCK_ADMIN = import.meta.env.VITE_USE_MOCK_ADMIN_DASHBOARD === 'true';
+// Short timeout so fallback/mock cepat saat backend lambat/mati
+const REQUEST_TIMEOUT_MS = Number(import.meta.env.VITE_ADMIN_REQUEST_TIMEOUT_MS || 1200);
 
 // Helper function to get auth token
 const getAuthToken = () => {
@@ -24,7 +27,10 @@ const apiRequest = async (endpoint, options = {}) => {
   };
 
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, { ...config, signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await response.json();
 
     if (!response.ok) {
@@ -46,7 +52,9 @@ export const adminDashboardAPI = {
       return await apiRequest('/admin/dashboard/statistics');
     } catch (error) {
       // Return mock data if API not available
-      console.warn('Using mock dashboard statistics data');
+      if (!USE_MOCK_ADMIN) {
+        console.warn('Using mock dashboard statistics data');
+      }
       return {
         success: true,
         data: {
@@ -89,6 +97,16 @@ export const adminDashboardAPI = {
 
   // Get recent orders
   getRecentOrders: async (limit = 10) => {
+    if (USE_MOCK_ADMIN) {
+      return {
+        success: true,
+        data: {
+          orders: mockRecentOrders,
+          total: mockRecentOrders.length
+        }
+      };
+    }
+
     try {
       return await apiRequest(`/admin/dashboard/recent-orders?limit=${limit}`);
     } catch (error) {
@@ -96,54 +114,8 @@ export const adminDashboardAPI = {
       return {
         success: true,
         data: {
-          orders: [
-            {
-              order_id: 1,
-              order_number: 'ORD-2025-001',
-              customer_name: 'Budi Santoso',
-              product_name: 'Laptop ASUS ROG',
-              total_amount: 15000000,
-              status: 'pending',
-              created_at: '2025-11-10T08:30:00.000Z'
-            },
-            {
-              order_id: 2,
-              order_number: 'ORD-2025-002',
-              customer_name: 'Siti Nurhaliza',
-              product_name: 'iPhone 15 Pro',
-              total_amount: 18500000,
-              status: 'completed',
-              created_at: '2025-11-10T07:15:00.000Z'
-            },
-            {
-              order_id: 3,
-              order_number: 'ORD-2025-003',
-              customer_name: 'Ahmad Wijaya',
-              product_name: 'Samsung Galaxy S24',
-              total_amount: 12000000,
-              status: 'processing',
-              created_at: '2025-11-10T06:45:00.000Z'
-            },
-            {
-              order_id: 4,
-              order_number: 'ORD-2025-004',
-              customer_name: 'Dewi Lestari',
-              product_name: 'iPad Pro 12.9',
-              total_amount: 16500000,
-              status: 'completed',
-              created_at: '2025-11-09T15:20:00.000Z'
-            },
-            {
-              order_id: 5,
-              order_number: 'ORD-2025-005',
-              customer_name: 'Rizki Pratama',
-              product_name: 'MacBook Air M2',
-              total_amount: 19000000,
-              status: 'completed',
-              created_at: '2025-11-09T14:10:00.000Z'
-            }
-          ],
-          total: 5
+          orders: mockRecentOrders,
+          total: mockRecentOrders.length
         }
       };
     }
@@ -151,6 +123,17 @@ export const adminDashboardAPI = {
 
   // Get top sellers
   getTopSellers: async (limit = 5, period = 'month') => {
+    if (USE_MOCK_ADMIN) {
+      return {
+        success: true,
+        data: {
+          sellers: mockTopSellers,
+          period,
+          total: mockTopSellers.length
+        }
+      };
+    }
+
     try {
       return await apiRequest(`/admin/dashboard/top-sellers?limit=${limit}&period=${period}`);
     } catch (error) {
@@ -158,65 +141,116 @@ export const adminDashboardAPI = {
       return {
         success: true,
         data: {
-          sellers: [
-            {
-              seller_id: 1,
-              store_name: 'Toko Elektronik Jaya',
-              owner_name: 'Ahmad Suryadi',
-              total_sales: 125000000,
-              total_orders: 245,
-              rating: 4.8,
-              trend: 'up',
-              growth_percentage: 15.5
-            },
-            {
-              seller_id: 2,
-              store_name: 'Fashion Store Indonesia',
-              owner_name: 'Siti Nurhaliza',
-              total_sales: 98000000,
-              total_orders: 189,
-              rating: 4.6,
-              trend: 'up',
-              growth_percentage: 8.2
-            },
-            {
-              seller_id: 3,
-              store_name: 'Gadget Paradise',
-              owner_name: 'Budi Santoso',
-              total_sales: 87500000,
-              total_orders: 156,
-              rating: 4.7,
-              trend: 'down',
-              growth_percentage: -3.1
-            },
-            {
-              seller_id: 4,
-              store_name: 'Toko Buku Online',
-              owner_name: 'Dewi Lestari',
-              total_sales: 75000000,
-              total_orders: 203,
-              rating: 4.9,
-              trend: 'up',
-              growth_percentage: 12.3
-            },
-            {
-              seller_id: 5,
-              store_name: 'Home Appliances Store',
-              owner_name: 'Rizki Pratama',
-              total_sales: 68000000,
-              total_orders: 134,
-              rating: 4.5,
-              trend: 'stable',
-              growth_percentage: 0.5
-            }
-          ],
+          sellers: mockTopSellers,
           period: period,
-          total: 5
+          total: mockTopSellers.length
         }
       };
     }
   }
 };
+
+// Shared mock data
+const mockRecentOrders = [
+  {
+    order_id: 1,
+    order_number: 'ORD-2025-001',
+    customer_name: 'Budi Santoso',
+    product_name: 'Laptop ASUS ROG',
+    total_amount: 15000000,
+    status: 'pending',
+    created_at: '2025-11-10T08:30:00.000Z'
+  },
+  {
+    order_id: 2,
+    order_number: 'ORD-2025-002',
+    customer_name: 'Siti Nurhaliza',
+    product_name: 'iPhone 15 Pro',
+    total_amount: 18500000,
+    status: 'completed',
+    created_at: '2025-11-10T07:15:00.000Z'
+  },
+  {
+    order_id: 3,
+    order_number: 'ORD-2025-003',
+    customer_name: 'Ahmad Wijaya',
+    product_name: 'Samsung Galaxy S24',
+    total_amount: 12000000,
+    status: 'processing',
+    created_at: '2025-11-10T06:45:00.000Z'
+  },
+  {
+    order_id: 4,
+    order_number: 'ORD-2025-004',
+    customer_name: 'Dewi Lestari',
+    product_name: 'iPad Pro 12.9',
+    total_amount: 16500000,
+    status: 'completed',
+    created_at: '2025-11-09T15:20:00.000Z'
+  },
+  {
+    order_id: 5,
+    order_number: 'ORD-2025-005',
+    customer_name: 'Rizki Pratama',
+    product_name: 'MacBook Air M2',
+    total_amount: 19000000,
+    status: 'completed',
+    created_at: '2025-11-09T14:10:00.000Z'
+  }
+];
+
+const mockTopSellers = [
+  {
+    seller_id: 1,
+    store_name: 'Toko Elektronik Jaya',
+    owner_name: 'Ahmad Suryadi',
+    total_sales: 125000000,
+    total_orders: 245,
+    rating: 4.8,
+    trend: 'up',
+    growth_percentage: 15.5
+  },
+  {
+    seller_id: 2,
+    store_name: 'Fashion Store Indonesia',
+    owner_name: 'Siti Nurhaliza',
+    total_sales: 98000000,
+    total_orders: 189,
+    rating: 4.6,
+    trend: 'up',
+    growth_percentage: 8.2
+  },
+  {
+    seller_id: 3,
+    store_name: 'Gadget Paradise',
+    owner_name: 'Budi Santoso',
+    total_sales: 87500000,
+    total_orders: 156,
+    rating: 4.7,
+    trend: 'down',
+    growth_percentage: -3.1
+  },
+  {
+    seller_id: 4,
+    store_name: 'Toko Buku Online',
+    owner_name: 'Dewi Lestari',
+    total_sales: 75000000,
+    total_orders: 203,
+    rating: 4.9,
+    trend: 'up',
+    growth_percentage: 12.3
+  },
+  {
+    seller_id: 5,
+    store_name: 'Home Appliances Store',
+    owner_name: 'Rizki Pratama',
+    total_sales: 68000000,
+    total_orders: 134,
+    rating: 4.5,
+    trend: 'stable',
+    growth_percentage: 0.5
+  }
+];
 
 // Admin Users API
 export const adminUsersAPI = {

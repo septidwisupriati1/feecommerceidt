@@ -59,20 +59,6 @@ function AdminSidebar({ children }) {
 
   const menuItems = [
     { path: '/admin/dashboard', icon: HomeIcon, label: 'Dashboard' },
-    { 
-      section: 'KELOLA ADMIN',
-      items: [
-        { path: '/admin/kelola-store', icon: ShoppingBagIcon, label: 'Kelola Toko' },
-        { path: '/admin/kelola-user', icon: UserGroupIcon, label: 'Kelola User' }
-      ]
-    },
-    {
-      section: 'KELOLA PRODUK',
-      items: [
-        { path: '/admin/kelola-product', icon: CubeIcon, label: 'Kelola Produk' },
-        { path: '/admin/kategori', icon: TagIcon, label: 'Kategori' }
-      ]
-    },
     {
       section: 'LAINNYA',
       items: [
