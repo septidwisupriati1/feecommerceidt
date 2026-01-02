@@ -5,31 +5,33 @@ import {
   EnvelopeIcon 
 } from '@heroicons/react/24/outline';
 
-export default function Footer() {
+export default function Footer({ showMap = false }) {
   return (
-    <footer className="bg-gray-50 mt-auto">
-      {/* Map Section - Full Width at Top */}
-      <div className="w-full bg-gray-50">
-        <div className="max-w-7xl mx-auto px-0">
-          <div className="w-full mb-0 relative">
-            {/* Top gradient overlay */}
-            <div className="absolute top-0 left-0 right-0 h-16 bg-linear-to-b from-gray-50 to-transparent z-10 pointer-events-none"></div>
-            
-            <iframe
-              src="https://maps.google.com/maps?q=loc:-7.555972568075667, 110.85383603307423&z=17&output=embed&hl=id"
-              width="100%"
-              height="400"
-              style={{ border: 0 }}
-              allowFullScreen=""
-              loading="lazy"
-              title="Solo Technopark Location"
-            ></iframe>
-            
-            {/* Bottom gradient overlay */}
-            <div className="absolute bottom-0 left-0 right-0 h-16 bg-linear-to-t from-gray-50 to-transparent z-10 pointer-events-none"></div>
+    <footer className="bg-gray-50 mt-auto border-t-2 border-gray-200">
+      {/* Map Section - shown only when enabled */}
+      {showMap && (
+        <div className="w-full bg-gray-50">
+          <div className="max-w-7xl mx-auto px-0">
+            <div className="w-full mb-0 relative">
+              {/* Top gradient overlay */}
+              <div className="absolute top-0 left-0 right-0 h-16 bg-linear-to-b from-gray-50 to-transparent z-10 pointer-events-none"></div>
+              
+              <iframe
+                src="https://maps.google.com/maps?q=loc:-7.555972568075667, 110.85383603307423&z=17&output=embed&hl=id"
+                width="100%"
+                height="400"
+                style={{ border: 0 }}
+                allowFullScreen=""
+                loading="lazy"
+                title="Solo Technopark Location"
+              ></iframe>
+              
+              {/* Bottom gradient overlay */}
+              <div className="absolute bottom-0 left-0 right-0 h-16 bg-linear-to-t from-gray-50 to-transparent z-10 pointer-events-none"></div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main Footer Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -14,8 +14,6 @@ import { browseProducts, getCategories } from "../services/productAPI";
 import { getImageUrl } from "../utils/imageHelper";
 import { useCart } from "../context/CartContext";
 import BuyerNavbar from "../components/BuyerNavbar";
-import CartSuccessToast from "../components/CartSuccessToast";
-import { products as staticProducts } from "../data/products";
 import styles from "./HomePage.module.css";
 
 export default function HomePage() {
@@ -397,12 +395,6 @@ export default function HomePage() {
           </div>
         </div>
       )}
-
-      <CartSuccessToast
-        show={cartToast.show}
-        message={cartToast.message || "Produk ditambahkan ke keranjang"}
-        onClose={() => setCartToast(prev => ({ ...prev, show: false }))}
-      />
     </div>
   );
 }
