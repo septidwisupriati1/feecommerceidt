@@ -208,9 +208,6 @@ const KategoriPage = () => {
           <h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-2">
             Kategori
           </h1>
-          <p className="text-lg text-blue-50 text-center">
-            Kelola kategori produk
-          </p>
         </div>
       </div>
 

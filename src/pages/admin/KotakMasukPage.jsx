@@ -194,9 +194,6 @@ const KotakMasukPage = () => {
           <h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-2">
             Kotak Masuk
           </h1>
-          <p className="text-lg text-blue-50 text-center">
-            Komunikasi dengan Penjual
-          </p>
         </div>
       </div>
 

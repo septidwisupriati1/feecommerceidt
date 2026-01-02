@@ -208,9 +208,6 @@ const PengirimanPage = () => {
           <h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-2">
             Ekspedisi Pengiriman
           </h1>
-          <p className="text-lg text-blue-50 text-center">
-            Kelola ekspedisi yang bekerjasama dengan platform
-          </p>
         </div>
       </div>
 

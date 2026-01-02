@@ -165,9 +165,6 @@ Alamat: Solo Technopark, Surakarta, Jawa Tengah`
           <h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-2">
             Syarat dan Ketentuan
           </h1>
-          <p className="text-lg text-blue-50 text-center">
-            Kelola syarat dan ketentuan penggunaan platform
-          </p>
         </div>
       </div>
 

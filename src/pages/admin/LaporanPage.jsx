@@ -216,9 +216,6 @@ const LaporanPage = () => {
           <h1 className="text-4xl md:text-5xl font-bold text-white text-center mb-2">
             Laporan Pelanggan
           </h1>
-          <p className="text-lg text-blue-50 text-center">
-            Kelola laporan dari pelanggan
-          </p>
         </div>
       </div>
 

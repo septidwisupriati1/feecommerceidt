@@ -34,6 +34,7 @@ function AdminSidebar({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
     const currentUser = getCurrentUser();
@@ -81,19 +82,15 @@ function AdminSidebar({ children }) {
     return location.pathname === path;
   };
 
-  const handleLogout = async () => {
-    const confirmed = window.confirm('Apakah Anda yakin ingin logout?');
-    if (confirmed) {
-      await logout();
-      // Force reload to login page
-      window.location.href = '/login';
-    }
+  const handleLogoutConfirm = async () => {
+    await logout();
+    window.location.href = '/login';
   };
 
   return (
     <>
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-blue-600 to-blue-700 transform ${
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-blue-600 to-blue-700 transform flex flex-col ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       } md:translate-x-0 transition-transform duration-300 ease-in-out overflow-y-auto`}>
         
@@ -144,9 +141,9 @@ function AdminSidebar({ children }) {
             
             // If it's a section with items
             return (
-              <div key={index} className="mb-4">
-                <div className="px-3 py-2 text-xs font-bold text-blue-200 uppercase tracking-wider">
-                  {item.section}
+              <div key={index} className="mb-3">
+                <div className="flex justify-center">
+                  <div className="h-0.5 w-[calc(100%-24px)] rounded-full bg-blue-200"></div>
                 </div>
                 {item.items.map((subItem, subIndex) => {
                   const Icon = subItem.icon;
@@ -159,7 +156,7 @@ function AdminSidebar({ children }) {
                         navigate(subItem.path);
                         setIsOpen(false);
                       }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors ${
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors ${subIndex === 0 ? 'mt-2' : ''} ${
                         active 
                           ? 'bg-white text-blue-600 font-semibold shadow-md' 
                           : 'text-white hover:bg-blue-500'
@@ -176,9 +173,9 @@ function AdminSidebar({ children }) {
         </nav>
 
         {/* Logout Button */}
-        <div className="px-3 pb-4 border-t border-blue-500 pt-4">
+        <div className="px-3 pb-4 border-t border-blue-500 pt-4 mt-auto">
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutModal(true)}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-white hover:bg-red-500 font-medium"
           >
             <ArrowLeftOnRectangleIcon className="h-5 w-5 flex-shrink-0" />
@@ -186,6 +183,35 @@ function AdminSidebar({ children }) {
           </button>
         </div>
       </div>
+
+      {/* Logout Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 px-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center text-red-600 font-bold" aria-hidden="true">!</div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Keluar dari akun?</h3>
+                <p className="text-sm text-gray-600 mt-1">Anda akan kembali ke halaman login. Pastikan data tersimpan.</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleLogoutConfirm}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <div className="md:ml-64">
