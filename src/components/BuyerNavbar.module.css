@@ -305,6 +305,12 @@
   border-radius: 1px;
 }
 
+/* Make the Logout button visually red on hover */
+.profileDropdown .dropdownItem:last-child:hover {
+  background: rgba(254,226,226,0.95);
+  color: #b91c1c;
+}
+
 /* Auth Buttons */
 .btnOutline,
 .btnPrimary {

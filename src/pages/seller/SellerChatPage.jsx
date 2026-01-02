@@ -440,7 +440,7 @@ export default function SellerChatPage() {
               {/* New Chat Button - Eye Catching */}
               <Button
                 onClick={handleNewChat}
-                className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 px-3 md:px-4 py-2"
+                className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 px-3 md:px-4 py-2 cursor-pointer"
                 size="sm"
               >
                 <MessageCirclePlus className="h-5 w-5 md:mr-2" />
@@ -460,7 +460,7 @@ export default function SellerChatPage() {
                 chatMode === 'buyer'
                   ? 'bg-white text-blue-600 shadow-lg scale-105'
                   : 'bg-blue-500 bg-opacity-50 text-white hover:bg-opacity-70'
-              }`}
+              } cursor-pointer`}
             >
               <MessageSquare className="h-5 w-5" />
               <span>Pembeli</span>
@@ -479,7 +479,7 @@ export default function SellerChatPage() {
                 chatMode === 'admin'
                   ? 'bg-white text-blue-600 shadow-lg scale-105'
                   : 'bg-blue-500 bg-opacity-50 text-white hover:bg-opacity-70'
-              }`}
+              } cursor-pointer`}
             >
               <Shield className="h-5 w-5" />
               <span>Admin</span>
@@ -518,10 +518,10 @@ export default function SellerChatPage() {
                 <button
                   onClick={() => setFilterType('all')}
                   className={`flex-1 py-3 text-sm font-semibold transition-all duration-200 relative ${
-                    filterType === 'all' 
-                      ? 'text-blue-600 bg-blue-50' 
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
+                      filterType === 'all' 
+                        ? 'text-blue-600 bg-blue-50' 
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    } cursor-pointer`}
                 >
                   {filterType === 'all' && (
                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
@@ -534,7 +534,7 @@ export default function SellerChatPage() {
                     filterType === 'unread' 
                       ? 'text-blue-600 bg-blue-50' 
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
+                  } cursor-pointer`}
                 >
                   {filterType === 'unread' && (
                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
@@ -671,12 +671,12 @@ export default function SellerChatPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                      <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer">
                         <Phone className="h-5 w-5 text-gray-600" />
                       </button>
                       <div className="relative" ref={dropdownRef}>
                         <button 
-                          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                          className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
                           onClick={() => setShowOptionsMenu(!showOptionsMenu)}
                         >
                           <MoreVertical className="h-5 w-5 text-gray-600" />
@@ -684,7 +684,7 @@ export default function SellerChatPage() {
                         {showOptionsMenu && (
                           <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                             <button
-                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 rounded-t-lg transition-colors flex items-center gap-2"
+                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 rounded-t-lg transition-colors flex items-center gap-2 cursor-pointer"
                               onClick={() => {
                                 if (window.confirm('Apakah Anda yakin ingin menghapus semua pesan dalam percakapan ini?')) {
                                   // Implementasi hapus pesan
@@ -697,7 +697,7 @@ export default function SellerChatPage() {
                               Hapus Pesan
                             </button>
                             <button
-                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 rounded-b-lg transition-colors flex items-center gap-2"
+                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 rounded-b-lg transition-colors flex items-center gap-2 cursor-pointer"
                               onClick={() => {
                                 if (window.confirm('Apakah Anda yakin ingin melaporkan percakapan ini?')) {
                                   // Update status isReported di localStorage

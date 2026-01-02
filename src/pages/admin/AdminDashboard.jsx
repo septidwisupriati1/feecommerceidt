@@ -1,36 +1,62 @@
 ﻿import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '../../components/AdminSidebar';
 import Footer from '../../components/Footer';
 import { UsersIcon, ShoppingBagIcon, CurrencyDollarIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon } from '@heroicons/react/24/outline';
 import { adminDashboardAPI, formatCurrency, formatNumber } from '../../services/adminAPI';
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [topSellers, setTopSellers] = useState([]);
+
+  const quickActions = [
+    {
+      label: 'Pengguna',
+      description: 'Tambah atau perbarui akun pengguna',
+      color: 'blue',
+      path: '/admin/kelola-user'
+    },
+    {
+      label: 'Toko',
+      description: 'Atur data toko dan status penjual',
+      color: 'blue',
+      path: '/admin/kelola-store'
+    },
+    {
+      label: 'Produk',
+      description: 'Review, edit, atau nonaktifkan produk',
+      color: 'blue',
+      path: '/admin/kelola-product'
+    },
+    {
+      label: 'Kategori',
+      description: 'Tambah atau ubah kategori produk',
+      color: 'blue',
+      path: '/admin/kategori'
+    }
+  ];
 
   // Fetch dashboard data on component mount
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        
-        // Fetch statistics
-        const statsResponse = await adminDashboardAPI.getStatistics();
-        if (statsResponse.success) {
+        const [statsResponse, ordersResponse, sellersResponse] = await Promise.all([
+          adminDashboardAPI.getStatistics(),
+          adminDashboardAPI.getRecentOrders(5),
+          adminDashboardAPI.getTopSellers(5, 'month')
+        ]);
+
+        if (statsResponse?.success) {
           setDashboardData(statsResponse.data);
         }
-
-        // Fetch recent orders
-        const ordersResponse = await adminDashboardAPI.getRecentOrders(5);
-        if (ordersResponse.success) {
+        if (ordersResponse?.success) {
           setRecentOrders(ordersResponse.data.orders);
         }
-
-        // Fetch top sellers
-        const sellersResponse = await adminDashboardAPI.getTopSellers(5, 'month');
-        if (sellersResponse.success) {
+        if (sellersResponse?.success) {
           setTopSellers(sellersResponse.data.sellers);
         }
       } catch (error) {
@@ -51,7 +77,7 @@ const AdminDashboard = () => {
       change: `+${dashboardData.users.new_this_month} bulan ini`, 
       isPositive: true, 
       icon: UsersIcon, 
-      color: 'blue' 
+      color: 'pink' 
     },
     { 
       label: 'Total Penjual', 
@@ -153,36 +179,74 @@ const AdminDashboard = () => {
 
       <div className="container mx-auto px-4 py-8">
         {/* Stats Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon;
-            const colorClasses = {
-              blue: { text: 'text-blue-600', bg: 'bg-blue-50' },
-              green: { text: 'text-green-600', bg: 'bg-green-50' },
-              purple: { text: 'text-purple-600', bg: 'bg-purple-50' },
-              yellow: { text: 'text-yellow-600', bg: 'bg-yellow-50' },
-              red: { text: 'text-red-600', bg: 'bg-red-50' }
-            };
-            const colors = colorClasses[stat.color] || colorClasses.blue;
-            
-            return (
-              <div key={index} className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`p-3 rounded-lg ${colors.bg}`}>
-                    <Icon className={`h-6 w-6 ${colors.text}`} />
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-800">Statistik Utama</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
+            {stats.map((stat, index) => {
+              const Icon = stat.icon;
+              const colorClasses = {
+                blue: { text: 'text-blue-600', bg: 'bg-blue-50' },
+                green: { text: 'text-green-600', bg: 'bg-green-50' },
+                purple: { text: 'text-purple-600', bg: 'bg-purple-50' },
+                yellow: { text: 'text-yellow-600', bg: 'bg-yellow-50' },
+                red: { text: 'text-red-600', bg: 'bg-red-50' },
+                amber: { text: 'text-amber-600', bg: 'bg-amber-50' },
+                pink: { text: 'text-pink-600', bg: 'bg-pink-50' }
+              };
+              const colors = colorClasses[stat.color] || colorClasses.blue;
+
+              return (
+                <div key={index} className="flex items-center justify-between p-4 gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-3 rounded-lg ${colors.bg}`}>
+                      <Icon className={`h-6 w-6 ${colors.text}`} />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 leading-tight">{stat.label}</p>
+                      <p className="text-xl font-bold text-gray-800 leading-tight">{stat.value}</p>
+                    </div>
                   </div>
                   <div className={`flex items-center gap-1 text-sm font-semibold ${stat.isPositive ? 'text-green-600' : 'text-red-600'}`}>
                     {stat.isPositive ? <ArrowTrendingUpIcon className="h-4 w-4" /> : <ArrowTrendingDownIcon className="h-4 w-4" />}
                     {stat.change}
                   </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
-                  <p className="text-sm text-gray-600 mt-1">{stat.label}</p>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-800">Pengelolaan</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {quickActions.map((action) => {
+            const colorMap = {
+              blue: { border: 'border-blue-500', text: 'text-blue-600' },
+              green: { border: 'border-green-500', text: 'text-green-600' },
+              purple: { border: 'border-purple-500', text: 'text-purple-600' },
+              yellow: { border: 'border-yellow-500', text: 'text-yellow-600' }
+            };
+            const accent = colorMap[action.color] || colorMap.blue;
+
+            return (
+              <button
+                key={action.label}
+                onClick={() => navigate(action.path)}
+                className={`bg-white p-6 rounded-xl shadow-sm hover:shadow-lg transition-all text-left border-t-4 hover:scale-105 h-full`}
+              >
+                <div className="flex flex-col gap-2 h-full">
+                  <div className={`font-bold text-lg ${accent.text}`}>{action.label}</div>
+                  <div className="text-gray-600 text-sm leading-snug">{action.description}</div>
                 </div>
-              </div>
+              </button>
             );
           })}
+          </div>
         </div>
 
         {/* Tables Section */}
@@ -255,25 +319,7 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <button className="bg-white p-6 rounded-xl shadow-sm hover:shadow-lg transition-all text-left border-t-4 border-blue-500 hover:scale-105">
-            <div className="text-blue-600 font-bold text-lg mb-2">Kelola Pengguna</div>
-            <div className="text-gray-600 text-sm">Tambah atau edit pengguna</div>
-          </button>
-          <button className="bg-white p-6 rounded-xl shadow-sm hover:shadow-lg transition-all text-left border-t-4 border-green-500 hover:scale-105">
-            <div className="text-green-600 font-bold text-lg mb-2">Lihat Laporan</div>
-            <div className="text-gray-600 text-sm">Analisis penjualan lengkap</div>
-          </button>
-          <button className="bg-white p-6 rounded-xl shadow-sm hover:shadow-lg transition-all text-left border-t-4 border-purple-500 hover:scale-105">
-            <div className="text-purple-600 font-bold text-lg mb-2">Kelola Kategori</div>
-            <div className="text-gray-600 text-sm">Tambah atau edit kategori</div>
-          </button>
-          <button className="bg-white p-6 rounded-xl shadow-sm hover:shadow-lg transition-all text-left border-t-4 border-yellow-500 hover:scale-105">
-            <div className="text-yellow-600 font-bold text-lg mb-2">Pengaturan</div>
-            <div className="text-gray-600 text-sm">Konfigurasi platform</div>
-          </button>
-        </div>
+        
       </div>
       <Footer />
     </AdminSidebar>
