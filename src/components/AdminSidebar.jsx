@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getCurrentUser, logout } from '../services/authAPI';
 import NotificationDropdown from './NotificationDropdown';
@@ -184,33 +185,36 @@ function AdminSidebar({ children }) {
         </div>
       </div>
 
-      {/* Logout Modal */}
-      {showLogoutModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 px-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-            <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center text-red-600 font-bold" aria-hidden="true">!</div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Keluar dari akun?</h3>
-                <p className="text-sm text-gray-600 mt-1">Anda akan kembali ke halaman login. Pastikan data tersimpan.</p>
+      {/* Logout Modal (portal to body) */}
+      {showLogoutModal && createPortal(
+        (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center text-red-600 font-bold" aria-hidden="true">!</div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Keluar dari akun?</h3>
+                  <p className="text-sm text-gray-600 mt-1">Anda akan kembali ke halaman login. Pastikan data tersimpan.</p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowLogoutModal(false)}
+                  className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleLogoutConfirm}
+                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+                >
+                  Logout
+                </button>
               </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowLogoutModal(false)}
-                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleLogoutConfirm}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
-              >
-                Logout
-              </button>
-            </div>
           </div>
-        </div>
+        ),
+        document.body
       )}
 
       {/* Main Content Area */}

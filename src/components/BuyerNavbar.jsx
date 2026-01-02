@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ShoppingCart, MessageCircle, Bell, User, Search, Clock } from "lucide-react";
 import { isAuthenticated, clearAuth } from "../utils/auth";
@@ -239,6 +240,7 @@ export default function BuyerNavbar() {
 function ProfileMenu() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -252,10 +254,19 @@ function ProfileMenu() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
     clearAuth();
     setOpen(false);
+    setShowLogoutConfirm(false);
     navigate('/login');
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutConfirm(false);
   };
 
   return (
@@ -279,10 +290,47 @@ function ProfileMenu() {
             Wishlist
           </button>
           <div className={styles.dropdownDivider} />
-          <button className={styles.dropdownItem} onClick={handleLogout}>
+          <button className={styles.dropdownItem} onClick={handleLogoutClick}>
             Logout
           </button>
         </div>
+      )}
+
+      {showLogoutConfirm && createPortal(
+        (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Konfirmasi Logout</h3>
+                  <p className="text-sm text-gray-600 mt-1">Anda akan keluar dari akun.</p>
+                </div>
+                <button
+                  onClick={cancelLogout}
+                  className="p-1 text-gray-500 hover:text-gray-700 cursor-pointer"
+                  aria-label="Tutup"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={cancelLogout}
+                  className="flex-1 border border-gray-300 rounded-lg py-2 font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={confirmLogout}
+                  className="flex-1 bg-red-600 text-white rounded-lg py-2 font-semibold hover:bg-red-700 cursor-pointer"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        ),
+        document.body
       )}
     </div>
   );
