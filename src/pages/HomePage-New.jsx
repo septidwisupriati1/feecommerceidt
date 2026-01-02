@@ -14,6 +14,9 @@ import { browseProducts, getCategories } from "../services/productAPI";
 import { getImageUrl } from "../utils/imageHelper";
 import { useCart } from "../context/CartContext";
 import BuyerNavbar from "../components/BuyerNavbar";
+import Footer from "../components/Footer";
+import CartSuccessToast from "../components/CartSuccessToast";
+import { products as staticProducts } from "../data/products";
 import styles from "./HomePage.module.css";
 
 export default function HomePage() {
