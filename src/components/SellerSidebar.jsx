@@ -27,6 +27,7 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
   const location = useLocation();
   const [user, setUser] = useState(null);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
     const currentUser = getCurrentUser();
@@ -94,12 +95,12 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
   };
 
   const handleLogout = async () => {
-    const confirmed = window.confirm('Apakah Anda yakin ingin logout?');
-    if (confirmed) {
-      await logout();
-      // Force reload to login page
-      window.location.href = '/login';
-    }
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = async () => {
+    await logout();
+    window.location.href = '/login';
   };
 
   return (
@@ -199,6 +200,41 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
           className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
           onClick={() => setIsOpen(false)}
         ></div>
+      )}
+
+      {/* Logout confirmation modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Konfirmasi Logout</h3>
+                <p className="text-sm text-gray-600 mt-1">Anda akan keluar dari akun seller.</p>
+              </div>
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="p-1 text-gray-500 hover:text-gray-700"
+                aria-label="Tutup"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 border border-gray-300 rounded-lg py-2 font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="flex-1 bg-red-600 text-white rounded-lg py-2 font-semibold hover:bg-red-700"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Main Content */}
