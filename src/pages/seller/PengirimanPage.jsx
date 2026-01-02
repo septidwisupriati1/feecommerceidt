@@ -186,6 +186,11 @@ export default function PengirimanPage() {
 
   return (
     <SellerSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen}>
+      <CartSuccessToast
+        show={toast.show}
+        message={toast.message}
+        onClose={() => setToast({ show: false, message: '' })}
+      />
       {/* Page Header */}
       <div className="bg-gradient-to-b from-blue-500 via-blue-300 via-30% to-white py-12">
         <div className="container mx-auto px-4">
@@ -206,12 +211,7 @@ export default function PengirimanPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                <Footer />
-                <CartSuccessToast
-                  show={toast.show}
-                  message={toast.message}
-                  onClose={() => setToast({ show: false, message: '' })}
-                />
+                  <p className="text-sm text-gray-600 mb-1">Total Layanan</p>
                   <h3 className="text-3xl font-bold text-gray-900">{totalServices}</h3>
                   <p className="text-sm text-blue-600 mt-1">Semua kurir</p>
                 </div>
