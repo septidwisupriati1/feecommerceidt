@@ -108,9 +108,20 @@ export default function ProductPage() {
         filteredProducts = filteredProducts.filter(p => p.status === filterStatus);
       }
       
-      // Filter berdasarkan kategori
+      // Filter berdasarkan kategori (mendukung array atau string)
       if (filterCategory) {
-        filteredProducts = filteredProducts.filter(p => p.category === filterCategory);
+        filteredProducts = filteredProducts.filter(p => {
+          if (Array.isArray(p.category)) {
+            return p.category.includes(filterCategory);
+          }
+          if (Array.isArray(p.categories)) {
+            return p.categories.includes(filterCategory) || p.categories.some(c => c?.name === filterCategory || c?.category_id === filterCategory);
+          }
+          if (typeof p.category === 'object' && p.category !== null) {
+            return p.category.name === filterCategory || p.category.category_id === filterCategory;
+          }
+          return p.category === filterCategory;
+        });
       }
       
       // Filter berdasarkan search query
@@ -436,10 +447,44 @@ export default function ProductPage() {
                               <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusBadge}`}>
                                 {getProductStatusLabel(product.status)}
                               </span>
-                              <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-semibold">
-                                {product.category || product.category?.name || 'Tidak ada kategori'}
-                              </span>
-                            </div>
+                              {(() => {
+                                const cats = [];
+
+                                if (Array.isArray(product.categories) && product.categories.length) {
+                                  product.categories.forEach(c => {
+                                    if (typeof c === 'string') cats.push(c);
+                                    else if (c && c.name) cats.push(c.name);
+                                  });
+                                }
+
+                                if (Array.isArray(product.category) && product.category.length) {
+                                  product.category.forEach(c => {
+                                    if (typeof c === 'string') cats.push(c);
+                                    else if (c && c.name) cats.push(c.name);
+                                  });
+                                } else if (product.category) {
+                                  if (typeof product.category === 'string') {
+                                    cats.push(...product.category.split(',').map(s => s.trim()).filter(Boolean));
+                                  } else if (product.category.name) {
+                                    cats.push(product.category.name);
+                                  }
+                                }
+
+                                if (!cats.length) {
+                                  return (
+                                    <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-semibold">
+                                      Tidak ada kategori
+                                    </span>
+                                  );
+                                }
+
+                                return cats.map((c, idx) => (
+                                  <span key={`${c}-${idx}`} className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-semibold">
+                                    {c}
+                                  </span>
+                                ));
+                              })()}
+                           </div>
                             <p className="text-sm text-gray-600 line-clamp-2">{product.description}</p>
                           </div>
                         </div>
