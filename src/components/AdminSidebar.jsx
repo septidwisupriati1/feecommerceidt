@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getCurrentUser, logout } from '../services/authAPI';
 import NotificationDropdown from './NotificationDropdown';
+import '../pages/admin/admin-interactions.css';
 import { 
   Bars3Icon,
   XMarkIcon,
@@ -91,9 +92,9 @@ function AdminSidebar({ children }) {
   return (
     <>
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-blue-600 to-blue-700 transform flex flex-col ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
-      } md:translate-x-0 transition-transform duration-300 ease-in-out overflow-y-auto`}>
+      <div className={`admin-area fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-blue-600 to-blue-700 transform flex flex-col ${
+            isOpen ? 'translate-x-0' : '-translate-x-full'
+          } md:translate-x-0 transition-transform duration-300 ease-in-out overflow-y-auto`}>
         
         {/* Header with Logo */}
         <div className="p-4 border-b border-blue-500">
@@ -218,7 +219,7 @@ function AdminSidebar({ children }) {
       )}
 
       {/* Main Content Area */}
-      <div className="md:ml-64">
+      <div className="md:ml-64 admin-area-content">
         {/* Navbar */}
         <nav className="bg-white border-b border-gray-200 sticky top-0 z-40">
           <div className="px-4 py-3">

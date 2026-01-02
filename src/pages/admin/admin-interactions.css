@@ -1,0 +1,58 @@
+/* Admin interactions helper - scoped to .admin-area */
+.admin-area button,
+.admin-area .clickable,
+.admin-area .action-icon,
+.admin-area .page-link,
+.admin-area .table-row-clickable,
+.admin-area .icon-btn {
+  cursor: pointer;
+}
+
+.admin-area .clickable {
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.admin-area .clickable:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+.admin-area .icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+
+.admin-area .icon-btn:hover {
+  transform: scale(1.08);
+}
+
+.admin-area-content table tr:hover,
+.admin-area-content table tr.table-row-clickable:hover {
+  background-color: rgba(15, 23, 42, 0.03);
+}
+
+.admin-area .pagination .page-link:hover {
+  background-color: #f3f4f6;
+}
+
+.admin-area .disabled,
+.admin-area .is-disabled {
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+.admin-area :focus-visible {
+  outline: 3px solid rgba(59,130,246,0.25);
+  outline-offset: 2px;
+}
+
+.admin-area .avatar.clickable:hover {
+  transform: scale(1.05);
+}
+
+/* Small helper utilities */
+.admin-area .hover-scale { transition: transform 120ms ease; }
+.admin-area .hover-scale:hover { transform: scale(1.03); }
+.admin-area .hover-opacity:hover { opacity: 0.9; }
