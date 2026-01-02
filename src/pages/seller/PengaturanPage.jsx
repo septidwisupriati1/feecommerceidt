@@ -123,7 +123,7 @@ export default function PengaturanPage() {
           <Button
             onClick={() => setActiveTab('toko')}
             variant={activeTab === 'toko' ? 'default' : 'outline'}
-            className={`flex items-center gap-2 ${activeTab === 'toko' ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+            className={`flex items-center gap-2 ${activeTab === 'toko' ? 'bg-blue-600 hover:bg-blue-700' : ''} cursor-pointer`}
           >
             <BuildingStorefrontIcon className="h-5 w-5" />
             Pengaturan Toko
@@ -131,7 +131,7 @@ export default function PengaturanPage() {
           <Button
             onClick={() => setActiveTab('profile')}
             variant={activeTab === 'profile' ? 'default' : 'outline'}
-            className={`flex items-center gap-2 ${activeTab === 'profile' ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+            className={`flex items-center gap-2 ${activeTab === 'profile' ? 'bg-blue-600 hover:bg-blue-700' : ''} cursor-pointer`}
           >
             <UserCircleIcon className="h-5 w-5" />
             Profil Saya
@@ -139,7 +139,7 @@ export default function PengaturanPage() {
           <Button
             onClick={() => setActiveTab('password')}
             variant={activeTab === 'password' ? 'default' : 'outline'}
-            className={`flex items-center gap-2 ${activeTab === 'password' ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+            className={`flex items-center gap-2 ${activeTab === 'password' ? 'bg-blue-600 hover:bg-blue-700' : ''} cursor-pointer`}
           >
             <LockClosedIcon className="h-5 w-5" />
             Ubah Password
@@ -181,7 +181,7 @@ export default function PengaturanPage() {
                           className="hidden"
                         />
                         <label htmlFor="logo-upload">
-                          <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('logo-upload').click()}>
+                          <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('logo-upload').click()} className="cursor-pointer">
                             <PhotoIcon className="h-4 w-4 mr-2" />
                             Upload Logo
                           </Button>
@@ -270,13 +270,13 @@ export default function PengaturanPage() {
                       type="button"
                       variant="outline"
                       onClick={() => navigate('/seller/dashboard')}
-                      className="flex-1"
+                      className="flex-1 cursor-pointer"
                     >
                       Batal
                     </Button>
                     <Button
                       type="submit"
-                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 cursor-pointer"
                     >
                       <CheckCircleIcon className="h-5 w-5 mr-2" />
                       Simpan Perubahan
@@ -320,7 +320,7 @@ export default function PengaturanPage() {
                           className="hidden"
                         />
                         <label htmlFor="photo-upload">
-                          <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('photo-upload').click()}>
+                          <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('photo-upload').click()} className="cursor-pointer">
                             <PhotoIcon className="h-4 w-4 mr-2" />
                             Upload Foto
                           </Button>
@@ -465,13 +465,13 @@ export default function PengaturanPage() {
                       type="button"
                       variant="outline"
                       onClick={() => navigate('/seller/dashboard')}
-                      className="flex-1"
+                      className="flex-1 cursor-pointer"
                     >
                       Batal
                     </Button>
                     <Button
                       type="submit"
-                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      className="flex-1 bg-green-600 hover:bg-green-700 cursor-pointer"
                     >
                       <CheckCircleIcon className="h-5 w-5 mr-2" />
                       Simpan Perubahan
@@ -596,13 +596,13 @@ export default function PengaturanPage() {
                       type="button"
                       variant="outline"
                       onClick={() => navigate('/seller/dashboard')}
-                      className="flex-1"
+                      className="flex-1 cursor-pointer"
                     >
                       Batal
                     </Button>
                     <Button
                       type="submit"
-                      className="flex-1 bg-red-600 hover:bg-red-700"
+                      className="flex-1 bg-red-600 hover:bg-red-700 cursor-pointer"
                     >
                       <LockClosedIcon className="h-5 w-5 mr-2" />
                       Ubah Password

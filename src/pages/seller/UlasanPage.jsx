@@ -705,7 +705,7 @@ export default function UlasanPage() {
                 <Button
                   onClick={() => handleFilterChange('all')}
                   variant={filterRating === 'all' ? 'default' : 'outline'}
-                  className={filterRating === 'all' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                  className={`${filterRating === 'all' ? 'bg-blue-600 hover:bg-blue-700' : ''} cursor-pointer`}
                   size="sm"
                 >
                   Semua
@@ -715,7 +715,7 @@ export default function UlasanPage() {
                     key={rating}
                     onClick={() => handleFilterChange(rating.toString())}
                     variant={filterRating === rating.toString() ? 'default' : 'outline'}
-                    className={filterRating === rating.toString() ? 'bg-yellow-500 hover:bg-yellow-600' : ''}
+                    className={`${filterRating === rating.toString() ? 'bg-yellow-500 hover:bg-yellow-600' : ''} cursor-pointer`}
                     size="sm"
                   >
                     {rating} ⭐

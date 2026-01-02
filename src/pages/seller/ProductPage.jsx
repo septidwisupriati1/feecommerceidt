@@ -245,13 +245,10 @@ export default function ProductPage() {
               <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
                 Produk Saya
               </h1>
-              <p className="text-lg text-blue-50">
-                Kelola semua produk yang Anda jual
-              </p>
             </div>
             <Button
               onClick={() => navigate('/seller/product/add')}
-              className="bg-white text-blue-600 hover:bg-blue-50"
+              className="bg-white text-blue-600 hover:bg-blue-50 cursor-pointer"
               size="lg"
             >
               <PlusIcon className="h-5 w-5 mr-2" />
@@ -505,7 +502,7 @@ export default function ProductPage() {
                             onClick={() => navigate(`/seller/product/${product.product_id || product.id}`)}
                             variant="outline"
                             size="sm"
-                            className="hover:bg-blue-50"
+                            className="hover:bg-blue-50 cursor-pointer"
                           >
                             <EyeIcon className="h-4 w-4 mr-1" />
                             Detail
@@ -514,7 +511,7 @@ export default function ProductPage() {
                             onClick={() => navigate(`/seller/product/edit/${product.product_id || product.id}`)}
                             variant="outline"
                             size="sm"
-                            className="hover:bg-green-50 text-green-600"
+                            className="hover:bg-green-50 text-green-600 cursor-pointer"
                           >
                             <PencilIcon className="h-4 w-4 mr-1" />
                             Edit
@@ -523,7 +520,7 @@ export default function ProductPage() {
                             onClick={() => handleDelete(product.product_id || product.id, product.name)}
                             variant="outline"
                             size="sm"
-                            className="hover:bg-red-50 text-red-600"
+                            className="hover:bg-red-50 text-red-600 cursor-pointer"
                           >
                             <TrashIcon className="h-4 w-4 mr-1" />
                             Hapus

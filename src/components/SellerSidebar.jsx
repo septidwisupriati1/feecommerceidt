@@ -115,7 +115,7 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <h2 className="text-lg font-bold text-blue-600">Seller Dashboard</h2>
               </div>
-              <button onClick={() => setIsOpen(false)} className="md:hidden">
+              <button onClick={() => setIsOpen(false)} className="md:hidden cursor-pointer">
                 <XMarkIcon className="h-6 w-6 text-gray-600" />
               </button>
             </div>
@@ -126,7 +126,7 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
                 navigate('/seller/profile');
                 setIsOpen(false);
               }}
-              className="w-full flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg hover:from-blue-100 hover:to-blue-200 transition-all duration-200 border-2 border-blue-200 hover:border-blue-300"
+              className="w-full flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg hover:from-blue-100 hover:to-blue-200 transition-all duration-200 border-2 border-blue-200 hover:border-blue-300 cursor-pointer"
             >
               {user?.profile_picture ? (
                 <img
@@ -165,7 +165,7 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
                         active 
                           ? 'text-red-600 bg-red-50 font-semibold' 
                           : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                      } cursor-pointer`}
                     >
                       <Icon className="h-5 w-5 flex-shrink-0" />
                       <span className="font-medium flex-1 text-left">{item.label}</span>
@@ -185,7 +185,7 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
           <div className="px-4 pb-4 border-t border-gray-200 pt-4">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-red-600 hover:bg-red-50 font-medium"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-red-600 hover:bg-red-50 font-medium cursor-pointer"
             >
               <ArrowLeftOnRectangleIcon className="h-5 w-5 flex-shrink-0" />
               <span className="flex-1 text-left">Logout</span>
@@ -213,7 +213,7 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
               </div>
               <button
                 onClick={() => setShowLogoutConfirm(false)}
-                className="p-1 text-gray-500 hover:text-gray-700"
+                className="p-1 text-gray-500 hover:text-gray-700 cursor-pointer"
                 aria-label="Tutup"
               >
                 <XMarkIcon className="h-5 w-5" />
@@ -222,13 +222,13 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 border border-gray-300 rounded-lg py-2 font-medium text-gray-700 hover:bg-gray-50"
+                className="flex-1 border border-gray-300 rounded-lg py-2 font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
               >
                 Batal
               </button>
               <button
                 onClick={confirmLogout}
-                className="flex-1 bg-red-600 text-white rounded-lg py-2 font-semibold hover:bg-red-700"
+                className="flex-1 bg-red-600 text-white rounded-lg py-2 font-semibold hover:bg-red-700 cursor-pointer"
               >
                 Logout
               </button>
@@ -244,7 +244,7 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
           <div className="flex items-center justify-between px-4 py-3">
             <button 
               onClick={() => setIsOpen(!isOpen)}
-              className="p-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              className="p-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
             >
               <Bars3Icon className="h-6 w-6" />
             </button>

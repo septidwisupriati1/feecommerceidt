@@ -274,7 +274,7 @@ export default function PengirimanPage() {
               {/* Add Button */}
               <Button
                 onClick={() => setShowAddModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 w-full md:w-auto"
+                className="bg-blue-600 hover:bg-blue-700 w-full md:w-auto cursor-pointer"
               >
                 <PlusCircleIcon className="h-5 w-5 mr-2" />
                 Tambah Layanan Pengiriman
@@ -376,7 +376,7 @@ export default function PengirimanPage() {
                               onClick={() => handleToggleActive(courier.id, service.id)}
                               variant="outline"
                               size="sm"
-                              className={service.isActive ? 'hover:bg-red-50 text-red-600' : 'hover:bg-green-50 text-green-600'}
+                              className={`${service.isActive ? 'hover:bg-red-50 text-red-600' : 'hover:bg-green-50 text-green-600'} cursor-pointer`}
                             >
                               {service.isActive ? (
                                 <>
@@ -395,7 +395,7 @@ export default function PengirimanPage() {
                               onClick={() => handleEditService(courier.id, service.id)}
                               variant="outline"
                               size="sm"
-                              className="hover:bg-blue-50"
+                              className="hover:bg-blue-50 cursor-pointer"
                             >
                               <PencilIcon className="h-4 w-4 mr-1" />
                               Edit
@@ -405,7 +405,7 @@ export default function PengirimanPage() {
                               onClick={() => handleDeleteService(courier.id, service.id)}
                               variant="outline"
                               size="sm"
-                              className="hover:bg-red-50 text-red-600"
+                              className="hover:bg-red-50 text-red-600 cursor-pointer"
                             >
                               <TrashIcon className="h-4 w-4 mr-1" />
                               Hapus

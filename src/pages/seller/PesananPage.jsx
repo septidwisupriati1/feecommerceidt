@@ -340,7 +340,7 @@ export default function PesananPage() {
               <Button
                 onClick={handleRegenerateOrders}
                 variant="outline"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 cursor-pointer"
               >
                 <ArrowPathIcon className="h-4 w-4" />
                 Buat Ulang Data
@@ -352,7 +352,7 @@ export default function PesananPage() {
               <Button
                 onClick={() => setFilterStatus('all')}
                 variant={filterStatus === 'all' ? 'default' : 'outline'}
-                className={filterStatus === 'all' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                className={`${filterStatus === 'all' ? 'bg-blue-600 hover:bg-blue-700' : ''} cursor-pointer`}
               >
                 <FunnelIcon className="h-4 w-4 mr-2" />
                 Semua ({orders.length})
@@ -360,35 +360,35 @@ export default function PesananPage() {
               <Button
                 onClick={() => setFilterStatus('pending')}
                 variant={filterStatus === 'pending' ? 'default' : 'outline'}
-                className={filterStatus === 'pending' ? 'bg-yellow-600 hover:bg-yellow-700' : ''}
+                className={`${filterStatus === 'pending' ? 'bg-yellow-600 hover:bg-yellow-700' : ''} cursor-pointer`}
               >
                 Menunggu ({stats.pending})
               </Button>
               <Button
                 onClick={() => setFilterStatus('processing')}
                 variant={filterStatus === 'processing' ? 'default' : 'outline'}
-                className={filterStatus === 'processing' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                className={`${filterStatus === 'processing' ? 'bg-blue-600 hover:bg-blue-700' : ''} cursor-pointer`}
               >
                 Diproses ({stats.processing})
               </Button>
               <Button
                 onClick={() => setFilterStatus('shipped')}
                 variant={filterStatus === 'shipped' ? 'default' : 'outline'}
-                className={filterStatus === 'shipped' ? 'bg-purple-600 hover:bg-purple-700' : ''}
+                className={`${filterStatus === 'shipped' ? 'bg-purple-600 hover:bg-purple-700' : ''} cursor-pointer`}
               >
                 Dikirim ({stats.shipped})
               </Button>
               <Button
                 onClick={() => setFilterStatus('delivered')}
                 variant={filterStatus === 'delivered' ? 'default' : 'outline'}
-                className={filterStatus === 'delivered' ? 'bg-green-600 hover:bg-green-700' : ''}
+                className={`${filterStatus === 'delivered' ? 'bg-green-600 hover:bg-green-700' : ''} cursor-pointer`}
               >
                 Selesai ({stats.delivered})
               </Button>
               <Button
                 onClick={() => setFilterStatus('cancelled')}
                 variant={filterStatus === 'cancelled' ? 'default' : 'outline'}
-                className={filterStatus === 'cancelled' ? 'bg-red-600 hover:bg-red-700' : ''}
+                className={`${filterStatus === 'cancelled' ? 'bg-red-600 hover:bg-red-700' : ''} cursor-pointer`}
               >
                 Dibatalkan ({stats.cancelled})
               </Button>
@@ -431,7 +431,7 @@ export default function PesananPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => navigate(`/seller/pesanan/${order.id}`)}
-                        className="mt-2 md:mt-0"
+                        className="mt-2 md:mt-0 cursor-pointer"
                       >
                         <EyeIcon className="h-4 w-4 mr-1" />
                         Lihat Detail
@@ -525,6 +525,7 @@ export default function PesananPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    className="cursor-pointer"
                     disabled={currentPage === 1}
                   >
                     <ChevronLeftIcon className="h-4 w-4" />
@@ -549,7 +550,7 @@ export default function PesananPage() {
                         variant={currentPage === pageNum ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setCurrentPage(pageNum)}
-                        className={currentPage === pageNum ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                        className={`${currentPage === pageNum ? 'bg-blue-600 hover:bg-blue-700' : ''} cursor-pointer`}
                       >
                         {pageNum}
                       </Button>
@@ -560,6 +561,7 @@ export default function PesananPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    className="cursor-pointer"
                     disabled={currentPage === totalPages}
                   >
                     Next
