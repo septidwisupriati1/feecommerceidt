@@ -398,6 +398,13 @@ export default function HomePage() {
           </div>
         </div>
       )}
+      <Footer showMap />
+
+      <CartSuccessToast
+        show={cartToast.show}
+        message={cartToast.message || "Produk ditambahkan ke keranjang"}
+        onClose={() => setCartToast(prev => ({ ...prev, show: false }))}
+      />
     </div>
   );
 }
