@@ -95,7 +95,7 @@ export default function OrderDetailPage() {
               <p className="text-lg text-gray-600">Pesanan tidak ditemukan</p>
               <Button 
                 onClick={() => navigate('/seller/pesanan')}
-                className="mt-4"
+                    className="mt-4 cursor-pointer"
               >
                 Kembali ke Daftar Pesanan
               </Button>
@@ -117,7 +117,7 @@ export default function OrderDetailPage() {
           <Button 
             onClick={() => navigate('/seller/pesanan')}
             variant="outline"
-            className="mb-4 bg-white hover:bg-gray-50"
+            className="mb-4 bg-white hover:bg-gray-50 cursor-pointer"
           >
             <ArrowLeftIcon className="h-4 w-4 mr-2" />
             Kembali
@@ -240,7 +240,7 @@ export default function OrderDetailPage() {
                       <Button 
                         onClick={() => setShowPaymentProof(true)}
                         variant="outline"
-                        className="w-full mt-3"
+                        className="w-full mt-3 cursor-pointer"
                       >
                         <PhotoIcon className="h-4 w-4 mr-2" />
                         Lihat Bukti Pembayaran
@@ -355,20 +355,20 @@ export default function OrderDetailPage() {
                 <h3 className="font-semibold text-gray-900 mb-3">Aksi Pesanan</h3>
                 <div className="space-y-2">
                   {order.status === 'pending' && (
-                    <Button className="w-full bg-green-600 hover:bg-green-700">
+                    <Button className="w-full bg-green-600 hover:bg-green-700 cursor-pointer">
                       <CheckCircleIcon className="h-4 w-4 mr-2" />
                       Konfirmasi Pembayaran
                     </Button>
                   )}
                   {order.status === 'processing' && (
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700 cursor-pointer">
                       <TruckIcon className="h-4 w-4 mr-2" />
                       Kirim Pesanan
                     </Button>
                   )}
                   <Button 
                     variant="outline" 
-                    className="w-full"
+                    className="w-full cursor-pointer"
                     onClick={() => window.print()}
                   >
                     <DocumentTextIcon className="h-4 w-4 mr-2" />

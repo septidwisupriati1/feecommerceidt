@@ -163,7 +163,7 @@ export default function RekeningPage() {
               </div>
               <button
                 onClick={handleAddAccount}
-                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold cursor-pointer"
               >
                 <PlusIcon className="h-5 w-5" />
                 Tambah Rekening
@@ -198,7 +198,7 @@ export default function RekeningPage() {
               <p className="text-gray-600 mb-6">Tambahkan rekening bank untuk mulai menerima pembayaran</p>
               <button
                 onClick={handleAddAccount}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold cursor-pointer"
               >
                 <PlusIcon className="h-5 w-5" />
                 Tambah Rekening Pertama
@@ -291,7 +291,7 @@ export default function RekeningPage() {
                       <div className="flex flex-col gap-2 ml-6">
                         {account.status === 'verified' && (
                           <button
-                            className="inline-flex items-center gap-1 px-3 py-1.5 text-red-600 text-sm font-semibold hover:bg-red-50 rounded transition-colors"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-red-600 text-sm font-semibold hover:bg-red-50 rounded transition-colors cursor-pointer"
                           >
                             <XCircleIcon className="h-4 w-4" />
                             Nonaktifkan
@@ -299,7 +299,7 @@ export default function RekeningPage() {
                         )}
                         <button
                           onClick={() => handleEditAccount(account)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 text-gray-600 text-sm font-semibold hover:bg-gray-100 rounded transition-colors"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-gray-600 text-sm font-semibold hover:bg-gray-100 rounded transition-colors cursor-pointer"
                         >
                           <PencilIcon className="h-4 w-4" />
                           Edit
@@ -307,7 +307,7 @@ export default function RekeningPage() {
                         {!account.isPrimary && (
                           <button
                             onClick={() => handleDeleteAccount(account.id)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 text-red-600 text-sm font-semibold hover:bg-red-50 rounded transition-colors"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-red-600 text-sm font-semibold hover:bg-red-50 rounded transition-colors cursor-pointer"
                           >
                             <TrashIcon className="h-4 w-4" />
                             Hapus
@@ -415,14 +415,14 @@ export default function RekeningPage() {
               <div className="flex gap-3 mt-6">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold"
+                    onClick={() => setShowAddModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold cursor-pointer"
                 >
                   Tambah Rekening
                 </button>
@@ -434,7 +434,7 @@ export default function RekeningPage() {
 
       {/* Edit Account Modal */}
       {showEditModal && selectedAccount && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-white/10 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b">
               <h2 className="text-2xl font-bold text-gray-800">Edit Rekening</h2>
@@ -506,13 +506,13 @@ export default function RekeningPage() {
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold"
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold cursor-pointer"
                 >
                   Simpan Perubahan
                 </button>
