@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { 
   ShoppingBag, 
   ShoppingCart, 
   MessageCircle, 
   Star,
-  Search,
   X,
   Package
 } from "lucide-react";
@@ -21,6 +20,7 @@ import styles from "./HomePage.module.css";
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { addToCart } = useCart();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -72,6 +72,15 @@ export default function HomePage() {
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // Read search keyword from URL (?q=...)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('q') || "";
+    setSearchInput(q);
+    setSearchQuery(q);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, [location.search]);
 
   // Debounce search input
   useEffect(() => {
@@ -207,16 +216,6 @@ export default function HomePage() {
           <p className={styles.heroSubtitle}>
             Temukan produk terbaik dengan harga terjangkau
           </p>
-          <div className={styles.searchBar}>
-            <input 
-              type="text"
-              placeholder="Cari produk yang kamu inginkan..."
-              className={styles.searchInput}
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-            />
-            <Search className={styles.searchIcon} />
-          </div>
         </div>
       </div>
 

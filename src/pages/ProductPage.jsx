@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import BuyerNavbar from "../components/BuyerNavbar";
 import Footer from "../components/Footer";
 import { Card, CardContent } from "../components/ui/card";
@@ -12,12 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import { Search, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { browseProducts, getCategories, formatCurrency } from "../services/productAPI";
 import { products as staticProducts } from "../data/products";
 
 export default function ProductPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -70,6 +71,14 @@ export default function ProductPage() {
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // Sync search term from URL (?q=...)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('q') || "";
+    setSearchQuery(q);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, [location.search]);
 
   // Fetch products when filters change
   useEffect(() => {
@@ -221,20 +230,6 @@ export default function ProductPage() {
           <p className="text-lg text-center mb-6" style={{ color: '#6b7280' }}>
             Temukan berbagai produk pilihan dengan harga terbaik
           </p>
-          
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-              <Input
-                type="text"
-                placeholder="Cari produk, kategori..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 h-14 text-lg bg-white shadow-lg border-none"
-              />
-            </div>
-          </div>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ShoppingCart, MessageCircle, Bell, User } from "lucide-react";
+import { ShoppingCart, MessageCircle, Bell, User, Search, Clock } from "lucide-react";
 import { isAuthenticated, clearAuth } from "../utils/auth";
 import { useCart } from "../context/CartContext";
 import { getUnreadCount } from "../services/notificationAPI";
@@ -13,6 +13,11 @@ export default function BuyerNavbar() {
   
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchHistory, setSearchHistory] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchRef = useRef(null);
+  const HISTORY_KEY = 'buyer-search-history';
 
   // Fetch unread notifications count
   useEffect(() => {
@@ -36,8 +41,64 @@ export default function BuyerNavbar() {
     return () => clearInterval(interval);
   }, []);
 
-  const isActive = (path) => {
-    return location.pathname === path;
+  // Sync search box with query param `q`
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('q') || "";
+    setSearchTerm(q);
+  }, [location.search]);
+
+  // Load search history once
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(HISTORY_KEY);
+      if (saved) setSearchHistory(JSON.parse(saved));
+    } catch (err) {
+      console.warn('Search history read error', err);
+    }
+  }, []);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filteredHistory = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return searchHistory;
+    return searchHistory.filter(item => item.toLowerCase().includes(q));
+  }, [searchHistory, searchTerm]);
+
+  const limitedHistory = useMemo(() => filteredHistory.slice(0, 5), [filteredHistory]);
+
+  const removeHistoryItem = (value) => {
+    setSearchHistory((prev) => {
+      const next = prev.filter((item) => item !== value);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const trimmed = searchTerm.trim();
+    if (trimmed) {
+      try {
+        const next = [trimmed, ...searchHistory.filter(i => i !== trimmed)].slice(0, 8);
+        setSearchHistory(next);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+      } catch (err) {
+        console.warn('Search history save error', err);
+      }
+    }
+    navigate(trimmed ? `/produk?q=${encodeURIComponent(trimmed)}` : '/produk');
+    setShowSuggestions(false);
   };
 
   return (
@@ -53,26 +114,69 @@ export default function BuyerNavbar() {
           <span className={styles.navbarTitle}>E-Commerce</span>
         </div>
 
-        {/* Navigation Links - Center */}
-        <div className={styles.navbarLinks}>
-          <button 
-            className={`${styles.navLink} ${isActive('/home') || isActive('/') ? styles.active : ''}`}
-            onClick={() => navigate('/home')}
-          >
-            Beranda
-          </button>
-          <button 
-            className={`${styles.navLink} ${isActive('/produk') ? styles.active : ''}`}
-            onClick={() => navigate('/produk')}
-          >
-            Produk
-          </button>
-          <button 
-            className={`${styles.navLink} ${isActive('/pesanan-saya') ? styles.active : ''}`}
-            onClick={() => navigate('/pesanan-saya')}
-          >
-            Pesanan Saya
-          </button>
+        {/* Search in Navbar */}
+        <div className={styles.searchWrapper} ref={searchRef}>
+          <form className={styles.navbarSearch} onSubmit={handleSearchSubmit}>
+            <Search className={styles.searchIcon} />
+            <input
+              type="text"
+              placeholder="Cari produk, kategori..."
+              value={searchTerm}
+              onFocus={() => setShowSuggestions(true)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setShowSuggestions(true);
+              }}
+              className={styles.searchInput}
+              autoComplete="off"
+            />
+          </form>
+
+          {showSuggestions && filteredHistory.length > 0 && (
+            <div className={styles.searchDropdown}>
+              <div className={styles.searchDropdownHeader}>
+                <span className={styles.searchDropdownLabel}><Clock className={styles.dropdownIcon} /> Riwayat pencarian</span>
+                <button
+                  type="button"
+                  className={styles.clearHistory}
+                  onClick={() => {
+                    setSearchHistory([]);
+                    localStorage.removeItem(HISTORY_KEY);
+                  }}
+                >
+                  Hapus
+                </button>
+              </div>
+              <div className={styles.searchHistoryList}>
+                {limitedHistory.map((item) => (
+                  <div key={item} className={styles.searchHistoryRow}>
+                    <button
+                      type="button"
+                      className={styles.searchHistoryItem}
+                      onClick={() => {
+                        setSearchTerm(item);
+                        navigate(`/produk?q=${encodeURIComponent(item)}`);
+                        setShowSuggestions(false);
+                      }}
+                    >
+                      {item}
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.deleteHistory}
+                      aria-label={`Hapus ${item}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeHistoryItem(item);
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Side Actions */}
