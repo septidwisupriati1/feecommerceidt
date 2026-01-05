@@ -5,6 +5,7 @@ import Footer from "../components/Footer";
 import CartSuccessToast from "../components/CartSuccessToast";
 import { getCurrentUser } from '../services/authAPI';
 import authAPI from '../services/authAPI';
+import { saveAuth } from '../utils/auth';
 import buyerTransactionAPI from '../services/buyerTransactionAPI';
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -58,6 +59,8 @@ export default function ProfilePage() {
         birthDate: currentUser.birth_date || '',
         gender: currentUser.gender || '',
         address: currentUser.address || '',
+        addressLabel: currentUser.address_label || '',
+        addressNotes: currentUser.address_note || '',
         province: currentUser.province || '',
         city: currentUser.city || '',
         postalCode: currentUser.postal_code || '',
@@ -100,6 +103,8 @@ export default function ProfilePage() {
     birthDate: '',
     gender: '',
     address: '',
+    addressLabel: 'Alamat Utama',
+    addressNotes: '',
     province: '',
     city: '',
     postalCode: '',
@@ -129,6 +134,27 @@ export default function ProfilePage() {
   };
 
   const handleSave = () => {
+    const existingUser = getCurrentUser() || {};
+    const token = localStorage.getItem('token') || '';
+
+    const updatedUser = {
+      ...existingUser,
+      full_name: editData.name,
+      email: editData.email,
+      phone: editData.phone,
+      birth_date: editData.birthDate,
+      gender: editData.gender,
+      address: editData.address,
+      address_label: editData.addressLabel,
+      address_note: editData.addressNotes,
+      province: editData.province,
+      city: editData.city,
+      postal_code: editData.postalCode,
+      profile_picture: editData.avatar
+    };
+
+    saveAuth(token, updatedUser);
+    setUser(updatedUser);
     setProfileData({ ...editData });
     setIsEditing(false);
     setProfileToast({ show: true, message: 'Profil berhasil diperbarui.' });
@@ -565,6 +591,23 @@ export default function ProfilePage() {
                       Alamat
                     </h3>
                     <div className="grid grid-cols-1 gap-4">
+                      {/* Address Label */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Label Alamat (misal: Rumah/Kantor)
+                        </label>
+                        {isEditing ? (
+                          <Input
+                            type="text"
+                            value={editData.addressLabel}
+                            onChange={(e) => setEditData({ ...editData, addressLabel: e.target.value })}
+                            className="w-full"
+                          />
+                        ) : (
+                          <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{profileData.addressLabel}</p>
+                        )}
+                      </div>
+
                       {/* Full Address */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -631,6 +674,24 @@ export default function ProfilePage() {
                             <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{profileData.postalCode}</p>
                           )}
                         </div>
+                      </div>
+
+                      {/* Address Notes */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Catatan Alamat (opsional)
+                        </label>
+                        {isEditing ? (
+                          <Input
+                            type="text"
+                            value={editData.addressNotes}
+                            onChange={(e) => setEditData({ ...editData, addressNotes: e.target.value })}
+                            className="w-full"
+                          />
+                        ) : (
+                          <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{profileData.addressNotes || '-'}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
