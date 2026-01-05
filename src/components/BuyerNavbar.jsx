@@ -120,7 +120,7 @@ export default function BuyerNavbar() {
             <Search className={styles.searchIcon} />
             <input
               type="text"
-              placeholder="Cari produk, kategori..."
+              placeholder="Cari produk"
               value={searchTerm}
               onFocus={() => setShowSuggestions(true)}
               onChange={(e) => {

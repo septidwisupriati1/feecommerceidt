@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BuyerNavbar from "../components/BuyerNavbar";
 import Footer from "../components/Footer";
@@ -8,6 +8,7 @@ import { useCart } from '../context/CartContext';
 import { formatPrice } from "../data/products";
 import { CheckCircleIcon } from '@heroicons/react/24/solid';
 import { MapPinIcon, CreditCardIcon, TruckIcon } from '@heroicons/react/24/outline';
+import { getCurrentUser } from "../services/authAPI";
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -19,10 +20,37 @@ export default function CheckoutPage() {
     removeFromCart,
     createOrder
   } = useCart();
-  const [selectedAddress, setSelectedAddress] = useState('home');
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [addressForm, setAddressForm] = useState({
+    label: '',
+    receiver: '',
+    phone: '',
+    address: '',
+    city: '',
+    province: '',
+    postalCode: '',
+    notes: ''
+  });
+  const [missingProfileAddress, setMissingProfileAddress] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState('transfer');
   const [selectedShipping, setSelectedShipping] = useState('regular');
   const [showSuccess, setShowSuccess] = useState(false);
+
+  const STORAGE_KEYS = {
+    addresses: 'checkout_addresses',
+    selected: 'checkout_selected_address'
+  };
+
+  const persistAddresses = (nextAddresses, nextSelected) => {
+    localStorage.setItem(STORAGE_KEYS.addresses, JSON.stringify(nextAddresses));
+    if (nextSelected) {
+      localStorage.setItem(STORAGE_KEYS.selected, nextSelected);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.selected);
+    }
+  };
 
   // Filter only selected items for checkout
   const checkoutItems = cartItems.filter(item => selectedItems.includes(item.id));
@@ -31,23 +59,86 @@ export default function CheckoutPage() {
   const subtotal = getSelectedTotal();
   const total = subtotal + shippingCost;
 
-  // Address details
-  const addresses = {
-    home: {
-      label: 'Rumah',
-      address: 'Jl. Sudirman No. 123, Jakarta Pusat, DKI Jakarta 10110',
-      receiver: 'John Doe',
-      phone: '08123456789'
-    },
-    office: {
-      label: 'Kantor',
-      address: 'Jl. Gatot Subroto No. 45, Jakarta Selatan, DKI Jakarta 12930',
-      receiver: 'John Doe',
-      phone: '08123456789'
-    }
+  useEffect(() => {
+    const user = getCurrentUser();
+    const hasProfileAddress = user && user.address && user.city && user.province;
+
+    const profileAddress = hasProfileAddress ? {
+      id: 'profile-address',
+      label: user.address_label || 'Alamat Profil',
+      address: user.address,
+      receiver: user.full_name || user.username || 'Penerima',
+      phone: user.phone || '',
+      city: user.city,
+      province: user.province,
+      postalCode: user.postal_code || '',
+      notes: user.address_note || ''
+    } : null;
+
+    const savedAddresses = JSON.parse(localStorage.getItem(STORAGE_KEYS.addresses) || '[]');
+    const savedSelected = localStorage.getItem(STORAGE_KEYS.selected);
+
+    const mergedAddresses = profileAddress
+      ? [profileAddress, ...savedAddresses.filter((addr) => addr.id !== 'profile-address')]
+      : savedAddresses;
+
+    const defaultSelected = savedSelected && mergedAddresses.some((a) => a.id === savedSelected)
+      ? savedSelected
+      : profileAddress?.id || mergedAddresses[0]?.id || null;
+
+    setAddresses(mergedAddresses);
+    setSelectedAddress(defaultSelected);
+    setMissingProfileAddress(!hasProfileAddress);
+    setShowAddressForm(!mergedAddresses.length);
+  }, []);
+
+  const handleSaveAddress = () => {
+    const required = ['label', 'receiver', 'phone', 'address', 'city', 'province', 'postalCode'];
+    const hasEmpty = required.some((key) => !addressForm[key].trim());
+    if (hasEmpty) return;
+
+    const id = `addr-${Date.now()}`;
+    const newAddress = { id, ...addressForm };
+    const updated = [...addresses, newAddress];
+    setAddresses(updated);
+    setSelectedAddress(id);
+    persistAddresses(updated, id);
+    setShowAddressForm(false);
+    setAddressForm({
+      label: '',
+      receiver: '',
+      phone: '',
+      address: '',
+      city: '',
+      province: '',
+      postalCode: '',
+      notes: ''
+    });
+    setMissingProfileAddress(false);
+  };
+
+  const handleDeleteAddress = (id) => {
+    setAddresses((prev) => {
+      const next = prev.filter((addr) => addr.id !== id);
+      const nextSelected = selectedAddress === id ? (next[0]?.id || null) : selectedAddress;
+      setSelectedAddress(nextSelected);
+      if (!next.length) {
+        setShowAddressForm(true);
+      }
+      persistAddresses(next, nextSelected);
+      return next;
+    });
   };
 
   const handleCheckout = () => {
+    if (!selectedAddress) {
+      setShowAddressForm(true);
+      return;
+    }
+
+    const shippingAddress = addresses.find((a) => a.id === selectedAddress);
+    if (!shippingAddress) return;
+
     // Create order data
     const orderData = {
       order_id: 'ORD-' + Date.now(),
@@ -56,7 +147,7 @@ export default function CheckoutPage() {
       subtotal: subtotal,
       shipping_cost: shippingCost,
       total: total,
-      shippingAddress: addresses[selectedAddress],
+      shippingAddress,
       shippingMethod: selectedShipping,
       paymentMethod: selectedPayment,
       status: 'pending',
@@ -147,37 +238,148 @@ export default function CheckoutPage() {
                 </div>
                 
                 <div className="space-y-3">
-                  <label className={`block p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedAddress === 'home' ? 'border-red-600 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                    <input
-                      type="radio"
-                      name="address"
-                      value="home"
-                      checked={selectedAddress === 'home'}
-                      onChange={(e) => setSelectedAddress(e.target.value)}
-                      className="mr-3"
-                    />
-                    <span className="font-semibold">Rumah</span>
-                    <p className="ml-6 text-sm text-gray-600">Jl. Sudirman No. 123, Jakarta Pusat, DKI Jakarta 10110</p>
-                    <p className="ml-6 text-sm text-gray-600">Penerima: John Doe | 08123456789</p>
-                  </label>
+                  {missingProfileAddress && (
+                    <div className="p-3 border border-dashed border-gray-300 rounded-lg text-sm text-gray-600 bg-gray-50 flex items-start justify-between gap-3">
+                      <span>Alamat di profil belum diisi. Lengkapi di Profil atau tambah alamat di sini.</span>
+                      <Button size="sm" onClick={() => navigate('/profil')} className="bg-blue-600 hover:bg-blue-700 text-white">Buka Profil</Button>
+                    </div>
+                  )}
 
-                  <label className={`block p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedAddress === 'office' ? 'border-red-600 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                    <input
-                      type="radio"
-                      name="address"
-                      value="office"
-                      checked={selectedAddress === 'office'}
-                      onChange={(e) => setSelectedAddress(e.target.value)}
-                      className="mr-3"
-                    />
-                    <span className="font-semibold">Kantor</span>
-                    <p className="ml-6 text-sm text-gray-600">Jl. Gatot Subroto No. 45, Jakarta Selatan, DKI Jakarta 12930</p>
-                    <p className="ml-6 text-sm text-gray-600">Penerima: John Doe | 08123456789</p>
-                  </label>
+                  {addresses.map((addr) => (
+                    <label
+                      key={addr.id}
+                      className={`block p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedAddress === addr.id ? 'border-red-600 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="radio"
+                            name="address"
+                            value={addr.id}
+                            checked={selectedAddress === addr.id}
+                            onChange={(e) => {
+                              setSelectedAddress(e.target.value);
+                              localStorage.setItem(STORAGE_KEYS.selected, e.target.value);
+                            }}
+                            className="mt-1"
+                          />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{addr.label}</span>
+                              <span className="text-xs text-gray-500">{addr.city}, {addr.province}</span>
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1">{addr.address}</p>
+                            <p className="text-sm text-gray-600">Penerima: {addr.receiver} | {addr.phone}</p>
+                            {addr.notes && <p className="text-xs text-gray-500 mt-1">Catatan: {addr.notes}</p>}
+                          </div>
+                        </div>
 
-                  <Button variant="outline" className="w-full border-dashed border-2 border-gray-300 hover:border-red-600 text-gray-600 hover:text-red-600">
-                    + Tambah Alamat Baru
+                        {addr.id !== 'profile-address' && (
+                          <button
+                            type="button"
+                            className="text-xs text-red-600 hover:text-red-700 font-semibold"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteAddress(addr.id);
+                            }}
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+
+                  <Button
+                    variant="outline"
+                    className="w-full border-dashed border-2 border-gray-300 hover:border-red-600 text-gray-600 hover:text-red-600"
+                    type="button"
+                    onClick={() => setShowAddressForm((v) => !v)}
+                  >
+                    {showAddressForm ? 'Tutup Form Alamat' : '+ Tambah Alamat Baru'}
                   </Button>
+
+                  {showAddressForm && (
+                    <div className="border rounded-lg p-4 bg-gray-50">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-semibold mb-1">Label Alamat</label>
+                          <input
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            placeholder="Contoh: Rumah, Kantor"
+                            value={addressForm.label}
+                            onChange={(e) => setAddressForm((f) => ({ ...f, label: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold mb-1">Nama Penerima</label>
+                          <input
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            value={addressForm.receiver}
+                            onChange={(e) => setAddressForm((f) => ({ ...f, receiver: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold mb-1">No. HP</label>
+                          <input
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            value={addressForm.phone}
+                            onChange={(e) => setAddressForm((f) => ({ ...f, phone: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold mb-1">Kota/Kabupaten</label>
+                          <input
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            value={addressForm.city}
+                            onChange={(e) => setAddressForm((f) => ({ ...f, city: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold mb-1">Provinsi</label>
+                          <input
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            value={addressForm.province}
+                            onChange={(e) => setAddressForm((f) => ({ ...f, province: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold mb-1">Kode Pos</label>
+                          <input
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            value={addressForm.postalCode}
+                            onChange={(e) => setAddressForm((f) => ({ ...f, postalCode: e.target.value }))}
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-semibold mb-1">Alamat Lengkap</label>
+                          <textarea
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            rows="2"
+                            value={addressForm.address}
+                            onChange={(e) => setAddressForm((f) => ({ ...f, address: e.target.value }))}
+                          ></textarea>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-semibold mb-1">Catatan (opsional)</label>
+                          <input
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            value={addressForm.notes}
+                            onChange={(e) => setAddressForm((f) => ({ ...f, notes: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 mt-4">
+                        <Button type="button" className="bg-red-600 hover:bg-red-700" onClick={handleSaveAddress}>
+                          Simpan Alamat
+                        </Button>
+                        <Button type="button" variant="outline" onClick={() => { setShowAddressForm(false); setAddressForm({ label: '', receiver: '', phone: '', address: '', city: '', province: '', postalCode: '', notes: '' }); }}>
+                          Batal
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -321,7 +523,7 @@ export default function CheckoutPage() {
 
           {/* Right Section - Order Summary */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-4">
+            <Card className="sticky top-24">
               <CardContent className="p-6">
                 <h2 className="text-xl font-bold mb-4 text-gray-900">Ringkasan Belanja</h2>
                 
@@ -353,7 +555,8 @@ export default function CheckoutPage() {
 
                 <Button 
                   onClick={handleCheckout}
-                  className="w-full h-12 bg-red-600 hover:bg-red-700 text-white text-lg font-semibold"
+                  disabled={!selectedAddress}
+                  className={`w-full h-12 text-white text-lg font-semibold ${selectedAddress ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-300 cursor-not-allowed'}`}
                 >
                   Bayar Sekarang
                 </Button>
