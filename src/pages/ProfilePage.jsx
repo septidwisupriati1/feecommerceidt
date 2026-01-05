@@ -134,6 +134,24 @@ export default function ProfilePage() {
   };
 
   const handleSave = () => {
+    const requiredFields = [
+      { key: 'name', label: 'Nama Lengkap' },
+      { key: 'email', label: 'Email' },
+      { key: 'phone', label: 'Nomor Telepon' },
+      { key: 'addressLabel', label: 'Label Alamat' },
+      { key: 'address', label: 'Alamat Lengkap' },
+      { key: 'city', label: 'Kota/Kabupaten' },
+      { key: 'province', label: 'Provinsi' },
+      { key: 'postalCode', label: 'Kode Pos' }
+    ];
+
+    const missing = requiredFields.filter(({ key }) => !String(editData[key] || '').trim());
+    if (missing.length) {
+      const missingLabels = missing.map((m) => m.label).join(', ');
+      setProfileToast({ show: true, message: `Gagal menyimpan: lengkapi data wajib (${missingLabels})`, variant: 'error' });
+      return;
+    }
+
     const existingUser = getCurrentUser() || {};
     const token = localStorage.getItem('token') || '';
 
@@ -157,7 +175,7 @@ export default function ProfilePage() {
     setUser(updatedUser);
     setProfileData({ ...editData });
     setIsEditing(false);
-    setProfileToast({ show: true, message: 'Profil berhasil diperbarui.' });
+    setProfileToast({ show: true, message: 'Profil berhasil diperbarui.', variant: 'success' });
   };
 
   const handleCancel = () => {
@@ -462,7 +480,7 @@ export default function ProfilePage() {
                       {/* Name */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Nama Lengkap
+                          Nama Lengkap <span className="text-red-600">*</span>
                         </label>
                         {isEditing ? (
                           <Input
@@ -479,7 +497,7 @@ export default function ProfilePage() {
                       {/* Email */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Email
+                          Email <span className="text-red-600">*</span>
                         </label>
                         {isEditing ? (
                           <div className="relative">
@@ -502,7 +520,7 @@ export default function ProfilePage() {
                       {/* Phone */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Nomor Telepon
+                          Nomor Telepon <span className="text-red-600">*</span>
                         </label>
                         {isEditing ? (
                           <div className="relative">
@@ -594,7 +612,7 @@ export default function ProfilePage() {
                       {/* Address Label */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Label Alamat (misal: Rumah/Kantor)
+                          Label Alamat (misal: Rumah/Kantor) <span className="text-red-600">*</span>
                         </label>
                         {isEditing ? (
                           <Input
@@ -611,7 +629,7 @@ export default function ProfilePage() {
                       {/* Full Address */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Alamat Lengkap
+                          Alamat Lengkap <span className="text-red-600">*</span>
                         </label>
                         {isEditing ? (
                           <textarea
@@ -629,7 +647,7 @@ export default function ProfilePage() {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Provinsi
+                            Provinsi <span className="text-red-600">*</span>
                           </label>
                           {isEditing ? (
                             <Input
@@ -645,7 +663,7 @@ export default function ProfilePage() {
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Kota/Kabupaten
+                            Kota/Kabupaten <span className="text-red-600">*</span>
                           </label>
                           {isEditing ? (
                             <Input
@@ -661,7 +679,7 @@ export default function ProfilePage() {
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Kode Pos
+                            Kode Pos <span className="text-red-600">*</span>
                           </label>
                           {isEditing ? (
                             <Input
@@ -723,6 +741,7 @@ export default function ProfilePage() {
       <CartSuccessToast
         show={profileToast.show}
         message={profileToast.message || "Profil berhasil diperbarui"}
+        variant={profileToast.variant || 'success'}
         onClose={() => setProfileToast(prev => ({ ...prev, show: false }))}
       />
     </div>

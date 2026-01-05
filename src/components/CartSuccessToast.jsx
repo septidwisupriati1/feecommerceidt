@@ -1,8 +1,12 @@
 import { useEffect } from "react";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, XCircle } from "lucide-react";
 import styles from "./CartSuccessToast.module.css";
 
-export default function CartSuccessToast({ message, show, onClose }) {
+export default function CartSuccessToast({ message, show, onClose, variant = 'success', title }) {
+  const isError = variant === 'error';
+  const Icon = isError ? XCircle : CheckCircle;
+  const resolvedTitle = title || (isError ? 'Gagal' : 'Berhasil');
+
   useEffect(() => {
     if (!show) return;
     const timer = setTimeout(() => {
@@ -12,12 +16,12 @@ export default function CartSuccessToast({ message, show, onClose }) {
   }, [show, onClose]);
 
   return (
-    <div className={`${styles.toast} ${show ? styles.show : ""}`}>
-      <div className={styles.iconWrap}>
-        <CheckCircle className={styles.icon} />
+    <div className={`${styles.toast} ${show ? styles.show : ""} ${isError ? styles.error : styles.success}`}>
+      <div className={`${styles.iconWrap} ${isError ? styles.iconWrapError : styles.iconWrapSuccess}`}>
+        <Icon className={`${styles.icon} ${isError ? styles.iconError : styles.iconSuccess}`} />
       </div>
       <div className={styles.textWrap}>
-        <div className={styles.title}>Berhasil</div>
+        <div className={`${styles.title} ${isError ? styles.titleError : styles.titleSuccess}`}>{resolvedTitle}</div>
         <div className={styles.message}>{message}</div>
       </div>
       <button
@@ -28,7 +32,7 @@ export default function CartSuccessToast({ message, show, onClose }) {
       >
         x
       </button>
-      {show && <span className={styles.progress} aria-hidden="true" />}
+      {show && <span className={`${styles.progress} ${isError ? styles.progressError : styles.progressSuccess}`} aria-hidden="true" />}
     </div>
   );
 }

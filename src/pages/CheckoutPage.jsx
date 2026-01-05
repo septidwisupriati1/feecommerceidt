@@ -23,6 +23,7 @@ export default function CheckoutPage() {
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
+  const [hasProfileAddress, setHasProfileAddress] = useState(false);
   const [addressForm, setAddressForm] = useState({
     label: '',
     receiver: '',
@@ -75,7 +76,8 @@ export default function CheckoutPage() {
       notes: user.address_note || ''
     } : null;
 
-    const savedAddresses = JSON.parse(localStorage.getItem(STORAGE_KEYS.addresses) || '[]');
+    const savedAddressesRaw = localStorage.getItem(STORAGE_KEYS.addresses);
+    const savedAddresses = JSON.parse(savedAddressesRaw || '[]');
     const savedSelected = localStorage.getItem(STORAGE_KEYS.selected);
 
     const mergedAddresses = profileAddress
@@ -89,10 +91,15 @@ export default function CheckoutPage() {
     setAddresses(mergedAddresses);
     setSelectedAddress(defaultSelected);
     setMissingProfileAddress(!hasProfileAddress);
-    setShowAddressForm(!mergedAddresses.length);
+    setHasProfileAddress(!!hasProfileAddress);
+    setShowAddressForm(false);
   }, []);
 
   const handleSaveAddress = () => {
+    if (!hasProfileAddress) {
+      setMissingProfileAddress(true);
+      return;
+    }
     const required = ['label', 'receiver', 'phone', 'address', 'city', 'province', 'postalCode'];
     const hasEmpty = required.some((key) => !addressForm[key].trim());
     if (hasEmpty) return;
@@ -122,9 +129,7 @@ export default function CheckoutPage() {
       const next = prev.filter((addr) => addr.id !== id);
       const nextSelected = selectedAddress === id ? (next[0]?.id || null) : selectedAddress;
       setSelectedAddress(nextSelected);
-      if (!next.length) {
-        setShowAddressForm(true);
-      }
+      setShowAddressForm(false);
       persistAddresses(next, nextSelected);
       return next;
     });
@@ -292,9 +297,16 @@ export default function CheckoutPage() {
 
                   <Button
                     variant="outline"
-                    className="w-full border-dashed border-2 border-gray-300 hover:border-red-600 text-gray-600 hover:text-red-600"
+                    className={`w-full border-dashed border-2 ${hasProfileAddress ? 'border-gray-300 hover:border-red-600 text-gray-600 hover:text-red-600' : 'border-gray-200 text-gray-400 cursor-not-allowed'}`}
                     type="button"
-                    onClick={() => setShowAddressForm((v) => !v)}
+                    disabled={!hasProfileAddress}
+                    onClick={() => {
+                      if (!hasProfileAddress) {
+                        navigate('/profil');
+                        return;
+                      }
+                      setShowAddressForm((v) => !v);
+                    }}
                   >
                     {showAddressForm ? 'Tutup Form Alamat' : '+ Tambah Alamat Baru'}
                   </Button>
@@ -303,7 +315,7 @@ export default function CheckoutPage() {
                     <div className="border rounded-lg p-4 bg-gray-50">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-sm font-semibold mb-1">Label Alamat</label>
+                          <label className="block text-sm font-semibold mb-1">Label Alamat <span className="text-red-600">*</span></label>
                           <input
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                             placeholder="Contoh: Rumah, Kantor"
@@ -312,7 +324,7 @@ export default function CheckoutPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold mb-1">Nama Penerima</label>
+                          <label className="block text-sm font-semibold mb-1">Nama Penerima <span className="text-red-600">*</span></label>
                           <input
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                             value={addressForm.receiver}
@@ -320,7 +332,7 @@ export default function CheckoutPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold mb-1">No. HP</label>
+                          <label className="block text-sm font-semibold mb-1">No. HP <span className="text-red-600">*</span></label>
                           <input
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                             value={addressForm.phone}
@@ -328,7 +340,7 @@ export default function CheckoutPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold mb-1">Kota/Kabupaten</label>
+                          <label className="block text-sm font-semibold mb-1">Kota/Kabupaten <span className="text-red-600">*</span></label>
                           <input
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                             value={addressForm.city}
@@ -336,7 +348,7 @@ export default function CheckoutPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold mb-1">Provinsi</label>
+                          <label className="block text-sm font-semibold mb-1">Provinsi <span className="text-red-600">*</span></label>
                           <input
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                             value={addressForm.province}
@@ -344,7 +356,7 @@ export default function CheckoutPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold mb-1">Kode Pos</label>
+                          <label className="block text-sm font-semibold mb-1">Kode Pos <span className="text-red-600">*</span></label>
                           <input
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                             value={addressForm.postalCode}
@@ -352,7 +364,7 @@ export default function CheckoutPage() {
                           />
                         </div>
                         <div className="md:col-span-2">
-                          <label className="block text-sm font-semibold mb-1">Alamat Lengkap</label>
+                          <label className="block text-sm font-semibold mb-1">Alamat Lengkap <span className="text-red-600">*</span></label>
                           <textarea
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                             rows="2"
