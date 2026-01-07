@@ -9,13 +9,21 @@
   min-width: 260px;
   max-width: 90vw;
   padding: 0.9rem 1rem;
-  background: linear-gradient(135deg, #ecfdf3 0%, #e0f2fe 100%);
-  border: 1px solid #bbf7d0;
   border-radius: 0.75rem;
   box-shadow: 0 20px 45px rgba(15, 23, 42, 0.15);
   opacity: 0;
   transition: transform 0.25s ease, opacity 0.25s ease;
   z-index: 120;
+}
+
+.success {
+  background: linear-gradient(135deg, #ecfdf3 0%, #e0f2fe 100%);
+  border: 1px solid #bbf7d0;
+}
+
+.error {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 1px solid #fecdd3;
 }
 
 .show {
@@ -27,15 +35,31 @@
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 999px;
-  background: #dcfce7;
   display: grid;
   place-items: center;
+}
+
+.iconWrapSuccess {
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+}
+
+.iconWrapError {
+  background: #fee2e2;
+  border: 1px solid #fecdd3;
 }
 
 .icon {
   width: 1.5rem;
   height: 1.5rem;
+}
+
+.iconSuccess {
   color: #16a34a;
+}
+
+.iconError {
+  color: #dc2626;
 }
 
 .textWrap {
@@ -44,9 +68,16 @@
 
 .title {
   font-weight: 700;
-  color: #065f46;
   margin-bottom: 0.15rem;
   letter-spacing: 0.01em;
+}
+
+.titleSuccess {
+  color: #065f46;
+}
+
+.titleError {
+  color: #b91c1c;
 }
 
 .message {
@@ -77,9 +108,16 @@
   bottom: 0;
   height: 3px;
   width: 100%;
-  background: linear-gradient(90deg, #16a34a, #22c55e);
   border-radius: 0 0 0.75rem 0.75rem;
   animation: progressShrink 2.5s linear forwards;
+}
+
+.progressSuccess {
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+}
+
+.progressError {
+  background: linear-gradient(90deg, #dc2626, #f87171);
 }
 
 @keyframes progressShrink {
