@@ -904,7 +904,7 @@ export default function UlasanPage() {
                       <Button
                         onClick={() => handleReply(reviewId)}
                         size="sm"
-                        className="bg-blue-600 hover:bg-blue-700"
+                        className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
                       >
                         <ChatBubbleLeftIcon className="h-4 w-4 mr-1" />
                         Balas Ulasan
@@ -914,7 +914,7 @@ export default function UlasanPage() {
                         onClick={() => handleReply(reviewId, hasReply)}
                         variant="outline"
                         size="sm"
-                        className="hover:bg-blue-50"
+                        className="hover:bg-blue-50 cursor-pointer"
                       >
                         <ChatBubbleLeftIcon className="h-4 w-4 mr-1" />
                         Edit Balasan
