@@ -127,13 +127,19 @@ export default function HomePage() {
     }
   };
 
-  const handleChatClick = (productId, productName) => {
+  const handleBuyNowClick = (product) => {
     if (!isAuthenticated()) {
-      setLoginAction(`mengirim pesan tentang "${productName}"`);
+      setLoginAction(`membeli "${product.name}" sekarang`);
       setShowLoginModal(true);
     } else {
-      // Navigate to chat
-      navigate('/chat');
+      navigate('/checkout', {
+        state: {
+          buyNow: {
+            product,
+            quantity: 1
+          }
+        }
+      });
     }
   };
 
@@ -231,7 +237,7 @@ export default function HomePage() {
             className={`${styles.btnIcon} ${styles.btnIconPrimary}`}
             onClick={(e) => {
               e.stopPropagation();
-              handleChatClick(product.product_id, product.name);
+              handleBuyNowClick(product);
             }}
             title="Beli Sekarang"
           >
