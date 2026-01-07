@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { validateAuth, getAuthHeaders, debugAuth } from '../utils/auth';
 
-const BASE_URL = 'http://localhost:5000/api/ecommerce';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/ecommerce';
 
 /**
  * Buyer Transaction API Service
