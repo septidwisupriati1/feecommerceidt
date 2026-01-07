@@ -15,7 +15,7 @@ export default function LandingPage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/products?limit=8`);
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/products?limit=8`);
       const data = await response.json();
       console.log("Products data:", data);
       if (data.success) {

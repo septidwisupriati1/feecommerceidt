@@ -3,8 +3,7 @@
  * For buyers and guests to browse products
  * Base URL: /api/ecommerce/browse
  */
-
-const API_BASE_URL = 'http://localhost:5000/api/ecommerce/browse';
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/ecommerce'}/browse`;
 
 /**
  * Browse products (public access)

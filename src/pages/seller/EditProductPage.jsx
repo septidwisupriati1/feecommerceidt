@@ -303,7 +303,7 @@ export default function EditProductPage() {
         formDataToSend.append('existing_images', JSON.stringify(existingImages));
       }
 
-      const response = await fetch(`http://localhost:5000/api/ecommerce/products/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/ecommerce'}/products/${id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
