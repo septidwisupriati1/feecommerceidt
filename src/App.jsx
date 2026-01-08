@@ -24,6 +24,9 @@ import BuyerDashboard from './pages/buyer/BuyerDashboard';
 import ProductPage from './pages/ProductPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import CartPage from './pages/CartPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
+import VerifyEmailLocalPage from './pages/VerifyEmailLocalPage';
+import VerifyPhoneLocalPage from './pages/VerifyPhoneLocalPage';
 import CheckoutPage from './pages/CheckoutPage';
 import PaymentPage from './pages/PaymentPage';
 import MyOrdersPage from './pages/MyOrdersPage';
@@ -108,6 +111,9 @@ function App() {
           <Route path="/produk" element={<ProductPage />} />
           <Route path="/produk/:id" element={<ProductDetailPage />} />
           <Route path="/keranjang" element={<CartPage />} />
+          <Route path="/ubah-password" element={<ChangePasswordPage />} />
+          <Route path="/verifikasi-email" element={<VerifyEmailLocalPage />} />
+          <Route path="/verifikasi-telepon" element={<VerifyPhoneLocalPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/pesanan-saya" element={<MyOrdersPage />} />

@@ -320,7 +320,7 @@ export default function ProfilePage() {
                   <Button
                     onClick={() => navigate('/pesanan-saya')}
                     variant="outline"
-                    className="w-full justify-start"
+                    className="w-full justify-start cursor-pointer"
                   >
                     <ShoppingBagIcon className="w-5 h-5 mr-2" />
                     Pesanan Saya
@@ -328,7 +328,7 @@ export default function ProfilePage() {
                   <Button
                     onClick={() => navigate('/chat')}
                     variant="outline"
-                    className="w-full justify-start"
+                    className="w-full justify-start cursor-pointer"
                   >
                     <ChatBubbleLeftIcon className="w-5 h-5 mr-2" />
                     Pesan
@@ -336,7 +336,7 @@ export default function ProfilePage() {
                   <Button
                     onClick={() => navigate('/wishlist')}
                     variant="outline"
-                    className="w-full justify-start"
+                    className="w-full justify-start cursor-pointer"
                   >
                     <HeartIcon className="w-5 h-5 mr-2" />
                     Wishlist
@@ -344,7 +344,7 @@ export default function ProfilePage() {
                   <Button
                     onClick={handleLogout}
                     variant="outline"
-                    className="w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200"
+                    className="w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200 cursor-pointer"
                   >
                     <ArrowRightOnRectangleIcon className="w-5 h-5 mr-2" />
                     Logout
@@ -364,7 +364,7 @@ export default function ProfilePage() {
                   <Button
                     onClick={() => navigate('/pesanan-saya')}
                     variant="outline"
-                    className="text-yellow-500 hover:text-yellow-600 border-yellow-500 hover:bg-yellow-50"
+                    className="text-yellow-500 hover:text-yellow-600 border-yellow-500 hover:bg-yellow-50 cursor-pointer"
                   >
                     Lihat Semua →
                   </Button>
@@ -384,6 +384,7 @@ export default function ProfilePage() {
                         background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
                         color: '#111827'
                       }}
+                      className="cursor-pointer"
                     >
                       Mulai Belanja Sekarang
                     </Button>
@@ -440,6 +441,7 @@ export default function ProfilePage() {
                         background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
                         color: 'white'
                       }}
+                      className="cursor-pointer"
                     >
                       <PencilIcon className="w-5 h-5 mr-2" />
                       Edit Profil
@@ -452,6 +454,7 @@ export default function ProfilePage() {
                           background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                           color: 'white'
                         }}
+                        className="cursor-pointer"
                       >
                         <CheckIcon className="w-5 h-5 mr-2" />
                         Simpan
@@ -459,7 +462,7 @@ export default function ProfilePage() {
                       <Button
                         onClick={handleCancel}
                         variant="outline"
-                        className="text-red-600 hover:bg-red-50"
+                        className="text-red-600 hover:bg-red-50 cursor-pointer"
                       >
                         <XMarkIcon className="w-5 h-5 mr-2" />
                         Batal
@@ -719,13 +722,13 @@ export default function ProfilePage() {
                     <div className="border-t pt-6">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4">Keamanan</h3>
                       <div className="space-y-3">
-                        <Button variant="outline" className="w-full justify-start">
+                        <Button variant="outline" className="w-full justify-start cursor-pointer" onClick={() => navigate('/ubah-password')}>
                           Ubah Password
                         </Button>
-                        <Button variant="outline" className="w-full justify-start">
+                        <Button variant="outline" className="w-full justify-start cursor-pointer" onClick={() => navigate('/verifikasi-email')}>
                           Verifikasi Email
                         </Button>
-                        <Button variant="outline" className="w-full justify-start">
+                        <Button variant="outline" className="w-full justify-start cursor-pointer" onClick={() => navigate('/verifikasi-telepon')}>
                           Verifikasi Nomor Telepon
                         </Button>
                       </div>
