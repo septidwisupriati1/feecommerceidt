@@ -176,10 +176,10 @@ export default function CheckoutPage() {
         <BuyerNavbar />
         <div className="container mx-auto px-4 py-20">
           <Card className="max-w-md mx-auto">
-            <CardContent className="p-8 text-center">
+              <CardContent className="p-8 text-center">
               <h2 className="text-2xl font-bold mb-4">Tidak Ada Item yang Dipilih</h2>
               <p className="text-gray-600 mb-6">Silakan pilih produk di keranjang terlebih dahulu</p>
-              <Button onClick={() => navigate('/keranjang')} className="bg-red-600 hover:bg-red-700">
+              <Button onClick={() => navigate('/keranjang')} className="bg-red-600 hover:bg-red-700 cursor-pointer">
                 Kembali ke Keranjang
               </Button>
             </CardContent>
@@ -220,10 +220,10 @@ export default function CheckoutPage() {
       <BuyerNavbar />
       
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
+          <div className="mb-6">
           <button 
             onClick={() => navigate('/keranjang')} 
-            className="text-gray-700 hover:text-blue-600 font-medium"
+            className="text-gray-700 hover:text-blue-600 font-medium cursor-pointer"
           >
             ← Kembali ke Keranjang
           </button>
@@ -282,7 +282,7 @@ export default function CheckoutPage() {
                         {addr.id !== 'profile-address' && (
                           <button
                             type="button"
-                            className="text-xs text-red-600 hover:text-red-700 font-semibold"
+                            className="text-xs text-red-600 hover:text-red-700 font-semibold cursor-pointer"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteAddress(addr.id);
@@ -297,7 +297,7 @@ export default function CheckoutPage() {
 
                   <Button
                     variant="outline"
-                    className={`w-full border-dashed border-2 ${hasProfileAddress ? 'border-gray-300 hover:border-red-600 text-gray-600 hover:text-red-600' : 'border-gray-200 text-gray-400 cursor-not-allowed'}`}
+                    className={`w-full border-dashed border-2 ${hasProfileAddress ? 'border-gray-300 hover:border-red-600 text-gray-600 hover:text-red-600 cursor-pointer' : 'border-gray-200 text-gray-400 cursor-not-allowed'}`}
                     type="button"
                     disabled={!hasProfileAddress}
                     onClick={() => {
@@ -383,10 +383,10 @@ export default function CheckoutPage() {
                       </div>
 
                       <div className="flex gap-3 mt-4">
-                        <Button type="button" className="bg-red-600 hover:bg-red-700" onClick={handleSaveAddress}>
+                        <Button type="button" className="bg-red-600 hover:bg-red-700 cursor-pointer" onClick={handleSaveAddress}>
                           Simpan Alamat
                         </Button>
-                        <Button type="button" variant="outline" onClick={() => { setShowAddressForm(false); setAddressForm({ label: '', receiver: '', phone: '', address: '', city: '', province: '', postalCode: '', notes: '' }); }}>
+                        <Button type="button" variant="outline" className="cursor-pointer" onClick={() => { setShowAddressForm(false); setAddressForm({ label: '', receiver: '', phone: '', address: '', city: '', province: '', postalCode: '', notes: '' }); }}>
                           Batal
                         </Button>
                       </div>
@@ -568,7 +568,7 @@ export default function CheckoutPage() {
                 <Button 
                   onClick={handleCheckout}
                   disabled={!selectedAddress}
-                  className={`w-full h-12 text-white text-lg font-semibold ${selectedAddress ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-300 cursor-not-allowed'}`}
+                  className={`w-full h-12 text-white text-lg font-semibold ${selectedAddress ? 'bg-red-600 hover:bg-red-700 cursor-pointer' : 'bg-gray-300 cursor-not-allowed'}`}
                 >
                   Bayar Sekarang
                 </Button>

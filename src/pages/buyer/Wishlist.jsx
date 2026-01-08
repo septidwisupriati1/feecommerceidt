@@ -69,11 +69,11 @@ export default function WishlistPage() {
                     <div className="mt-3 flex items-center justify-between">
                       <button
                         onClick={() => navigate(`/produk/${p.id}`)}
-                        className="text-sm text-blue-600 hover:underline"
+                        className="text-sm text-blue-600 hover:underline cursor-pointer"
                       >Lihat Produk</button>
                       <button
                         onClick={() => removeFromWishlist(p.id)}
-                        className="text-sm text-red-600 flex items-center"
+                        className="text-sm text-red-600 flex items-center cursor-pointer"
                       >
                         <XCircleIcon className="w-4 h-4 mr-1" /> Hapus
                       </button>
