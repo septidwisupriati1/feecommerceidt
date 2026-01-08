@@ -53,6 +53,11 @@ export default function UlasanPage() {
     total_reviews: 0,
     limit: 10
   });
+  // Reply modal state
+  const [replyModalOpen, setReplyModalOpen] = useState(false);
+  const [replyDraft, setReplyDraft] = useState('');
+  const [replyTargetId, setReplyTargetId] = useState(null);
+  const [replyIsEdit, setReplyIsEdit] = useState(false);
 
   // Load blocked reviews from localStorage on mount
   useEffect(() => {
@@ -252,45 +257,56 @@ export default function UlasanPage() {
     };
   }, [openDropdownId]);
 
-  const handleReply = async (reviewId, existingReply = '') => {
-    const replyText = prompt(
-      existingReply ? 'Edit balasan Anda:' : 'Tulis balasan Anda:', 
-      existingReply
-    );
-    
-    if (replyText && replyText.trim()) {
-      try {
-        const result = await replyToReview(reviewId, replyText.trim());
-        
-        if (result.success) {
-          // Update local state immediately
-          setReviews(prevReviews => 
-            prevReviews.map(review => 
-              (review.id || `review-${prevReviews.indexOf(review)}`) === reviewId
-                ? { 
-                    ...review, 
-                    seller_reply: replyText.trim(),
-                    sellerReply: replyText.trim() 
-                  }
-                : review
-            )
-          );
-          
-          // Save to localStorage for persistence
-          const localReplies = JSON.parse(localStorage.getItem('localReplies') || '{}');
-          localReplies[reviewId] = replyText.trim();
-          localStorage.setItem('localReplies', JSON.stringify(localReplies));
-          console.log('Saved reply to localStorage:', reviewId, replyText.trim());
-          console.log('All local replies:', localReplies);
-          
-          setToast({ show: true, message: existingReply ? 'Balasan berhasil diupdate!' : 'Balasan berhasil dikirim!' });
-          fetchStats(); // Refresh stats
-        } else {
-          setToast({ show: true, message: 'Gagal mengirim balasan: ' + result.message });
-        }
-      } catch (err) {
-        setToast({ show: true, message: 'Terjadi kesalahan: ' + err.message });
+  // Open reply modal (for new reply or editing existing reply)
+  const handleReply = (reviewId, existingReply = '') => {
+    setReplyTargetId(reviewId);
+    setReplyDraft(existingReply || '');
+    setReplyIsEdit(!!existingReply);
+    setReplyModalOpen(true);
+    setOpenDropdownId(null);
+  };
+
+  // Submit reply from custom modal
+  const submitReply = async () => {
+    if (!replyDraft || !replyDraft.trim()) {
+      setToast({ show: true, message: 'Balasan tidak boleh kosong.' });
+      return;
+    }
+
+    try {
+      const result = await replyToReview(replyTargetId, replyDraft.trim());
+
+      if (result.success) {
+        // Update local state immediately
+        setReviews(prevReviews => 
+          prevReviews.map(review => 
+            (review.id || `review-${prevReviews.indexOf(review)}`) === replyTargetId
+              ? { 
+                  ...review, 
+                  seller_reply: replyDraft.trim(),
+                  sellerReply: replyDraft.trim() 
+                }
+              : review
+          )
+        );
+
+        // Save to localStorage for persistence
+        const localReplies = JSON.parse(localStorage.getItem('localReplies') || '{}');
+        localReplies[replyTargetId] = replyDraft.trim();
+        localStorage.setItem('localReplies', JSON.stringify(localReplies));
+
+        setToast({ show: true, message: replyIsEdit ? 'Balasan berhasil diupdate!' : 'Balasan berhasil dikirim!' });
+        fetchStats(); // Refresh stats
+        // Close modal and reset
+        setReplyModalOpen(false);
+        setReplyDraft('');
+        setReplyTargetId(null);
+        setReplyIsEdit(false);
+      } else {
+        setToast({ show: true, message: 'Gagal mengirim balasan: ' + result.message });
       }
+    } catch (err) {
+      setToast({ show: true, message: 'Terjadi kesalahan: ' + err.message });
     }
   };
 
@@ -847,7 +863,7 @@ export default function UlasanPage() {
                     <div className="relative ml-2 dropdown-menu-container">
                       <button
                         onClick={(e) => toggleDropdown(reviewId, e)}
-                        className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                        className="p-2 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
                         title="Opsi lainnya"
                         type="button"
                       >
@@ -865,7 +881,7 @@ export default function UlasanPage() {
                               e.stopPropagation();
                               handleBlockUser(reviewId, customerName);
                             }}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors text-red-600 hover:bg-red-50"
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors text-red-600 hover:bg-red-50 cursor-pointer"
                             type="button"
                           >
                             <NoSymbolIcon className="h-5 w-5" />
@@ -876,7 +892,7 @@ export default function UlasanPage() {
                               e.stopPropagation();
                               handleDeleteReview(reviewId, customerName);
                             }}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors text-orange-600 hover:bg-orange-50 border-t border-gray-100"
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors text-orange-600 hover:bg-orange-50 border-t border-gray-100 cursor-pointer"
                             type="button"
                           >
                             <TrashIcon className="h-5 w-5" />
@@ -887,7 +903,7 @@ export default function UlasanPage() {
                               e.stopPropagation();
                               handleReportReview(reviewId, customerName);
                             }}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors text-yellow-600 hover:bg-yellow-50 border-t border-gray-100"
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors text-yellow-600 hover:bg-yellow-50 border-t border-gray-100 cursor-pointer"
                             type="button"
                           >
                             <ExclamationTriangleIcon className="h-5 w-5" />
@@ -904,7 +920,7 @@ export default function UlasanPage() {
                       <Button
                         onClick={() => handleReply(reviewId)}
                         size="sm"
-                        className="bg-blue-600 hover:bg-blue-700"
+                        className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
                       >
                         <ChatBubbleLeftIcon className="h-4 w-4 mr-1" />
                         Balas Ulasan
@@ -914,7 +930,7 @@ export default function UlasanPage() {
                         onClick={() => handleReply(reviewId, hasReply)}
                         variant="outline"
                         size="sm"
-                        className="hover:bg-blue-50"
+                        className="hover:bg-blue-50 cursor-pointer"
                       >
                         <ChatBubbleLeftIcon className="h-4 w-4 mr-1" />
                         Edit Balasan
@@ -966,6 +982,43 @@ export default function UlasanPage() {
           </div>
         )}
       </div>
+      {/* Reply Modal (custom) */}
+      {replyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black opacity-40" onClick={() => setReplyModalOpen(false)} />
+          <div className="relative w-full max-w-2xl mx-4 bg-white rounded-lg shadow-lg z-50">
+            <div className="p-4 border-b">
+              <h3 className="text-lg font-semibold">{replyIsEdit ? 'Edit Balasan' : 'Balas Ulasan'}</h3>
+            </div>
+            <div className="p-4">
+              <textarea
+                value={replyDraft}
+                onChange={(e) => setReplyDraft(e.target.value)}
+                rows={6}
+                placeholder="Tulis balasan Anda di sini..."
+                className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 p-4 border-t">
+              <button
+                type="button"
+                className="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 cursor-pointer"
+                onClick={() => { setReplyModalOpen(false); setReplyDraft(''); setReplyTargetId(null); setReplyIsEdit(false); }}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
+                onClick={submitReply}
+              >
+                Kirim
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
       <CartSuccessToast
         show={toast.show}
