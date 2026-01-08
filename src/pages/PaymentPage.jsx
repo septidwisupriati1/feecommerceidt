@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import BuyerNavbar from "../components/BuyerNavbar";
 import Footer from "../components/Footer";
+import CartSuccessToast from "../components/CartSuccessToast";
 import {
   ArrowLeft,
   Building2,
@@ -42,6 +43,7 @@ export default function PaymentPage() {
   const [notes, setNotes] = useState("");
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', variant: 'success' });
 
   // Bank account info (bisa diganti dengan data dari API)
   const bankInfo = {
@@ -153,8 +155,11 @@ export default function PaymentPage() {
       // Simulasi delay
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      alert('Bukti pembayaran berhasil dikirim! Tim kami akan memverifikasi dalam 1x24 jam.');
-      navigate('/pesanan-saya');
+      setToast({ show: true, message: 'Bukti pembayaran berhasil dikirim! Tim kami akan memverifikasi dalam 1x24 jam.', variant: 'success' });
+      // Navigate after showing toast briefly
+      setTimeout(() => {
+        navigate('/pesanan-saya');
+      }, 1600);
     } catch (error) {
       console.error('Error uploading payment proof:', error);
       alert('Gagal mengirim bukti pembayaran. Silakan coba lagi.');
@@ -404,6 +409,7 @@ export default function PaymentPage() {
         </div>
       </div>
       <Footer />
+      <CartSuccessToast show={toast.show} message={toast.message} variant={toast.variant} onClose={() => setToast(prev => ({ ...prev, show: false }))} />
     </div>
   );
 }

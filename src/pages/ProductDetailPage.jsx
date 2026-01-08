@@ -79,10 +79,10 @@ export default function ProductDetailPage() {
       {/* Breadcrumb */}
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <button onClick={() => navigate('/')} className="hover:text-blue-600">Beranda</button>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+            <button onClick={() => navigate('/')} className="hover:text-blue-600 cursor-pointer">Beranda</button>
             <span>/</span>
-            <button onClick={() => navigate('/produk')} className="hover:text-blue-600">Produk</button>
+            <button onClick={() => navigate('/produk')} className="hover:text-blue-600 cursor-pointer">Produk</button>
             <span>/</span>
             <span className="text-gray-900 font-medium">{product.name}</span>
           </div>
@@ -110,7 +110,7 @@ export default function ProductDetailPage() {
                   {[1, 2, 3, 4].map((i) => (
                     <button
                       key={i}
-                      className="aspect-square bg-white rounded-lg border-2 border-gray-200 hover:border-blue-500 transition-colors overflow-hidden"
+                      className="aspect-square bg-white rounded-lg border-2 border-gray-200 hover:border-blue-500 transition-colors overflow-hidden cursor-pointer"
                     >
                       <img 
                         src={product.image} 
@@ -179,7 +179,7 @@ export default function ProductDetailPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={decrementQuantity}
-                      className="w-10 h-10 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100 transition-colors"
+                      className="w-10 h-10 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100 transition-colors cursor-pointer"
                     >
                       <MinusIcon className="h-4 w-4" />
                     </button>
@@ -191,7 +191,7 @@ export default function ProductDetailPage() {
                     />
                     <button
                       onClick={incrementQuantity}
-                      className="w-10 h-10 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100 transition-colors"
+                      className="w-10 h-10 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100 transition-colors cursor-pointer"
                     >
                       <PlusIcon className="h-4 w-4" />
                     </button>
@@ -203,21 +203,21 @@ export default function ProductDetailPage() {
                   <Button 
                     onClick={handleAddToCart}
                     variant="outline"
-                    className="flex-1 h-12 border-2 border-red-600 text-red-600 hover:bg-red-50 text-lg font-semibold"
+                    className="flex-1 h-12 border-2 border-red-600 text-red-600 hover:bg-red-50 text-lg font-semibold cursor-pointer"
                   >
                     <ShoppingCartIcon className="h-6 w-6 mr-2" />
                     TAMBAH KE KERANJANG
                   </Button>
                   <Button 
                     onClick={handleBuyNow}
-                    className="flex-1 h-12 bg-red-600 hover:bg-red-700 text-white text-lg font-semibold"
+                    className="flex-1 h-12 bg-red-600 hover:bg-red-700 text-white text-lg font-semibold cursor-pointer"
                   >
                     BELI SEKARANG
                   </Button>
                   <button
                     onClick={handleToggleWishlist}
-                    className={`ml-2 inline-flex items-center justify-center px-4 h-12 rounded-md border ${inWishlist ? 'bg-red-500 text-white border-red-500' : 'bg-white text-red-600 border-gray-200'}`}
                     title={inWishlist ? 'Hapus dari Wishlist' : 'Tambah ke Wishlist'}
+                    className={`${inWishlist ? 'bg-red-500 text-white border-red-500' : 'bg-white text-red-600 border-gray-200'} ml-2 inline-flex items-center justify-center px-4 h-12 rounded-md border cursor-pointer`}
                   >
                     <HeartIcon className="h-5 w-5 mr-2" />
                     {inWishlist ? 'Disimpan' : 'Simpan'}
@@ -237,12 +237,12 @@ export default function ProductDetailPage() {
                         <h3 className="font-bold text-lg text-gray-900">Toko Official Store</h3>
                         <p className="text-sm text-gray-600">{product.location}</p>
                       </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" className="bg-red-600 text-white hover:bg-red-700 border-none">
+                        <div className="flex gap-2">
+                        <Button variant="outline" className="bg-red-600 text-white hover:bg-red-700 border-none cursor-pointer">
                           <ChatBubbleLeftIcon className="h-5 w-5 mr-1" />
                           Chat
                         </Button>
-                        <Button variant="outline" className="bg-red-600 text-white hover:bg-red-700 border-none">
+                        <Button variant="outline" className="bg-red-600 text-white hover:bg-red-700 border-none cursor-pointer">
                           Profil Toko
                         </Button>
                       </div>
@@ -263,7 +263,7 @@ export default function ProductDetailPage() {
                       selectedTab === 'deskripsi'
                         ? 'text-red-600 border-b-2 border-red-600'
                         : 'text-gray-600 hover:text-gray-900'
-                    }`}
+                    } cursor-pointer`}
                   >
                     Deskripsi
                   </button>
@@ -273,7 +273,7 @@ export default function ProductDetailPage() {
                       selectedTab === 'ulasan'
                         ? 'text-red-600 border-b-2 border-red-600'
                         : 'text-gray-600 hover:text-gray-900'
-                    }`}
+                    } cursor-pointer`}
                   >
                     Rating dan Ulasan
                   </button>

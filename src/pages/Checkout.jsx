@@ -115,10 +115,10 @@ export default function Checkout() {
               )}
             </div>
             <div className="wizard-actions">
-              {step>0 && <button type="button" className="btn btn-ghost" onClick={back}>Kembali</button>}
+              {step>0 && <button type="button" className="btn btn-ghost cursor-pointer" onClick={back}>Kembali</button>}
               {step<2 && <button type="button" className="btn" onClick={next}>Lanjut</button>}
               {step===2 && (
-                <button className="btn" disabled={status==='processing'}>
+                <button className="btn cursor-pointer" disabled={status==='processing'}>
                   {status==='processing' ? 'Memproses...' : 'Bayar Sekarang'}
                 </button>
               )}

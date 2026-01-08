@@ -246,7 +246,7 @@ export default function ProductPage() {
                 <div className="mb-6">
                   <label className="block text-sm font-semibold mb-2">Kategori</label>
                   <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger>
+                    <SelectTrigger className="cursor-pointer">
                       <SelectValue placeholder="Semua Kategori" />
                     </SelectTrigger>
                     <SelectContent>
@@ -283,7 +283,7 @@ export default function ProductPage() {
                 <Button 
                   variant="outline" 
                   onClick={handleClear}
-                  className="w-full"
+                  className="w-full cursor-pointer"
                 >
                   Clear Filter
                 </Button>
@@ -299,7 +299,7 @@ export default function ProductPage() {
                 Menampilkan <span className="font-semibold">{products.length}</span> dari {pagination.total} produk
               </p>
               <Select defaultValue="terbaru" onValueChange={handleSortChange}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-48 cursor-pointer">
                   <SelectValue placeholder="Urutkan" />
                 </SelectTrigger>
                 <SelectContent>

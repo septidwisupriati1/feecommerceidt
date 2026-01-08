@@ -51,7 +51,7 @@ export default function CartPage() {
               </p>
               <Button 
                 onClick={() => navigate('/produk')}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
               >
                 Mulai Belanja
               </Button>
@@ -108,7 +108,7 @@ export default function CartPage() {
                       <Button
                         variant="outline"
                         onClick={removeSelectedItems}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer"
                       >
                         Hapus Dipilih ({selectedItems.length})
                       </Button>
@@ -116,7 +116,7 @@ export default function CartPage() {
                     <Button
                       variant="outline"
                       onClick={clearCart}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer"
                     >
                       Hapus Semua
                     </Button>
@@ -183,7 +183,7 @@ export default function CartPage() {
                       <div className="flex flex-col items-end justify-between">
                         <button
                           onClick={() => removeFromCart(item.id)}
-                          className="text-red-600 hover:text-red-700 p-2"
+                          className="text-red-600 hover:text-red-700 p-2 cursor-pointer"
                         >
                           <TrashIcon className="h-5 w-5" />
                         </button>
@@ -191,7 +191,7 @@ export default function CartPage() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="w-8 h-8 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100"
+                            className="w-8 h-8 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100 cursor-pointer"
                           >
                             <MinusIcon className="h-4 w-4" />
                           </button>
@@ -200,7 +200,7 @@ export default function CartPage() {
                           </span>
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="w-8 h-8 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100"
+                            className="w-8 h-8 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100 cursor-pointer"
                           >
                             <PlusIcon className="h-4 w-4" />
                           </button>
@@ -223,7 +223,7 @@ export default function CartPage() {
             <Button
               variant="outline"
               onClick={() => navigate('/produk')}
-              className="mt-4 w-full"
+              className="mt-4 w-full cursor-pointer"
             >
               ← Lanjut Belanja
             </Button>
@@ -269,7 +269,7 @@ export default function CartPage() {
                     navigate('/checkout');
                   }}
                   disabled={selectedItems.length === 0}
-                  className="w-full h-12 bg-red-600 hover:bg-red-700 text-white text-lg font-semibold mb-3 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="w-full h-12 bg-red-600 hover:bg-red-700 text-white text-lg font-semibold mb-3 cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   Checkout ({selectedItems.length} item)
                 </Button>

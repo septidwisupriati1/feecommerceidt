@@ -812,25 +812,25 @@ export default function SellerChatPage() {
                             <>
                               <button
                                 onClick={() => setMessage('Terima kasih sudah menghubungi kami 🙏')}
-                                className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-sm font-medium transition-all hover:shadow-md"
+                                className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-sm font-medium transition-all hover:shadow-md cursor-pointer"
                               >
                                 👋 Salam
                               </button>
                               <button
                                 onClick={() => setMessage('Produk ready stock kak, silakan checkout 😊')}
-                                className="px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg text-sm font-medium transition-all hover:shadow-md"
+                                className="px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg text-sm font-medium transition-all hover:shadow-md cursor-pointer"
                               >
                                 ✅ Ready Stock
                               </button>
                               <button
                                 onClick={() => setMessage('Pesanan akan kami proses segera')}
-                                className="px-3 py-1.5 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border border-yellow-200 rounded-lg text-sm font-medium transition-all hover:shadow-md"
+                                className="px-3 py-1.5 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border border-yellow-200 rounded-lg text-sm font-medium transition-all hover:shadow-md cursor-pointer"
                               >
                                 ⏳ Proses
                               </button>
                               <button
                                 onClick={() => setMessage('Barang sudah dikirim, silakan cek resi')}
-                                className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-sm font-medium transition-all hover:shadow-md"
+                                className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-sm font-medium transition-all hover:shadow-md cursor-pointer"
                               >
                                 🚚 Dikirim
                               </button>
@@ -860,13 +860,13 @@ export default function SellerChatPage() {
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600">
+                          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600 cursor-pointer">
                             <Smile className="h-6 w-6" />
                           </button>
-                          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600">
+                          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600 cursor-pointer">
                             <Image className="h-6 w-6" />
                           </button>
-                          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600">
+                          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600 cursor-pointer">
                             <Paperclip className="h-6 w-6" />
                           </button>
                           
@@ -884,7 +884,7 @@ export default function SellerChatPage() {
                           <Button 
                             onClick={handleSendMessage}
                             disabled={!message.trim() || sendingMessage}
-                            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-300 disabled:to-gray-300 text-white shadow-md hover:shadow-lg transition-all duration-200 px-4"
+                            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-300 disabled:to-gray-300 text-white shadow-md hover:shadow-lg transition-all duration-200 px-4 cursor-pointer"
                           >
                             {sendingMessage ? (
                               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
