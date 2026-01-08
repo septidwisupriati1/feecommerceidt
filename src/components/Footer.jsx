@@ -40,27 +40,19 @@ export default function Footer({ showMap = false }) {
           <div className="flex flex-col items-center md:items-start">
             <div className="flex items-center gap-4 mb-4">
               <img 
-                src="/images/logo-stp.png" 
+                src="/images/stp.png" 
                 alt="Solo Technopark" 
-                className="h-16 object-contain"
+                className="h-20 md:h-20 object-contain"
                 onError={(e) => {
-                  e.target.src = 'https://via.placeholder.com/80x60?text=STP';
+                  e.target.src = 'https://via.placeholder.com/100x80?text=STP';
                 }}
               />
               <img 
-                src="/images/logo-pemda.png" 
+                src="/images/pemda.png" 
                 alt="Pemda Surakarta" 
-                className="h-16 object-contain"
+                className="h-20 md:h-20 object-contain"
                 onError={(e) => {
-                  e.target.src = 'https://via.placeholder.com/60x80?text=Pemda';
-                }}
-              />
-              <img 
-                src="/images/logo-liprin.png" 
-                alt="Liprin" 
-                className="h-16 object-contain"
-                onError={(e) => {
-                  e.target.src = 'https://via.placeholder.com/80x60?text=Liprin';
+                  e.target.src = 'https://via.placeholder.com/80x100?text=Pemda';
                 }}
               />
             </div>

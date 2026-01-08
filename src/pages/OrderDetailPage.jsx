@@ -567,11 +567,30 @@ export default function OrderDetailPage() {
             {order.order_status === 'pending' && (
               <Card>
                 <CardContent className="p-6">
-                  <Button className="w-full bg-red-600 hover:bg-red-700 mb-3">
+                  <Button
+                    className="w-full bg-red-600 hover:bg-red-700 mb-3"
+                    onClick={() => navigate('/payment-status', { state: { order, status: 'pending' } })}
+                  >
                     <BanknotesIcon className="w-5 h-5 mr-2" />
                     Bayar Sekarang
                   </Button>
-                  <Button variant="outline" className="w-full">
+
+                  {/* Show "Cek Status" for VA / e-wallet flows to open payment-status page */}
+                  {(order.payment_method && (order.payment_method.includes('transfer') || order.payment_method.includes('ewallet') || order.payment_method.includes('va') || order.payment_method.includes('qr'))) && (
+                    <Button
+                      variant="outline"
+                      className="w-full mb-3"
+                      onClick={() => navigate('/payment-status', { state: { order, status: 'pending' } })}
+                    >
+                      Cek Status Pembayaran
+                    </Button>
+                  )}
+
+                  <Button variant="outline" className="w-full" onClick={() => {
+                    if (confirm('Apakah Anda yakin ingin membatalkan pesanan ini?')) {
+                      alert('Fitur batalkan pesanan akan segera tersedia');
+                    }
+                  }}>
                     Batalkan Pesanan
                   </Button>
                 </CardContent>

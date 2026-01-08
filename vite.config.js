@@ -7,5 +7,9 @@ export default defineConfig({
   server: {
     port: 5173,
     open: true,
+    // allow the ngrok hostname so Vite accepts proxied requests
+    allowedHosts: [
+      'gerri-semaphorical-ilona.ngrok-free.dev'
+    ]
   },
 });

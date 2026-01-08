@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BuyerNavbar from "../components/BuyerNavbar";
 import Footer from "../components/Footer";
@@ -7,8 +7,9 @@ import { Card, CardContent } from "../components/ui/card";
 import { useCart } from '../context/CartContext';
 import { formatPrice } from "../data/products";
 import { CheckCircleIcon } from '@heroicons/react/24/solid';
-import { MapPinIcon, CreditCardIcon, TruckIcon } from '@heroicons/react/24/outline';
+import { MapPinIcon, TruckIcon } from '@heroicons/react/24/outline';
 import { getCurrentUser } from "../services/authAPI";
+import { getToken } from "../utils/auth";
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -38,6 +39,18 @@ export default function CheckoutPage() {
   const [selectedPayment, setSelectedPayment] = useState('transfer');
   const [selectedShipping, setSelectedShipping] = useState('regular');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [addressAlert, setAddressAlert] = useState(null);
+  const [isPaying, setIsPaying] = useState(false);
+
+  const addressRefs = {
+    label: useRef(null),
+    receiver: useRef(null),
+    phone: useRef(null),
+    address: useRef(null),
+    city: useRef(null),
+    province: useRef(null),
+    postalCode: useRef(null)
+  };
 
   const STORAGE_KEYS = {
     addresses: 'checkout_addresses',
@@ -60,6 +73,12 @@ export default function CheckoutPage() {
   const subtotal = getSelectedTotal();
   const total = subtotal + shippingCost;
 
+  const getItemImage = (item) => {
+    return (
+      item?.image || item?.primary_image || item?.image_url || item?.picture || 'https://via.placeholder.com/80?text=Produk'
+    );
+  };
+
   useEffect(() => {
     const user = getCurrentUser();
     const hasProfileAddress = user && user.address && user.city && user.province;
@@ -80,13 +99,16 @@ export default function CheckoutPage() {
     const savedAddresses = JSON.parse(savedAddressesRaw || '[]');
     const savedSelected = localStorage.getItem(STORAGE_KEYS.selected);
 
-    const mergedAddresses = profileAddress
+    // Only show addresses when profil sudah ada alamat; otherwise hide all addresses.
+    const mergedAddresses = hasProfileAddress
       ? [profileAddress, ...savedAddresses.filter((addr) => addr.id !== 'profile-address')]
-      : savedAddresses;
+      : [];
 
-    const defaultSelected = savedSelected && mergedAddresses.some((a) => a.id === savedSelected)
+    const defaultSelected = hasProfileAddress && savedSelected && mergedAddresses.some((a) => a.id === savedSelected)
       ? savedSelected
-      : profileAddress?.id || mergedAddresses[0]?.id || null;
+      : hasProfileAddress
+        ? profileAddress?.id || mergedAddresses[0]?.id || null
+        : null;
 
     setAddresses(mergedAddresses);
     setSelectedAddress(defaultSelected);
@@ -98,19 +120,41 @@ export default function CheckoutPage() {
   const handleSaveAddress = () => {
     if (!hasProfileAddress) {
       setMissingProfileAddress(true);
+      setAddressAlert({ type: 'error', message: 'Lengkapi alamat di Profil terlebih dahulu.' });
       return;
     }
-    const required = ['label', 'receiver', 'phone', 'address', 'city', 'province', 'postalCode'];
-    const hasEmpty = required.some((key) => !addressForm[key].trim());
-    if (hasEmpty) return;
 
-    const id = `addr-${Date.now()}`;
-    const newAddress = { id, ...addressForm };
+    const required = ['label', 'receiver', 'phone', 'address', 'city', 'province', 'postalCode'];
+    const fieldLabels = {
+      label: 'Label Alamat',
+      receiver: 'Nama Penerima',
+      phone: 'No. HP',
+      address: 'Alamat Lengkap',
+      city: 'Kota/Kabupaten',
+      province: 'Provinsi',
+      postalCode: 'Kode Pos'
+    };
+    const missing = required.filter((key) => !addressForm[key].trim());
+    if (missing.length) {
+      const first = missing[0];
+      const ref = addressRefs[first]?.current;
+      if (ref) {
+        ref.focus({ preventScroll: false });
+        ref.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      setAddressAlert({ type: 'error', message: `${fieldLabels[first]} wajib diisi.` });
+      return;
+    }
+
+    const targetId = `addr-${Date.now()}`;
+    const newAddress = { id: targetId, ...addressForm };
     const updated = [...addresses, newAddress];
+
     setAddresses(updated);
-    setSelectedAddress(id);
-    persistAddresses(updated, id);
+    setSelectedAddress(targetId);
+    persistAddresses(updated, targetId);
     setShowAddressForm(false);
+    setAddressAlert({ type: 'success', message: 'Alamat baru berhasil disimpan.' });
     setAddressForm({
       label: '',
       receiver: '',
@@ -135,7 +179,9 @@ export default function CheckoutPage() {
     });
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
+    if (isPaying) return;
+
     if (!selectedAddress) {
       setShowAddressForm(true);
       return;
@@ -143,6 +189,14 @@ export default function CheckoutPage() {
 
     const shippingAddress = addresses.find((a) => a.id === selectedAddress);
     if (!shippingAddress) return;
+
+    const token = getToken();
+    if (!token) {
+      navigate('/login', { state: { message: 'Silakan login untuk melanjutkan pembayaran.' } });
+      return;
+    }
+
+    setIsPaying(true);
 
     // Create order data
     const orderData = {
@@ -159,11 +213,72 @@ export default function CheckoutPage() {
       created_at: new Date().toISOString()
     };
 
-    // Save order to context
+    // Save order locally (context) first
     createOrder(orderData);
 
-    // Redirect to payment page
-    navigate('/payment', { state: { order: orderData } });
+    // Request snap token from backend
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/payments/snap-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          order_id: orderData.order_id,
+          amount: orderData.total,
+          items: orderData.items,
+          customer: {
+            name: shippingAddress.receiver,
+            phone: shippingAddress.phone,
+            address: shippingAddress.address,
+            city: shippingAddress.city,
+            province: shippingAddress.province,
+            postal_code: shippingAddress.postalCode
+          }
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Gagal membuat transaksi Midtrans');
+      }
+
+      const data = await res.json();
+      const snapToken = data?.data?.token || data?.token;
+      if (!snapToken) throw new Error('Snap token tidak ditemukan');
+
+      // Ensure snap script loaded (in case user pays from checkout directly)
+      if (!window.snap) {
+        const script = document.createElement('script');
+        script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
+        script.dataset.clientKey = import.meta.env.VITE_MIDTRANS_CLIENT_KEY;
+        script.async = true;
+        document.body.appendChild(script);
+        await new Promise((resolve) => {
+          script.onload = resolve;
+          script.onerror = resolve;
+          setTimeout(resolve, 1000);
+        });
+      }
+
+      window.snap?.pay(snapToken, {
+        onSuccess: (result) => navigate('/payment-status', { state: { order: orderData, paymentResult: result, status: 'success', snapToken } }),
+        onPending: (result) => navigate('/payment-status', { state: { order: orderData, paymentResult: result, status: 'pending', snapToken } }),
+        onError: () => {
+          setIsPaying(false);
+          navigate('/payment-status', { state: { order: orderData, status: 'error', snapToken } });
+        },
+        onClose: () => {
+          setIsPaying(false);
+          navigate('/payment-status', { state: { order: orderData, status: 'closed', snapToken } });
+        }
+      });
+    } catch (err) {
+      console.error('Midtrans error:', err);
+      alert(err.message || 'Gagal memulai pembayaran.');
+      setIsPaying(false);
+    }
   };
 
   if (checkoutItems.length === 0 && !showSuccess) {
@@ -245,7 +360,7 @@ export default function CheckoutPage() {
                 <div className="space-y-3">
                   {missingProfileAddress && (
                     <div className="p-3 border border-dashed border-gray-300 rounded-lg text-sm text-gray-600 bg-gray-50 flex items-start justify-between gap-3">
-                      <span>Alamat di profil belum diisi. Lengkapi di Profil atau tambah alamat di sini.</span>
+                      <span>Alamat di profil belum diisi. Lengkapi Alamat di Profil terlebih dahulu.</span>
                       <Button size="sm" onClick={() => navigate('/profil')} className="bg-blue-600 hover:bg-blue-700 text-white">Buka Profil</Button>
                     </div>
                   )}
@@ -282,7 +397,7 @@ export default function CheckoutPage() {
                         {addr.id !== 'profile-address' && (
                           <button
                             type="button"
-                            className="text-xs text-red-600 hover:text-red-700 font-semibold"
+                            className="text-xs px-3 py-1 rounded-md border border-red-200 text-red-600 hover:text-red-700 hover:bg-red-50 font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteAddress(addr.id);
@@ -305,6 +420,17 @@ export default function CheckoutPage() {
                         navigate('/profil');
                         return;
                       }
+                      setAddressAlert(null);
+                      setAddressForm({
+                        label: '',
+                        receiver: '',
+                        phone: '',
+                        address: '',
+                        city: '',
+                        province: '',
+                        postalCode: '',
+                        notes: ''
+                      });
                       setShowAddressForm((v) => !v);
                     }}
                   >
@@ -312,7 +438,17 @@ export default function CheckoutPage() {
                   </Button>
 
                   {showAddressForm && (
-                    <div className="border rounded-lg p-4 bg-gray-50">
+                    <div className="border rounded-lg p-4 bg-gray-50 space-y-3">
+                      {addressAlert && (
+                        <div
+                          className={`rounded-lg p-3 text-sm flex items-start gap-2 ${addressAlert.type === 'error' ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-green-50 border border-green-200 text-green-700'}`}
+                        >
+                          <span className="font-semibold">
+                            {addressAlert.type === 'error' ? 'Validasi' : 'Sukses'}:
+                          </span>
+                          <span>{addressAlert.message}</span>
+                        </div>
+                      )}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                           <label className="block text-sm font-semibold mb-1">Label Alamat <span className="text-red-600">*</span></label>
@@ -320,6 +456,7 @@ export default function CheckoutPage() {
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                             placeholder="Contoh: Rumah, Kantor"
                             value={addressForm.label}
+                            ref={addressRefs.label}
                             onChange={(e) => setAddressForm((f) => ({ ...f, label: e.target.value }))}
                           />
                         </div>
@@ -328,6 +465,7 @@ export default function CheckoutPage() {
                           <input
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                             value={addressForm.receiver}
+                            ref={addressRefs.receiver}
                             onChange={(e) => setAddressForm((f) => ({ ...f, receiver: e.target.value }))}
                           />
                         </div>
@@ -336,6 +474,7 @@ export default function CheckoutPage() {
                           <input
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                             value={addressForm.phone}
+                            ref={addressRefs.phone}
                             onChange={(e) => setAddressForm((f) => ({ ...f, phone: e.target.value }))}
                           />
                         </div>
@@ -344,6 +483,7 @@ export default function CheckoutPage() {
                           <input
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                             value={addressForm.city}
+                            ref={addressRefs.city}
                             onChange={(e) => setAddressForm((f) => ({ ...f, city: e.target.value }))}
                           />
                         </div>
@@ -352,6 +492,7 @@ export default function CheckoutPage() {
                           <input
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                             value={addressForm.province}
+                            ref={addressRefs.province}
                             onChange={(e) => setAddressForm((f) => ({ ...f, province: e.target.value }))}
                           />
                         </div>
@@ -360,6 +501,7 @@ export default function CheckoutPage() {
                           <input
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                             value={addressForm.postalCode}
+                            ref={addressRefs.postalCode}
                             onChange={(e) => setAddressForm((f) => ({ ...f, postalCode: e.target.value }))}
                           />
                         </div>
@@ -369,6 +511,7 @@ export default function CheckoutPage() {
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                             rows="2"
                             value={addressForm.address}
+                            ref={addressRefs.address}
                             onChange={(e) => setAddressForm((f) => ({ ...f, address: e.target.value }))}
                           ></textarea>
                         </div>
@@ -395,6 +538,8 @@ export default function CheckoutPage() {
                 </div>
               </CardContent>
             </Card>
+
+            
 
             {/* Metode Pengiriman */}
             <Card>
@@ -468,69 +613,7 @@ export default function CheckoutPage() {
               </CardContent>
             </Card>
 
-            {/* Metode Pembayaran */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <CreditCardIcon className="h-6 w-6 text-red-600" />
-                  <h2 className="text-xl font-bold text-gray-900">Metode Pembayaran</h2>
-                </div>
-                
-                <div className="space-y-3">
-                  <label className={`block p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedPayment === 'transfer' ? 'border-red-600 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="transfer"
-                      checked={selectedPayment === 'transfer'}
-                      onChange={(e) => setSelectedPayment(e.target.value)}
-                      className="mr-3"
-                    />
-                    <span className="font-semibold">Transfer Bank</span>
-                    <p className="ml-6 text-sm text-gray-600">BCA, Mandiri, BNI, BRI</p>
-                  </label>
-
-                  <label className={`block p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedPayment === 'ewallet' ? 'border-red-600 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="ewallet"
-                      checked={selectedPayment === 'ewallet'}
-                      onChange={(e) => setSelectedPayment(e.target.value)}
-                      className="mr-3"
-                    />
-                    <span className="font-semibold">E-Wallet</span>
-                    <p className="ml-6 text-sm text-gray-600">OVO, GoPay, Dana, ShopeePay</p>
-                  </label>
-
-                  <label className={`block p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedPayment === 'credit' ? 'border-red-600 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="credit"
-                      checked={selectedPayment === 'credit'}
-                      onChange={(e) => setSelectedPayment(e.target.value)}
-                      className="mr-3"
-                    />
-                    <span className="font-semibold">Kartu Kredit/Debit</span>
-                    <p className="ml-6 text-sm text-gray-600">Visa, Mastercard, JCB</p>
-                  </label>
-
-                  <label className={`block p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedPayment === 'cod' ? 'border-red-600 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="cod"
-                      checked={selectedPayment === 'cod'}
-                      onChange={(e) => setSelectedPayment(e.target.value)}
-                      className="mr-3"
-                    />
-                    <span className="font-semibold">COD (Cash on Delivery)</span>
-                    <p className="ml-6 text-sm text-gray-600">Bayar di tempat saat barang tiba</p>
-                  </label>
-                </div>
-              </CardContent>
-            </Card>
+            
           </div>
 
           {/* Right Section - Order Summary */}
@@ -538,7 +621,30 @@ export default function CheckoutPage() {
             <Card className="sticky top-24">
               <CardContent className="p-6">
                 <h2 className="text-xl font-bold mb-4 text-gray-900">Ringkasan Belanja</h2>
-                
+                {/* Produk yang dipesan */}
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Produk</h3>
+                  <div className="divide-y border rounded-lg">
+                    {checkoutItems.map((item) => (
+                      <div key={item.id} className="py-2 px-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <img src={getItemImage(item)} alt={item.name} className="w-12 h-12 object-cover rounded-md border" loading="lazy" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{item.name}</p>
+                            <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold">{formatPrice(item.price * item.quantity)}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {checkoutItems.length === 0 && (
+                      <div className="p-3 text-sm text-gray-500">Tidak ada item terpilih untuk checkout.</div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="space-y-3 mb-4">
                   <div className="flex justify-between text-gray-700">
                     <span>Subtotal ({getSelectedItemsCount()} barang)</span>
@@ -565,12 +671,14 @@ export default function CheckoutPage() {
                   </ul>
                 </div>
 
+
+
                 <Button 
                   onClick={handleCheckout}
-                  disabled={!selectedAddress}
-                  className={`w-full h-12 text-white text-lg font-semibold ${selectedAddress ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-300 cursor-not-allowed'}`}
+                  disabled={!selectedAddress || isPaying}
+                  className={`w-full h-12 text-white text-lg font-semibold ${selectedAddress && !isPaying ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-300 cursor-not-allowed'}`}
                 >
-                  Bayar Sekarang
+                  {isPaying ? 'Memproses…' : 'Bayar Sekarang'}
                 </Button>
 
                 <p className="text-xs text-gray-500 text-center mt-3">

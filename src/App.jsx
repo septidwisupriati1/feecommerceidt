@@ -26,6 +26,7 @@ import ProductDetailPage from './pages/ProductDetailPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import PaymentPage from './pages/PaymentPage';
+import PaymentStatusPage from './pages/PaymentStatusPage';
 import MyOrdersPage from './pages/MyOrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import ChatPage from './pages/ChatPage';
@@ -110,6 +111,7 @@ function App() {
           <Route path="/keranjang" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/payment" element={<PaymentPage />} />
+          <Route path="/payment-status" element={<PaymentStatusPage />} />
           <Route path="/pesanan-saya" element={<MyOrdersPage />} />
           <Route path="/pesanan/:id" element={<OrderDetailPage />} />
           <Route path="/chat" element={<ChatPage />} />

@@ -20,6 +20,22 @@ export default function PaymentPage() {
   const location = useLocation();
   const orderData = location.state?.order;
 
+  // Load Midtrans Snap script
+  useEffect(() => {
+    const existing = document.querySelector('script[src*="snap.js"]');
+    if (existing) return;
+    const script = document.createElement('script');
+    script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
+    script.dataset.clientKey = import.meta.env.VITE_MIDTRANS_CLIENT_KEY;
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+    };
+  }, []);
+
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [accountName, setAccountName] = useState("");
