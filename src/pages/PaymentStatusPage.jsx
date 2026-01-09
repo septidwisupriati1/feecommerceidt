@@ -7,6 +7,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 import { formatPrice } from '../data/products';
 import { useCart } from '../context/CartContext';
+import orderAPI from '../services/orderAPI';
 
 export default function PaymentStatusPage() {
   const navigate = useNavigate();
@@ -77,6 +78,7 @@ export default function PaymentStatusPage() {
   const isPaid = useMemo(() => currentStatus === 'success', [currentStatus]);
   const isPending = useMemo(() => currentStatus === 'pending', [currentStatus]);
   const [clearedCart, setClearedCart] = useState(false);
+  const [syncedPayment, setSyncedPayment] = useState(false);
 
   // When payment is confirmed, remove selected items from cart
   useEffect(() => {
@@ -89,6 +91,28 @@ export default function PaymentStatusPage() {
       setClearedCart(true);
     }
   }, [isPaid, clearedCart, removeSelectedItems]);
+
+  // Sync paid status to backend (in case webhook belum jalan)
+  useEffect(() => {
+    const syncPaid = async () => {
+      if (!isPaid || !pageOrder?.order_id || syncedPayment) return;
+      try {
+        await orderAPI.confirmMidtransPayment({
+          order_id: pageOrder.order_id,
+          order_number: pageOrder.order_number,
+          transaction_status: paymentResult?.transaction_status || status,
+          fraud_status: paymentResult?.fraud_status,
+          status_code: paymentResult?.status_code,
+          gross_amount: paymentResult?.gross_amount,
+          signature_key: paymentResult?.signature_key,
+        });
+        setSyncedPayment(true);
+      } catch (err) {
+        console.warn('Failed to sync payment status to backend', err.response?.data || err.message);
+      }
+    };
+    syncPaid();
+  }, [isPaid, pageOrder, paymentResult, status, syncedPayment]);
 
   const handlePayAgain = () => {
     if (!snapToken) return;
