@@ -38,9 +38,14 @@ export default function ProductDetailPage() {
 
   const handleBuyNow = () => {
     if (!product) return;
-    addToCart(product, quantity);
-    // Langsung redirect ke halaman keranjang
-    navigate('/keranjang');
+    navigate('/checkout', {
+      state: {
+        buyNow: {
+          product,
+          quantity
+        }
+      }
+    });
   };
 
   if (!product) {

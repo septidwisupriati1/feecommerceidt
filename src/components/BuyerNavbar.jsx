@@ -256,11 +256,11 @@ function ProfileMenu() {
 
   const handleLogoutClick = () => {
     setShowLogoutConfirm(true);
+    setOpen(false);
   };
 
   const confirmLogout = () => {
     clearAuth();
-    setOpen(false);
     setShowLogoutConfirm(false);
     navigate('/login');
   };
@@ -297,39 +297,37 @@ function ProfileMenu() {
       )}
 
       {showLogoutConfirm && createPortal(
-        (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Konfirmasi Logout</h3>
-                  <p className="text-sm text-gray-600 mt-1">Anda akan keluar dari akun.</p>
-                </div>
-                <button
-                  onClick={cancelLogout}
-                  className="p-1 text-gray-500 hover:text-gray-700 cursor-pointer"
-                  aria-label="Tutup"
-                >
-                  ×
-                </button>
+        <div className={styles.logoutOverlay} onClick={cancelLogout}>
+          <div className={styles.logoutModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.logoutHeader}>
+              <div>
+                <h3>Konfirmasi Logout</h3>
+                <p>Anda akan keluar dari akun buyer.</p>
               </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={cancelLogout}
-                  className="flex-1 border border-gray-300 rounded-lg py-2 font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={confirmLogout}
-                  className="flex-1 bg-red-600 text-white rounded-lg py-2 font-semibold hover:bg-red-700 cursor-pointer"
-                >
-                  Logout
-                </button>
-              </div>
+              <button
+                className={styles.logoutClose}
+                aria-label="Tutup"
+                onClick={cancelLogout}
+              >
+                ×
+              </button>
+            </div>
+            <div className={styles.logoutActions}>
+              <button
+                className={styles.logoutCancel}
+                onClick={cancelLogout}
+              >
+                Batal
+              </button>
+              <button
+                className={styles.logoutConfirm}
+                onClick={confirmLogout}
+              >
+                Logout
+              </button>
             </div>
           </div>
-        ),
+        </div>,
         document.body
       )}
     </div>

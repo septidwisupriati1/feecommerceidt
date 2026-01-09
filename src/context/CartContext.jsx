@@ -153,6 +153,17 @@ export const CartProvider = ({ children }) => {
     }
   };
 
+  // Set selected items explicitly (used by buy-now flows)
+  const selectItemsById = (ids, { append = false } = {}) => {
+    const incoming = Array.isArray(ids) ? ids : [ids];
+    const normalized = incoming.filter(Boolean);
+
+    setSelectedItems(prev => {
+      const next = append ? [...prev, ...normalized] : normalized;
+      return Array.from(new Set(next));
+    });
+  };
+
   const removeSelectedItems = () => {
     setCartItems(prevItems => prevItems.filter(item => !selectedItems.includes(item.id)));
     setSelectedItems([]);
@@ -212,6 +223,7 @@ export const CartProvider = ({ children }) => {
         clearCart,
         toggleSelectItem,
         toggleSelectAll,
+        selectItemsById,
         removeSelectedItems,
         getCartTotal,
         getSelectedTotal,

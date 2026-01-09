@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import BuyerNavbar from "../components/BuyerNavbar";
 import Footer from "../components/Footer";
 import { Button } from "../components/ui/button";
@@ -13,12 +13,12 @@ import { getToken } from "../utils/auth";
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { 
     cartItems, 
     selectedItems, 
     getSelectedTotal, 
     getSelectedItemsCount,
-    removeFromCart,
     createOrder
   } = useCart();
   const [addresses, setAddresses] = useState([]);
@@ -66,11 +66,23 @@ export default function CheckoutPage() {
     }
   };
 
-  // Filter only selected items for checkout
-  const checkoutItems = cartItems.filter(item => selectedItems.includes(item.id));
+  const buyNowState = location.state?.buyNow;
+  const buyNowProduct = buyNowState?.product;
+  const buyNowQuantity = Number.isFinite(buyNowState?.quantity) ? buyNowState.quantity : 1;
+  const isBuyNow = Boolean(buyNowProduct);
+
+  // Determine checkout items: buy-now payload or selected cart items
+  const checkoutItems = isBuyNow
+    ? [{ ...buyNowProduct, quantity: buyNowQuantity }]
+    : cartItems.filter(item => selectedItems.includes(item.id));
 
   const shippingCost = selectedShipping === 'regular' ? 0 : selectedShipping === 'same-day' ? 15000 : 30000;
-  const subtotal = getSelectedTotal();
+  const subtotal = isBuyNow
+    ? checkoutItems.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 0)), 0)
+    : getSelectedTotal();
+  const itemsCount = isBuyNow
+    ? checkoutItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
+    : getSelectedItemsCount();
   const total = subtotal + shippingCost;
 
   const getItemImage = (item) => {
@@ -647,7 +659,7 @@ export default function CheckoutPage() {
 
                 <div className="space-y-3 mb-4">
                   <div className="flex justify-between text-gray-700">
-                    <span>Subtotal ({getSelectedItemsCount()} barang)</span>
+                    <span>Subtotal ({itemsCount} barang)</span>
                     <span>{formatPrice(subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-gray-700">

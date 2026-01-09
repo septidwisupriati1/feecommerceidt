@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import BuyerNavbar from "../components/BuyerNavbar";
 import Footer from "../components/Footer";
@@ -47,6 +48,7 @@ export default function ProfilePage() {
   });
   const [recentOrders, setRecentOrders] = useState([]);
   const [profileToast, setProfileToast] = useState({ show: false, message: '' });
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   
   useEffect(() => {
     const currentUser = getCurrentUser();
@@ -184,7 +186,12 @@ export default function ProfilePage() {
   };
 
   const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
     authAPI.logout();
+    setShowLogoutConfirm(false);
     navigate('/login');
   };
 
@@ -747,6 +754,47 @@ export default function ProfilePage() {
         variant={profileToast.variant || 'success'}
         onClose={() => setProfileToast(prev => ({ ...prev, show: false }))}
       />
+
+      {showLogoutConfirm && createPortal(
+        <div
+          className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          onClick={() => setShowLogoutConfirm(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Konfirmasi Logout</h3>
+                <p className="text-sm text-gray-600 mt-1">Anda akan keluar dari akun buyer.</p>
+              </div>
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+                aria-label="Tutup"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 border border-gray-300 rounded-lg py-2 font-medium text-gray-700 hover:bg-gray-50 transition duration-150 hover:-translate-y-[1px] shadow-sm hover:shadow-md"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="flex-1 bg-red-600 text-white rounded-lg py-2 font-semibold hover:bg-red-700 transition duration-150 hover:-translate-y-[1px] shadow-md"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
