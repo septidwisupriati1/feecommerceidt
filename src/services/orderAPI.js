@@ -34,6 +34,18 @@ const orderAPI = {
     });
     return res.data;
   },
+
+  /**
+   * Confirm Midtrans payment from client callback
+   */
+  confirmMidtransPayment: async (payload) => {
+    validateAuth();
+    debugAuth();
+    const res = await axios.post(`${BASE_URL}/payments/midtrans/confirm`, payload, {
+      headers: getAuthHeaders(),
+    });
+    return res.data;
+  },
 };
 
 export default orderAPI;
