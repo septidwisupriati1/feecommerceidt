@@ -16,13 +16,11 @@ const normalizeProductForCart = (product) => {
 
   const productId = product.id ?? product.product_id ?? product.slug ?? product.sku;
   const numericPrice = Number(product.price ?? 0);
-  const sellerId = product.seller_id ?? product.sellerId ?? product.seller?.seller_id ?? product.seller?.id;
 
   return {
     ...product,
     id: productId ?? Date.now(),
     product_id: product.product_id ?? productId ?? Date.now(),
-    seller_id: sellerId ?? null,
     name: product.name ?? product.title ?? product.product_name ?? 'Produk',
     price: Number.isFinite(numericPrice) ? numericPrice : 0,
     quantity: Number.isFinite(product.quantity) ? product.quantity : 1,

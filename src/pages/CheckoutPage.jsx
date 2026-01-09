@@ -10,8 +10,6 @@ import { CheckCircleIcon } from '@heroicons/react/24/solid';
 import { MapPinIcon, TruckIcon } from '@heroicons/react/24/outline';
 import { getCurrentUser } from "../services/authAPI";
 import { getToken } from "../utils/auth";
-import orderAPI from "../services/orderAPI";
-import { adaptOrderForPaymentStatus } from "../utils/orderAdapter";
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -21,6 +19,7 @@ export default function CheckoutPage() {
     selectedItems, 
     getSelectedTotal, 
     getSelectedItemsCount,
+    createOrder
   } = useCart();
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
@@ -211,76 +210,25 @@ export default function CheckoutPage() {
 
     setIsPaying(true);
 
-    // Derive seller_id (all items must belong to same seller for this flow)
-    const sellerIdCandidates = Array.from(new Set(
-      checkoutItems
-        .map((item) => item.seller_id || item.sellerId || item.seller?.seller_id || item.seller?.id)
-        .filter(Boolean)
-    ));
-
-    if (sellerIdCandidates.length > 1) {
-      alert('Saat ini checkout hanya mendukung 1 seller per transaksi. Pisahkan pesanan per toko.');
-      setIsPaying(false);
-      return;
-    }
-
-    const fallbackSellerId = Number(import.meta.env.VITE_DEFAULT_SELLER_ID) || 1;
-    const sellerId = sellerIdCandidates[0] || fallbackSellerId;
-
-    if (!sellerIdCandidates[0]) {
-      console.warn('Checkout: seller_id tidak ditemukan di item. Menggunakan fallback seller_id =', sellerId);
-    }
-
-    const itemsPayload = checkoutItems.map((item) => ({
-      product_id: item.product_id || item.id,
-      seller_id: sellerId,
-      product_name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      product_image: item.image || item.primary_image || item.image_url,
-      variant_name: item.variant_name || item.variant,
-      variant_value: item.variant_value,
-      variant_id: item.variant_id,
-    }));
-
-    const shippingPayload = {
-      label: shippingAddress.label || 'Checkout',
-      recipient_name: shippingAddress.receiver,
-      phone: shippingAddress.phone,
-      province: shippingAddress.province,
-      regency: shippingAddress.city,
-      district: shippingAddress.city,
-      village: shippingAddress.city,
-      postal_code: shippingAddress.postalCode,
-      full_address: shippingAddress.address,
+    // Create order data
+    const orderData = {
+      order_id: 'ORD-' + Date.now(),
+      items: checkoutItems,
+      items_count: checkoutItems.reduce((sum, item) => sum + item.quantity, 0),
+      subtotal: subtotal,
+      shipping_cost: shippingCost,
+      total: total,
+      shippingAddress,
+      shippingMethod: selectedShipping,
+      paymentMethod: selectedPayment,
+      status: 'pending',
+      created_at: new Date().toISOString()
     };
 
-    let orderResponse;
+    // Save order locally (context) first
+    createOrder(orderData);
 
-    try {
-      const orderReq = {
-        seller_id: sellerId,
-        items: itemsPayload,
-        shipping_address: shippingPayload,
-        shipping_cost: shippingCost,
-        buyer_notes: shippingAddress.notes,
-        payment_method: selectedPayment === 'transfer' ? 'manual_transfer' : 'midtrans',
-      };
-
-      const created = await orderAPI.createOrder(orderReq);
-      orderResponse = created?.data;
-
-      if (!orderResponse?.order_id) {
-        throw new Error('Order backend tidak mengembalikan order_id');
-      }
-    } catch (err) {
-      console.error('Create order error:', err);
-      alert(err.response?.data?.message || err.message || 'Gagal membuat pesanan');
-      setIsPaying(false);
-      return;
-    }
-
-    // Request snap token from backend (using backend order id/number)
+    // Request snap token from backend
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/payments/snap-token`, {
         method: 'POST',
@@ -289,9 +237,9 @@ export default function CheckoutPage() {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          order_id: orderResponse.order_number || orderResponse.order_id,
-          amount: orderResponse.total_amount || orderResponse.total || total,
-          items: itemsPayload,
+          order_id: orderData.order_id,
+          amount: orderData.total,
+          items: orderData.items,
           customer: {
             name: shippingAddress.receiver,
             phone: shippingAddress.phone,
@@ -312,13 +260,6 @@ export default function CheckoutPage() {
       const snapToken = data?.data?.token || data?.token;
       if (!snapToken) throw new Error('Snap token tidak ditemukan');
 
-      const normalizedOrder = adaptOrderForPaymentStatus({
-        orderResponse,
-        itemsPayload,
-        subtotal,
-        shippingCost,
-      });
-
       // Ensure snap script loaded (in case user pays from checkout directly)
       if (!window.snap) {
         const script = document.createElement('script');
@@ -334,15 +275,15 @@ export default function CheckoutPage() {
       }
 
       window.snap?.pay(snapToken, {
-        onSuccess: (result) => navigate('/payment-status', { state: { order: normalizedOrder, paymentResult: result, status: 'success', snapToken } }),
-        onPending: (result) => navigate('/payment-status', { state: { order: normalizedOrder, paymentResult: result, status: 'pending', snapToken } }),
+        onSuccess: (result) => navigate('/payment-status', { state: { order: orderData, paymentResult: result, status: 'success', snapToken } }),
+        onPending: (result) => navigate('/payment-status', { state: { order: orderData, paymentResult: result, status: 'pending', snapToken } }),
         onError: () => {
           setIsPaying(false);
-          navigate('/payment-status', { state: { order: normalizedOrder, status: 'error', snapToken } });
+          navigate('/payment-status', { state: { order: orderData, status: 'error', snapToken } });
         },
         onClose: () => {
           setIsPaying(false);
-          navigate('/payment-status', { state: { order: normalizedOrder, status: 'closed', snapToken } });
+          navigate('/payment-status', { state: { order: orderData, status: 'closed', snapToken } });
         }
       });
     } catch (err) {

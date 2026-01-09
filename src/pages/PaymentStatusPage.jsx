@@ -128,14 +128,10 @@ export default function PaymentStatusPage() {
   };
 
   const items = pageOrder?.items || [];
-  const subtotal = pageOrder?.subtotal ?? items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity || 0) || 0), 0);
-  const shippingCost = pageOrder?.shipping_cost ?? 0;
-  const totalAmount = pageOrder?.total ?? pageOrder?.total_amount ?? subtotal + shippingCost;
 
   const getItemImage = (item) => {
     return (
       item?.image ||
-      item?.product_image ||
       item?.primary_image ||
       item?.image_url ||
       'https://via.placeholder.com/80?text=Produk'
@@ -150,7 +146,7 @@ export default function PaymentStatusPage() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Ringkasan Pembayaran</h1>
-              <p className="text-sm text-gray-600">Order #{pageOrder?.order_id || pageOrder?.orderNumber}</p>
+              <p className="text-sm text-gray-600">Order #{order?.order_id || order?.orderNumber}</p>
             </div>
             {statusBadge()}
           </div>
@@ -188,15 +184,15 @@ export default function PaymentStatusPage() {
               <CardContent className="p-6 space-y-3">
                 <div className="flex justify-between text-gray-700">
                   <span>Subtotal</span>
-                  <span>{formatPrice(subtotal)}</span>
+                  <span>{formatPrice(order?.subtotal || 0)}</span>
                 </div>
                 <div className="flex justify-between text-gray-700">
                   <span>Ongkir</span>
-                  <span>{formatPrice(shippingCost)}</span>
+                  <span>{formatPrice(order?.shipping_cost || 0)}</span>
                 </div>
                 <div className="border-t pt-3 flex justify-between items-center">
                   <span className="text-lg font-bold text-gray-900">Total</span>
-                  <span className="text-2xl font-bold text-red-600">{formatPrice(totalAmount)}</span>
+                  <span className="text-2xl font-bold text-red-600">{formatPrice(order?.total || 0)}</span>
                 </div>
                 {!isPaid && (
                   <div className="space-y-2 pt-3">
