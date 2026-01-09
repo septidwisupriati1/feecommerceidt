@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import BuyerNavbar from "../components/BuyerNavbar";
 import Footer from "../components/Footer";
 import CartSuccessToast from "../components/CartSuccessToast";
+import orderAPI from "../services/orderAPI";
 import {
   ArrowLeft,
   Building2,
@@ -20,6 +21,12 @@ export default function PaymentPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const orderData = location.state?.order;
+
+  useEffect(() => {
+    if (!orderData) {
+      navigate('/checkout');
+    }
+  }, [orderData, navigate]);
 
   // Load Midtrans Snap script
   useEffect(() => {
@@ -130,6 +137,8 @@ export default function PaymentPage() {
     e.preventDefault();
 
     if (!selectedFile) {
+
+  if (!orderData) return null;
       alert('Silakan upload bukti transfer terlebih dahulu');
       return;
     }
