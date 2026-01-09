@@ -311,6 +311,98 @@
   color: #b91c1c;
 }
 
+/* Logout confirmation */
+.logoutOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: grid;
+  place-items: center;
+  z-index: 5000;
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+
+.logoutModal {
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.15);
+  width: 100%;
+  max-width: 400px;
+  padding: 1.25rem 1.5rem;
+}
+
+.logoutHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.logoutHeader h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.logoutHeader p {
+  margin: 0.2rem 0 0;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.logoutClose {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.logoutClose:hover {
+  color: #111827;
+}
+
+.logoutActions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.logoutCancel,
+.logoutConfirm {
+  flex: 1;
+  border: none;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.logoutCancel {
+  background: #f9fafb;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+
+.logoutCancel:hover {
+  background: #f3f4f6;
+}
+
+.logoutConfirm {
+  background: #dc2626;
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.2);
+}
+
+.logoutConfirm:hover {
+  background: #b91c1c;
+}
+
 /* Auth Buttons */
 .btnOutline,
 .btnPrimary {

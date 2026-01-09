@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ShoppingCart, MessageCircle, Bell, User, Search, Clock } from "lucide-react";
 import { isAuthenticated, clearAuth } from "../utils/auth";
@@ -239,6 +240,7 @@ export default function BuyerNavbar() {
 function ProfileMenu() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -253,8 +255,13 @@ function ProfileMenu() {
   }, []);
 
   const handleLogout = () => {
-    clearAuth();
+    setShowLogoutConfirm(true);
     setOpen(false);
+  };
+
+  const confirmLogout = () => {
+    clearAuth();
+    setShowLogoutConfirm(false);
     navigate('/login');
   };
 
@@ -283,6 +290,41 @@ function ProfileMenu() {
             Logout
           </button>
         </div>
+      )}
+
+      {showLogoutConfirm && createPortal(
+        <div className={styles.logoutOverlay} onClick={() => setShowLogoutConfirm(false)}>
+          <div className={styles.logoutModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.logoutHeader}>
+              <div>
+                <h3>Konfirmasi Logout</h3>
+                <p>Anda akan keluar dari akun buyer.</p>
+              </div>
+              <button
+                className={styles.logoutClose}
+                aria-label="Tutup"
+                onClick={() => setShowLogoutConfirm(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className={styles.logoutActions}>
+              <button
+                className={styles.logoutCancel}
+                onClick={() => setShowLogoutConfirm(false)}
+              >
+                Batal
+              </button>
+              <button
+                className={styles.logoutConfirm}
+                onClick={confirmLogout}
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
