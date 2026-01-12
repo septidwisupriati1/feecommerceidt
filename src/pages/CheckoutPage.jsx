@@ -747,7 +747,7 @@ export default function CheckoutPage() {
                 <Button 
                   onClick={handleCheckout}
                   disabled={!selectedAddress}
-                  className={`w-full h-12 text-white text-lg font-semibold ${selectedAddress ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-300 cursor-not-allowed'}`}
+                  className={`w-full h-12 text-white text-lg font-semibold ${selectedAddress ? 'bg-red-600 hover:bg-red-700 hover:cursor-pointer' : 'bg-gray-300 cursor-not-allowed'}`}
                 >
                   {isPaying ? 'Memproses…' : 'Bayar Sekarang'}
                 </Button>
