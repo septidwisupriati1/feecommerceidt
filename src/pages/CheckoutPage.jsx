@@ -696,8 +696,8 @@ export default function CheckoutPage() {
                 <div className="mb-4">
                   <h3 className="text-sm font-semibold text-gray-700 mb-2">Produk</h3>
                   <div className="divide-y border rounded-lg">
-                    {checkoutItems.map((item) => (
-                      <div key={item.id} className="py-2 px-3 flex items-center justify-between">
+                    {checkoutItems.map((item, idx) => (
+                      <div key={item.id || item.product_id || idx} className="py-2 px-3 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <img src={getItemImage(item)} alt={item.name} className="w-12 h-12 object-cover rounded-md border" loading="lazy" />
                           <div className="min-w-0">

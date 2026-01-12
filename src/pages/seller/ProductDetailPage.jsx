@@ -28,6 +28,8 @@ import {
   getProductStatusColor,
   getStockStatus
 } from '../../services/sellerProductAPI';
+import { updateProduct } from '../../services/sellerProductAPI';
+import { getProductDetail } from '../../services/sellerProductAPI';
 
 export default function ProductDetailPage() {
   const navigate = useNavigate();
@@ -39,18 +41,55 @@ export default function ProductDetailPage() {
   const [toast, setToast] = useState({ show: false, message: '' });
   const [navigateAfterToast, setNavigateAfterToast] = useState(false);
 
+  const normalizeImageValue = (img) => {
+    if (!img) return '';
+    if (typeof img === 'string') return img;
+    if (typeof img === 'object') return img.image_url || img.url || img.path || img.src || img.image || img.imageUrl || '';
+    return '';
+  };
+
   useEffect(() => {
     loadProduct();
   }, [id]);
 
-  const loadProduct = () => {
+  const loadProduct = async () => {
     try {
       setLoading(true);
-      const products = JSON.parse(localStorage.getItem('seller_products') || '[]');
-      const foundProduct = products.find(p => p.id === parseInt(id) || p.product_id === parseInt(id));
-      
-      if (foundProduct) {
-        setProduct(foundProduct);
+      const res = await getProductDetail(id);
+      const data = res?.data || res; // service may return {success,data}
+
+      if (data) {
+        const normalizedImages = Array.isArray(data.images)
+          ? data.images.map(normalizeImageValue).filter(Boolean)
+          : [
+              normalizeImageValue(data.primary_image),
+              normalizeImageValue(data.image_url),
+              normalizeImageValue(data.image),
+              normalizeImageValue(data.thumbnail),
+              normalizeImageValue(data.cover_image)
+            ].filter(Boolean);
+
+        const normalized = {
+          ...data,
+          product_id: data.product_id || data.id,
+          id: data.product_id || data.id,
+          name: data.name,
+          price: data.price,
+          stock: data.stock,
+          status: data.status,
+          category: data.category?.name || data.category,
+          condition: data.condition || 'new',
+          images: normalizedImages,
+          primary_image: normalizeImageValue(data.primary_image) || normalizeImageValue(data.image) || normalizeImageValue(data.image_url),
+          description: data.description,
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          weight: data.weight,
+          length: data.length,
+          width: data.width,
+          height: data.height,
+        };
+        setProduct(normalized);
       } else {
         setProduct(null);
       }
@@ -84,22 +123,23 @@ export default function ProductDetailPage() {
 
   const handleToggleStatus = async () => {
     try {
-      const products = JSON.parse(localStorage.getItem('seller_products') || '[]');
-      const productIndex = products.findIndex(p => 
-        p.id === parseInt(id) || p.product_id === parseInt(id)
-      );
-      
-      if (productIndex !== -1) {
-        const newStatus = products[productIndex].status === 'active' ? 'inactive' : 'active';
-        products[productIndex] = {
-          ...products[productIndex],
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        };
-        localStorage.setItem('seller_products', JSON.stringify(products));
-        setProduct(products[productIndex]);
-        setToast({ show: true, message: `Produk berhasil ${newStatus === 'active' ? 'diaktifkan' : 'dinonaktifkan'}!` });
-      }
+      const newStatus = product.status === 'active' ? 'inactive' : 'active';
+      const res = await updateProduct(product.product_id || product.id, { status: newStatus });
+      const data = res?.data || res;
+      const updated = data ? {
+        ...product,
+        ...data,
+        status: data.status || newStatus,
+        primary_image: normalizeImageValue(data.primary_image) || normalizeImageValue(data.image) || normalizeImageValue(data.image_url) || normalizeImageValue(product.primary_image),
+        images: Array.isArray(data.images)
+          ? data.images.map(normalizeImageValue).filter(Boolean)
+          : Array.isArray(product.images)
+            ? product.images.map(normalizeImageValue).filter(Boolean)
+            : [],
+        updated_at: data.updated_at || new Date().toISOString(),
+      } : { ...product, status: newStatus, updated_at: new Date().toISOString() };
+      setProduct(updated);
+      setToast({ show: true, message: `Produk berhasil ${updated.status === 'active' ? 'diaktifkan' : 'dinonaktifkan'}!` });
     } catch (error) {
       console.error('Error toggling status:', error);
       setToast({ show: true, message: 'Terjadi kesalahan saat mengubah status produk' });
@@ -145,7 +185,11 @@ export default function ProductDetailPage() {
 
   const statusBadge = getProductStatusColor(product.status);
   const stockStatus = getStockStatus(product.stock);
-  const images = product.images || (product.primary_image ? [product.primary_image] : []);
+  const images = Array.isArray(product.images) && product.images.length
+    ? product.images.map(normalizeImageValue).filter(Boolean)
+    : normalizeImageValue(product.primary_image)
+      ? [normalizeImageValue(product.primary_image)]
+      : [];
   const isBase64 = (img) => typeof img === 'string' && img.startsWith('data:');
 
   return (
@@ -339,6 +383,21 @@ export default function ProductDetailPage() {
                       <p className="text-xs text-gray-500 text-center mt-2">
                         Klik untuk {product.status === 'active' ? 'menonaktifkan' : 'mengaktifkan'}
                       </p>
+                      <hr className="my-4 border-gray-200" />
+                      <Button
+                        onClick={() => navigate(`/seller/product/edit/${id}`)}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white mb-3"
+                      >
+                        <PencilIcon className="h-5 w-5 mr-2" />
+                        Edit Produk
+                      </Button>
+                      <Button
+                        onClick={handleDelete}
+                        className="w-full bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        <TrashIcon className="h-5 w-5 mr-2" />
+                        Hapus Produk
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -421,51 +480,6 @@ export default function ProductDetailPage() {
                 </CardContent>
               </Card>
 
-              {/* Action Buttons */}
-              <Card className="shadow-lg border-t-4 border-t-red-600">
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Aksi</h3>
-                  
-                  <div className="space-y-3">
-                    <Button
-                      onClick={() => navigate(`/seller/product/edit/${id}`)}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      <PencilIcon className="h-5 w-5 mr-2" />
-                      Edit Produk
-                    </Button>
-
-                    <Button
-                      onClick={handleToggleStatus}
-                      className={`w-full ${
-                        product.status === 'active' 
-                          ? 'bg-gray-600 hover:bg-gray-700' 
-                          : 'bg-green-600 hover:bg-green-700'
-                      } text-white`}
-                    >
-                      {product.status === 'active' ? (
-                        <>
-                          <XCircleIcon className="h-5 w-5 mr-2" />
-                          Nonaktifkan
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircleIcon className="h-5 w-5 mr-2" />
-                          Aktifkan
-                        </>
-                      )}
-                    </Button>
-
-                    <Button
-                      onClick={handleDelete}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white"
-                    >
-                      <TrashIcon className="h-5 w-5 mr-2" />
-                      Hapus Produk
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </div>

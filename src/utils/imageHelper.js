@@ -18,6 +18,11 @@ export const getImageUrl = (imagePath, fallback = 'https://via.placeholder.com/4
     return fallback;
   }
 
+  // Data URL or blob URL: gunakan langsung tanpa prefix backend
+  if (typeof imagePath === 'string' && (imagePath.startsWith('data:') || imagePath.startsWith('blob:'))) {
+    return imagePath;
+  }
+
   // Jika imagePath sudah berupa URL lengkap (http/https), return langsung
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
     return imagePath;
@@ -85,8 +90,12 @@ export const getImageUrls = (images) => {
   if (!Array.isArray(images)) {
     return [];
   }
-  
-  return images.map(img => getImageUrl(img.image_url || img.url));
+  return images
+    .map(img => {
+      if (typeof img === 'string') return getImageUrl(img);
+      return getImageUrl(img.image_url || img.url || img.path || img.src);
+    })
+    .filter(Boolean);
 };
 
 /**
@@ -105,5 +114,5 @@ export const getPrimaryImageUrl = (images) => {
   // Use primary image if found, otherwise use first image
   const imageToUse = primaryImage || images[0];
   
-  return getImageUrl(imageToUse.image_url || imageToUse.url);
+  return getImageUrl(imageToUse.image_url || imageToUse.url || imageToUse.path || imageToUse.src);
 };

@@ -123,25 +123,22 @@ export const createProduct = async (productData) => {
       throw new Error('Token tidak ditemukan. Silakan login kembali.');
     }
     
-    const headers = {
-      'Authorization': `Bearer ${token}`
-      // Don't set Content-Type for FormData, browser will set it automatically with boundary
-    };
+    const isFormData = typeof FormData !== 'undefined' && productData instanceof FormData;
 
-    console.log('Creating product with URL:', `${API_BASE_URL}/products`);
-    console.log('Token present:', !!token);
+    const headers = isFormData
+      ? { 'Authorization': `Bearer ${token}` }
+      : {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        };
 
     const response = await fetch(`${API_BASE_URL}/products`, {
       method: 'POST',
-      headers: headers,
-      body: productData // FormData object, not JSON
+      headers,
+      body: isFormData ? productData : JSON.stringify(productData)
     });
 
-    console.log('Response status:', response.status);
-    console.log('Response ok:', response.ok);
-
     const data = await response.json();
-    console.log('Response data:', data);
 
     if (!response.ok) {
       throw new Error(data.error || data.message || 'Gagal membuat produk');

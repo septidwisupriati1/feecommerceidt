@@ -1,11 +1,13 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import BuyerNavbar from "../components/BuyerNavbar";
 import Footer from "../components/Footer";
 import CartSuccessToast from "../components/CartSuccessToast";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { products, formatPrice, getCategoryGradient } from "../data/products";
+import { getProductDetail } from "../services/productAPI";
+import { getPrimaryImageUrl, getImageUrls, getImageUrl } from "../utils/imageHelper";
 import { ShoppingCartIcon, ChatBubbleLeftIcon, StarIcon, HeartIcon } from '@heroicons/react/24/outline';
 import { MinusIcon, PlusIcon } from '@heroicons/react/24/solid';
 import { isInWishlist, toggleWishlist } from '../utils/wishlist';
@@ -15,38 +17,122 @@ export default function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  
-  const product = products.find(p => p.id === parseInt(id));
-  
+
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [selectedTab, setSelectedTab] = useState('deskripsi');
   const [cartToast, setCartToast] = useState({ show: false, message: '' });
+  const [inWishlist, setInWishlist] = useState(false);
+
+  useEffect(() => {
+    const fetchDetail = async () => {
+      setLoading(true);
+      try {
+        const res = await getProductDetail(id);
+        if (res?.success && res.data) {
+          const api = res.data;
+          const apiImages = api.images || api.product_images || api.productImages || [];
+          const extraImages = [api.image2, api.image3, api.image_2, api.image_3, api.second_image, api.third_image, api.photo2, api.photo3, api.thumbnail, api.cover_image].filter(Boolean);
+          const combinedImages = [...apiImages, ...extraImages];
+          const primaryImageRaw = api.primary_image || api.image || api.image_url || api.primary_image_url || getPrimaryImageUrl(combinedImages);
+          const primaryImage = getImageUrl(primaryImageRaw);
+          const gallerySource = combinedImages.length ? getImageUrls(combinedImages) : [];
+          const gallery = (gallerySource.length ? gallerySource : [primaryImage]).filter(Boolean);
+          const normalized = {
+            product_id: api.product_id || api.id,
+            name: api.name,
+            description: api.description || api.long_description || '',
+            price: api.price || 0,
+            primary_image: primaryImage,
+            images: gallery,
+            category: api.category?.name || api.category_name || api.category || 'Kategori',
+            rating: api.rating_average ?? api.rating ?? 0,
+            reviews: api.total_reviews ?? api.reviews ?? 0,
+            stock: api.stock ?? api.available_stock ?? 0,
+            location: api.seller?.store_name || api.seller_name || api.location || 'Toko',
+            seller_name: api.seller?.store_name || api.seller_name || 'Toko',
+            condition: api.condition || 'Baru',
+            sold: api.sold ?? api.total_sold ?? 0,
+            shipping: api.shipping || api.shipping_method || 'Reguler',
+            badge: api.badge || null,
+          };
+          setProduct(normalized);
+          setSelectedImage(primaryImage);
+          setInWishlist(isInWishlist(normalized.product_id));
+          setQuantity(normalized.stock > 0 ? 1 : 0);
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.warn('Product detail API failed, fallback to static', err.message);
+      }
+
+      const fallback = products.find(p => p.id === parseInt(id));
+      if (fallback) {
+        setProduct({
+          product_id: fallback.id,
+          name: fallback.name,
+          description: fallback.description,
+          price: fallback.price,
+          primary_image: getImageUrl(fallback.image),
+          images: [getImageUrl(fallback.image)].filter(Boolean),
+          category: fallback.category,
+          rating: fallback.rating,
+          reviews: fallback.reviews,
+          stock: fallback.stock ?? 100,
+        });
+        setInWishlist(isInWishlist(fallback.id));
+        setQuantity((fallback.stock ?? 0) > 0 ? 1 : 0);
+        setSelectedImage(getImageUrl(fallback.image));
+      }
+      setLoading(false);
+    };
+
+    fetchDetail();
+  }, [id]);
 
   const handleAddToCart = () => {
     if (!product) return;
-    addToCart(product, quantity);
+    if (maxQuantity === 0) return;
+    const safeQty = Math.min(maxQuantity, Math.max(1, quantity));
+    setQuantity(safeQty);
+    addToCart({ ...product, id: product.product_id || product.id }, safeQty);
     setCartToast({ show: true, message: `${product.name} berhasil ditambahkan ke keranjang.` });
   };
 
-  const [inWishlist, setInWishlist] = useState(isInWishlist(product.id));
-
   const handleToggleWishlist = (e) => {
     e.stopPropagation && e.stopPropagation();
-    toggleWishlist(product.id);
-    setInWishlist(isInWishlist(product.id));
+    const pid = product?.product_id || product?.id;
+    if (!pid) return;
+    toggleWishlist(pid);
+    setInWishlist(isInWishlist(pid));
   };
 
   const handleBuyNow = () => {
     if (!product) return;
+    if (maxQuantity === 0) return;
+    const safeQty = Math.min(maxQuantity, Math.max(1, quantity));
+    setQuantity(safeQty);
     navigate('/checkout', {
       state: {
         buyNow: {
           product,
-          quantity
+          quantity: safeQty
         }
       }
     });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <BuyerNavbar />
+        <div className="text-gray-600">Memuat produk...</div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -69,8 +155,12 @@ export default function ProductDetailPage() {
     .filter(p => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
 
-  const incrementQuantity = () => setQuantity(prev => prev + 1);
-  const decrementQuantity = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
+  const maxQuantity = Math.max(0, product.stock || 0);
+
+  const decrementQuantity = () => setQuantity(prev => {
+    if (maxQuantity === 0) return 0;
+    return prev > 1 ? prev - 1 : 1;
+  });
 
   return (
     <div style={{
@@ -104,7 +194,7 @@ export default function ProductDetailPage() {
                 {/* Main Image */}
                 <div className="aspect-square bg-white flex items-center justify-center rounded-t-lg overflow-hidden">
                   <img 
-                    src={product.image} 
+                    src={selectedImage || product.primary_image || 'https://via.placeholder.com/600x600?text=No+Image'} 
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />
@@ -112,14 +202,15 @@ export default function ProductDetailPage() {
                 
                 {/* Thumbnail Gallery */}
                 <div className="grid grid-cols-4 gap-2 p-4">
-                  {[1, 2, 3, 4].map((i) => (
+                {(product.images?.length ? product.images : [product.primary_image]).slice(0,4).map((img, i) => (
                     <button
-                      key={i}
-                      className="aspect-square bg-white rounded-lg border-2 border-gray-200 hover:border-blue-500 transition-colors overflow-hidden cursor-pointer"
+                    key={img || i}
+                    className={`aspect-square bg-white rounded-lg border-2 overflow-hidden cursor-pointer transition-colors ${selectedImage === img ? 'border-blue-500' : 'border-gray-200 hover:border-blue-500'}`}
+                    onClick={() => setSelectedImage(img || product.primary_image)}
                     >
                       <img 
-                        src={product.image} 
-                        alt={`${product.name} ${i}`}
+                        src={img || 'https://via.placeholder.com/200x200?text=No+Image'} 
+                        alt={`${product.name} ${i+1}`}
                         className="w-full h-full object-cover"
                       />
                     </button>
@@ -142,14 +233,14 @@ export default function ProductDetailPage() {
                 <div className="flex items-center gap-4 mb-4 pb-4 border-b">
                   <div className="flex items-center gap-2">
                     <span className="text-yellow-400 text-lg">
-                      {'⭐'.repeat(Math.floor(product.rating))}
+                      {'⭐'.repeat(Math.floor(product.rating || 0))}
                     </span>
                     <span className="text-gray-600">
-                      {product.rating} | {product.reviews} Review
+                      {(product.rating || 0).toFixed(1)} | {product.reviews || 0} Review
                     </span>
                   </div>
                   <div className="text-gray-600">
-                    STOK: <span className="font-semibold text-green-600">Tersedia</span>
+                    STOK: <span className={`font-semibold ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>{product.stock ?? 0}</span>
                   </div>
                 </div>
 
@@ -159,13 +250,13 @@ export default function ProductDetailPage() {
                     <span className="text-4xl font-bold text-red-600">
                       {formatPrice(product.price)}
                     </span>
-                    {product.originalPrice && (
+                    {product.originalPrice && product.badge && (
                       <>
                         <span className="text-xl text-gray-400 line-through">
                           {formatPrice(product.originalPrice)}
                         </span>
-                        <span className={`${product.badge.color} text-white px-3 py-1 rounded-full text-sm font-semibold`}>
-                          {product.badge.text}
+                        <span className={`${product.badge?.color} text-white px-3 py-1 rounded-full text-sm font-semibold`}>
+                          {product.badge?.text}
                         </span>
                       </>
                     )}
@@ -184,23 +275,31 @@ export default function ProductDetailPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={decrementQuantity}
-                      className="w-10 h-10 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100 transition-colors cursor-pointer"
+                      className="w-10 h-10 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100 transition-colors cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      disabled={maxQuantity === 0 || quantity <= 1}
                     >
                       <MinusIcon className="h-4 w-4" />
                     </button>
                     <input
                       type="number"
                       value={quantity}
-                      onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-20 h-10 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => setQuantity(Math.min(maxQuantity, Math.max(1, parseInt(e.target.value) || 1)))}
+                      max={maxQuantity || 1}
+                      min={1}
+                      disabled={maxQuantity === 0}
+                      className="w-20 h-10 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
                     <button
-                      onClick={incrementQuantity}
-                      className="w-10 h-10 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100 transition-colors cursor-pointer"
+                      onClick={() => setQuantity(prev => Math.min(maxQuantity, prev + 1))}
+                      className="w-10 h-10 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100 transition-colors cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      disabled={quantity >= maxQuantity || maxQuantity === 0}
                     >
                       <PlusIcon className="h-4 w-4" />
                     </button>
                   </div>
+                  {product.stock <= 0 && (
+                    <div className="text-sm text-red-600 mt-2">Stok habis</div>
+                  )}
                 </div>
 
                 {/* Action Buttons */}
@@ -209,6 +308,7 @@ export default function ProductDetailPage() {
                     onClick={handleAddToCart}
                     variant="outline"
                     className="flex-1 h-12 border-2 border-red-600 text-red-600 hover:bg-red-50 text-lg font-semibold cursor-pointer"
+                    disabled={product.stock <= 0}
                   >
                     <ShoppingCartIcon className="h-6 w-6 mr-2" />
                     TAMBAH KE KERANJANG
@@ -216,6 +316,7 @@ export default function ProductDetailPage() {
                   <Button 
                     onClick={handleBuyNow}
                     className="flex-1 h-12 bg-red-600 hover:bg-red-700 text-white text-lg font-semibold cursor-pointer"
+                    disabled={product.stock <= 0}
                   >
                     BELI SEKARANG
                   </Button>
@@ -235,12 +336,12 @@ export default function ProductDetailPage() {
                     <div className="flex items-center gap-4">
                       <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
                         <span className="text-2xl text-white font-bold">
-                          {product.name.charAt(0)}
+                          {(product.name || '?').charAt(0)}
                         </span>
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-bold text-lg text-gray-900">Toko Official Store</h3>
-                        <p className="text-sm text-gray-600">{product.location}</p>
+                        <h3 className="font-bold text-lg text-gray-900">{product.seller_name || 'Toko'}</h3>
+                        <p className="text-sm text-gray-600">{product.location || 'Lokasi tidak tersedia'}</p>
                       </div>
                         <div className="flex gap-2">
                         <Button variant="outline" className="bg-red-600 text-white hover:bg-red-700 border-none cursor-pointer">
