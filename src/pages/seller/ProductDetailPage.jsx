@@ -8,8 +8,6 @@ import {
   ArrowLeftIcon,
   PencilIcon,
   TrashIcon,
-  CheckCircleIcon,
-  XCircleIcon,
   ExclamationTriangleIcon,
   ChartBarIcon,
   ClockIcon,
@@ -25,11 +23,10 @@ import {
   formatCurrency,
   formatDate,
   getProductStatusLabel,
-  getProductStatusColor,
   getStockStatus
 } from '../../services/sellerProductAPI';
-import { updateProduct } from '../../services/sellerProductAPI';
 import { getProductDetail } from '../../services/sellerProductAPI';
+import buyerProductAPI from '../../services/buyerProductAPI';
 
 export default function ProductDetailPage() {
   const navigate = useNavigate();
@@ -55,39 +52,60 @@ export default function ProductDetailPage() {
   const loadProduct = async () => {
     try {
       setLoading(true);
-      const res = await getProductDetail(id);
-      const data = res?.data || res; // service may return {success,data}
+      let res = await getProductDetail(id);
+      // Support multiple response shapes: {success,data:{...}}, {data:{...}}, or direct product
+      let payload = res?.data?.data || res?.data || res;
 
-      if (data) {
-        const normalizedImages = Array.isArray(data.images)
-          ? data.images.map(normalizeImageValue).filter(Boolean)
+      // If seller endpoint fails or returns empty, fallback to buyer public API
+      if (!payload || res?.success === false) {
+        try {
+          const buyerRes = await buyerProductAPI.getProductDetail(id);
+          payload = buyerRes?.data || buyerRes?.data?.data || buyerRes;
+        } catch (e) {
+          console.warn('Fallback buyer product detail failed', e);
+        }
+      }
+
+      if (payload) {
+        const rawImages =
+          payload.images ||
+          payload.product_images ||
+          payload.images_url ||
+          payload.gallery || [];
+
+        const normalizedImages = Array.isArray(rawImages)
+          ? rawImages.map(normalizeImageValue).filter(Boolean)
           : [
-              normalizeImageValue(data.primary_image),
-              normalizeImageValue(data.image_url),
-              normalizeImageValue(data.image),
-              normalizeImageValue(data.thumbnail),
-              normalizeImageValue(data.cover_image)
+              normalizeImageValue(payload.primary_image),
+              normalizeImageValue(payload.image_url),
+              normalizeImageValue(payload.image),
+              normalizeImageValue(payload.thumbnail),
+              normalizeImageValue(payload.cover_image)
             ].filter(Boolean);
 
         const normalized = {
-          ...data,
-          product_id: data.product_id || data.id,
-          id: data.product_id || data.id,
-          name: data.name,
-          price: data.price,
-          stock: data.stock,
-          status: data.status,
-          category: data.category?.name || data.category,
-          condition: data.condition || 'new',
+          ...payload,
+          product_id: payload.product_id || payload.id,
+          id: payload.product_id || payload.id,
+          name: payload.name,
+          price: payload.price,
+          stock: payload.stock,
+          status: payload.status,
+          category: payload.category?.name || payload.category,
+          condition: payload.condition || 'new',
           images: normalizedImages,
-          primary_image: normalizeImageValue(data.primary_image) || normalizeImageValue(data.image) || normalizeImageValue(data.image_url),
-          description: data.description,
-          created_at: data.created_at,
-          updated_at: data.updated_at,
-          weight: data.weight,
-          length: data.length,
-          width: data.width,
-          height: data.height,
+          primary_image:
+            normalizeImageValue(payload.primary_image) ||
+            normalizeImageValue(payload.image) ||
+            normalizeImageValue(payload.image_url) ||
+            normalizedImages[0],
+          description: payload.description,
+          created_at: payload.created_at,
+          updated_at: payload.updated_at,
+          weight: payload.weight,
+          length: payload.length,
+          width: payload.width,
+          height: payload.height,
         };
         setProduct(normalized);
       } else {
@@ -118,31 +136,6 @@ export default function ProductDetailPage() {
     } catch (error) {
       console.error('Error deleting product:', error);
       setToast({ show: true, message: 'Terjadi kesalahan saat menghapus produk' });
-    }
-  };
-
-  const handleToggleStatus = async () => {
-    try {
-      const newStatus = product.status === 'active' ? 'inactive' : 'active';
-      const res = await updateProduct(product.product_id || product.id, { status: newStatus });
-      const data = res?.data || res;
-      const updated = data ? {
-        ...product,
-        ...data,
-        status: data.status || newStatus,
-        primary_image: normalizeImageValue(data.primary_image) || normalizeImageValue(data.image) || normalizeImageValue(data.image_url) || normalizeImageValue(product.primary_image),
-        images: Array.isArray(data.images)
-          ? data.images.map(normalizeImageValue).filter(Boolean)
-          : Array.isArray(product.images)
-            ? product.images.map(normalizeImageValue).filter(Boolean)
-            : [],
-        updated_at: data.updated_at || new Date().toISOString(),
-      } : { ...product, status: newStatus, updated_at: new Date().toISOString() };
-      setProduct(updated);
-      setToast({ show: true, message: `Produk berhasil ${updated.status === 'active' ? 'diaktifkan' : 'dinonaktifkan'}!` });
-    } catch (error) {
-      console.error('Error toggling status:', error);
-      setToast({ show: true, message: 'Terjadi kesalahan saat mengubah status produk' });
     }
   };
 
@@ -183,7 +176,6 @@ export default function ProductDetailPage() {
     );
   }
 
-  const statusBadge = getProductStatusColor(product.status);
   const stockStatus = getStockStatus(product.stock);
   const images = Array.isArray(product.images) && product.images.length
     ? product.images.map(normalizeImageValue).filter(Boolean)
@@ -224,14 +216,6 @@ export default function ProductDetailPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button
-                  onClick={() => navigate(`/seller/product/edit/${id}`)}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white"
-                  size="sm"
-                >
-                  <PencilIcon className="h-4 w-4 md:mr-2" />
-                  <span className="hidden md:inline">Edit</span>
-                </Button>
               </div>
             </div>
           </div>
@@ -290,7 +274,7 @@ export default function ProductDetailPage() {
                 <CardContent className="p-6">
                   <div className="mb-4">
                     <div className="flex items-center gap-2 mb-3">
-                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusBadge}`}>
+                      <span className={`text-sm font-medium ${product.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>
                         {getProductStatusLabel(product.status)}
                       </span>
                       <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-semibold">
@@ -360,29 +344,11 @@ export default function ProductDetailPage() {
 
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <p className="text-sm text-gray-600 mb-2">Status Produk</p>
-                      <Button
-                        onClick={handleToggleStatus}
-                        className={`w-full ${
-                          product.status === 'active' 
-                            ? 'bg-green-600 hover:bg-green-700' 
-                            : 'bg-gray-600 hover:bg-gray-700'
-                        } text-white`}
-                      >
-                        {product.status === 'active' ? (
-                          <>
-                            <CheckCircleIcon className="h-5 w-5 mr-2" />
-                            Aktif
-                          </>
-                        ) : (
-                          <>
-                            <XCircleIcon className="h-5 w-5 mr-2" />
-                            Nonaktif
-                          </>
-                        )}
-                      </Button>
-                      <p className="text-xs text-gray-500 text-center mt-2">
-                        Klik untuk {product.status === 'active' ? 'menonaktifkan' : 'mengaktifkan'}
-                      </p>
+                      <div className="px-3 py-2 rounded-md border border-gray-200 bg-white mb-3 text-center">
+                        <span className={`text-sm font-semibold ${product.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>
+                          {getProductStatusLabel(product.status)}
+                        </span>
+                      </div>
                       <hr className="my-4 border-gray-200" />
                       <Button
                         onClick={() => navigate(`/seller/product/edit/${id}`)}

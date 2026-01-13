@@ -25,6 +25,9 @@ export default function EditProductPage() {
   const [errors, setErrors] = useState({});
   const [productNotFound, setProductNotFound] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [productStatus, setProductStatus] = useState('inactive');
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
   const normalizeImageValue = (img) => {
     if (!img) return '';
@@ -96,6 +99,8 @@ export default function EditProductPage() {
           images: []
         });
 
+        setProductStatus(data.status || 'inactive');
+
         setImagePreviews(imagesFromApi);
       } catch (error) {
         console.error('Error loading product:', error);
@@ -114,6 +119,7 @@ export default function EditProductPage() {
       ...prev,
       [name]: value
     }));
+    setHasUnsavedChanges(true);
     // Clear error when user types
     if (errors[name]) {
       setErrors(prev => ({
@@ -144,6 +150,7 @@ export default function EditProductPage() {
           ...prev,
           images: [...prev.images, file]
         }));
+        setHasUnsavedChanges(true);
       };
       reader.readAsDataURL(file);
     });
@@ -158,6 +165,7 @@ export default function EditProductPage() {
       ...prev,
       images: prev.images.filter((_, i) => i !== index)
     }));
+    setHasUnsavedChanges(true);
   };
 
   const handleDragOver = (e) => {
@@ -190,6 +198,7 @@ export default function EditProductPage() {
           ...prev,
           images: [...prev.images, file]
         }));
+        setHasUnsavedChanges(true);
       };
       reader.readAsDataURL(file);
     });
@@ -264,12 +273,14 @@ export default function EditProductPage() {
         width: formData.width ? parseFloat(formData.width) : undefined,
         height: formData.height ? parseFloat(formData.height) : undefined,
         condition: formData.condition,
+        status: productStatus,
         images: imagePreviews.map((url) => ({ url: normalizeImageValue(url) })),
       };
 
       await updateProduct(id, payload);
       setToast({ show: true, message: 'Produk berhasil diperbarui!' });
       setNavigateAfterToast(true);
+      setHasUnsavedChanges(false);
     } catch (error) {
       console.error('Error updating product:', error);
       setToast({ show: true, message: error.message || 'Terjadi kesalahan saat memperbarui produk' });
@@ -277,6 +288,52 @@ export default function EditProductPage() {
       setLoading(false);
     }
   };
+
+  const handleToggleStatus = async () => {
+    try {
+      setStatusUpdating(true);
+      const newStatus = productStatus === 'active' ? 'inactive' : 'active';
+      setProductStatus(newStatus);
+      setHasUnsavedChanges(true);
+      setToast({ show: true, message: `Status diubah menjadi ${newStatus === 'active' ? 'Aktif' : 'Nonaktif'}. Simpan perubahan untuk menerapkan.` });
+    } catch (error) {
+      console.error('Error toggling status:', error);
+      setToast({ show: true, message: error.message || 'Terjadi kesalahan saat mengubah status produk' });
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
+  const handleNavigateAway = (path) => {
+    if (hasUnsavedChanges) {
+      const confirmLeave = window.confirm('Perubahan belum disimpan. Tinggalkan halaman?');
+      if (!confirmLeave) return;
+    }
+    navigate(path);
+  };
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    const handlePopState = () => {
+      if (hasUnsavedChanges && !window.confirm('Perubahan belum disimpan. Tinggalkan halaman?')) {
+        window.history.pushState(null, '', window.location.href);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [hasUnsavedChanges]);
 
   if (productNotFound) {
     return (
@@ -321,13 +378,14 @@ export default function EditProductPage() {
                 </Button>
 
                 <Button
-                  onClick={() => navigate('/seller/product')}
+                  onClick={() => handleNavigateAway('/seller/product')}
                   variant="ghost"
                   className="text-white hover:bg-blue-500"
                   size="sm"
                 >
                   <ArrowLeftIcon className="h-5 w-5" />
                 </Button>
+
                 <div>
                   <h1 className="text-xl md:text-2xl font-bold">Edit Produk</h1>
                   <p className="text-blue-100 text-xs md:text-sm">Perbarui informasi produk Anda</p>
@@ -340,6 +398,34 @@ export default function EditProductPage() {
         {/* Form Container */}
         <div className="container mx-auto px-4 py-6 md:py-8">
           <form onSubmit={handleSubmit} className="max-w-5xl mx-auto space-y-6">
+
+            {/* Status Produk */}
+            <Card className="shadow-md border-t-4 border-t-gray-600">
+              <CardContent className="p-4 md:p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Status Produk</p>
+                  <p className="text-xl font-bold text-gray-900">{productStatus === 'active' ? 'Aktif' : 'Nonaktif'}</p>
+                </div>
+                <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                  <Button
+                    type="button"
+                    onClick={handleToggleStatus}
+                    disabled={statusUpdating || loading}
+                    className={`w-full md:w-48 ${
+                      productStatus === 'active'
+                        ? 'bg-red-600 hover:bg-red-700'
+                        : 'bg-green-600 hover:bg-green-700'
+                    } text-white`}
+                  >
+                    {statusUpdating
+                      ? 'Memproses...'
+                      : productStatus === 'active'
+                        ? 'Nonaktifkan Produk'
+                        : 'Aktifkan Produk'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
             
             {/* Informasi Dasar Produk */}
             <Card className="shadow-md border-t-4 border-t-blue-600">
@@ -666,7 +752,7 @@ export default function EditProductPage() {
             <div className="flex flex-col sm:flex-row gap-3 justify-end pb-6">
               <Button
                 type="button"
-                onClick={() => navigate('/seller/product')}
+                onClick={() => handleNavigateAway('/seller/product')}
                 variant="outline"
                 className="border-gray-300 text-gray-700 hover:bg-gray-50 w-full sm:w-auto"
                 disabled={loading}
