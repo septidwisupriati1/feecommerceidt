@@ -481,7 +481,7 @@ export default function AddProductPage() {
                     {/* Length */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Panjang (cm) <span className="text-gray-500">(opsional)</span>
+                        Panjang (cm) <span className="text-red-600">*</span>
                       </label>
                       <Input
                         name="length"
@@ -496,7 +496,7 @@ export default function AddProductPage() {
                     {/* Width */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Lebar (cm) <span className="text-gray-500">(opsional)</span>
+                        Lebar (cm) <span className="text-red-600">*</span>
                       </label>
                       <Input
                         name="width"
@@ -511,7 +511,7 @@ export default function AddProductPage() {
                     {/* Height */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Tinggi (cm) <span className="text-gray-500">(opsional)</span>
+                        Tinggi (cm) <span className="text-red-600">*</span>
                       </label>
                       <Input
                         name="height"
