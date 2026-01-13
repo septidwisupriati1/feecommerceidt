@@ -76,13 +76,13 @@ export const getProductDetail = async (productId) => {
     });
 
     if (!response.ok) {
-      return useFallbackProductDetail(productId);
+      return { success: false, error: 'Failed to fetch product detail' };
     }
 
     const data = await response.json();
     
     if (!data.success) {
-      return useFallbackProductDetail(productId);
+      return { success: false, error: data.error || 'Failed to fetch product detail' };
     }
 
     return {
@@ -91,7 +91,7 @@ export const getProductDetail = async (productId) => {
     };
   } catch (error) {
     console.error('Error getting product detail:', error);
-    return useFallbackProductDetail(productId);
+    return { success: false, error: error.message };
   }
 };
 

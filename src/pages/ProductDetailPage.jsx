@@ -7,6 +7,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { products, formatPrice, getCategoryGradient } from "../data/products";
 import { getProductDetail } from "../services/productAPI";
+import buyerProductAPI from "../services/buyerProductAPI";
 import { getPrimaryImageUrl, getImageUrls, getImageUrl } from "../utils/imageHelper";
 import { ShoppingCartIcon, ChatBubbleLeftIcon, StarIcon, HeartIcon } from '@heroicons/react/24/outline';
 import { MinusIcon, PlusIcon } from '@heroicons/react/24/solid';
@@ -29,46 +30,95 @@ export default function ProductDetailPage() {
   useEffect(() => {
     const fetchDetail = async () => {
       setLoading(true);
+
+      const normalizePayload = (api) => {
+        if (!api) return null;
+        const apiImages = api.images || api.product_images || api.productImages || api.images_url || [];
+        const extraImages = [
+          api.image2,
+          api.image3,
+          api.image_2,
+          api.image_3,
+          api.second_image,
+          api.third_image,
+          api.photo2,
+          api.photo3,
+          api.thumbnail,
+          api.cover_image
+        ].filter(Boolean);
+        const combinedImages = [...apiImages, ...extraImages];
+        const primaryImageRaw =
+          api.primary_image ||
+          api.image ||
+          api.image_url ||
+          api.primary_image_url ||
+          getPrimaryImageUrl(combinedImages);
+        const primaryImage = getImageUrl(primaryImageRaw);
+        const gallerySource = combinedImages.length ? getImageUrls(combinedImages) : [];
+        const gallery = (gallerySource.length ? gallerySource : [primaryImage]).filter(Boolean);
+
+        return {
+          product_id: api.product_id || api.id,
+          name: api.name,
+          description:
+            api.description ||
+            api.product_description ||
+            api.long_description ||
+            api.full_description ||
+            api.detail ||
+            api.details ||
+            api.deskripsi ||
+            '',
+          price: api.price || 0,
+          primary_image: primaryImage,
+          images: gallery,
+          category: api.category?.name || api.category_name || api.category || 'Kategori',
+          rating: api.rating_average ?? api.rating ?? 0,
+          reviews: api.total_reviews ?? api.reviews ?? 0,
+          stock: api.stock ?? api.available_stock ?? 0,
+          location: api.seller?.store_name || api.seller_name || api.location || 'Toko',
+          seller_name: api.seller?.store_name || api.seller_name || 'Toko',
+          condition: api.condition || 'Baru',
+          sold: api.sold ?? api.total_sold ?? 0,
+          shipping: api.shipping || api.shipping_method || 'Reguler',
+          badge: api.badge || null,
+        };
+      };
+
+      const trySetProduct = (apiPayload) => {
+        const normalized = normalizePayload(apiPayload);
+        if (!normalized) return false;
+        setProduct(normalized);
+        setSelectedImage(normalized.primary_image);
+        setInWishlist(isInWishlist(normalized.product_id));
+        setQuantity(normalized.stock > 0 ? 1 : 0);
+        return true;
+      };
+
+      // Primary: buyer endpoint (langsung data seller)
       try {
-        const res = await getProductDetail(id);
-        if (res?.success && res.data) {
-          const api = res.data;
-          const apiImages = api.images || api.product_images || api.productImages || [];
-          const extraImages = [api.image2, api.image3, api.image_2, api.image_3, api.second_image, api.third_image, api.photo2, api.photo3, api.thumbnail, api.cover_image].filter(Boolean);
-          const combinedImages = [...apiImages, ...extraImages];
-          const primaryImageRaw = api.primary_image || api.image || api.image_url || api.primary_image_url || getPrimaryImageUrl(combinedImages);
-          const primaryImage = getImageUrl(primaryImageRaw);
-          const gallerySource = combinedImages.length ? getImageUrls(combinedImages) : [];
-          const gallery = (gallerySource.length ? gallerySource : [primaryImage]).filter(Boolean);
-          const normalized = {
-            product_id: api.product_id || api.id,
-            name: api.name,
-            description: api.description || api.long_description || '',
-            price: api.price || 0,
-            primary_image: primaryImage,
-            images: gallery,
-            category: api.category?.name || api.category_name || api.category || 'Kategori',
-            rating: api.rating_average ?? api.rating ?? 0,
-            reviews: api.total_reviews ?? api.reviews ?? 0,
-            stock: api.stock ?? api.available_stock ?? 0,
-            location: api.seller?.store_name || api.seller_name || api.location || 'Toko',
-            seller_name: api.seller?.store_name || api.seller_name || 'Toko',
-            condition: api.condition || 'Baru',
-            sold: api.sold ?? api.total_sold ?? 0,
-            shipping: api.shipping || api.shipping_method || 'Reguler',
-            badge: api.badge || null,
-          };
-          setProduct(normalized);
-          setSelectedImage(primaryImage);
-          setInWishlist(isInWishlist(normalized.product_id));
-          setQuantity(normalized.stock > 0 ? 1 : 0);
+        const buyerRes = await buyerProductAPI.getProductDetail(id);
+        const buyerData = buyerRes?.data || buyerRes;
+        if (buyerData && trySetProduct(buyerData)) {
           setLoading(false);
           return;
         }
       } catch (err) {
-        console.warn('Product detail API failed, fallback to static', err.message);
+        console.warn('Buyer product detail API failed', err.message);
       }
 
+      // Secondary: public browse endpoint
+      try {
+        const res = await getProductDetail(id);
+        if (res?.success && res.data && trySetProduct(res.data)) {
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.warn('Product detail API failed', err.message);
+      }
+
+      // Terkahir: dummy hanya jika kedua API gagal total
       const fallback = products.find(p => p.id === parseInt(id));
       if (fallback) {
         setProduct({
@@ -390,9 +440,10 @@ export default function ProductDetailPage() {
                   {selectedTab === 'deskripsi' ? (
                     <div className="prose max-w-none">
                       <h3 className="text-xl font-bold mb-4">Deskripsi Produk</h3>
-                      <p className="text-gray-700 leading-relaxed mb-4">
-                        {product.name} adalah produk berkualitas tinggi yang dirancang untuk memenuhi kebutuhan Anda. 
-                        Dengan material terbaik dan desain modern, produk ini memberikan nilai maksimal untuk investasi Anda.
+                      <p className="text-gray-700 leading-relaxed mb-4 whitespace-pre-wrap">
+                        {product.description && product.description.trim().length > 0
+                          ? product.description
+                          : 'Deskripsi belum tersedia.'}
                       </p>
                       <h4 className="font-bold mt-6 mb-3">Spesifikasi:</h4>
                       <ul className="list-disc list-inside space-y-2 text-gray-700">
