@@ -4,7 +4,8 @@
  * Base URL: /api/ecommerce/browse
  */
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/ecommerce'}/buyer/products`;
-const allowDummyFallback = import.meta.env.VITE_ENABLE_DUMMY === 'true';
+// Paksa nonaktif fallback dummy agar data selalu dari backend
+const allowDummyFallback = false;
 
 /**
  * Browse products (public access)
