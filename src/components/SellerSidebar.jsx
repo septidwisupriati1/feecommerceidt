@@ -44,10 +44,23 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
       updateUnreadCount();
     };
     window.addEventListener('chatUnreadCountChanged', handleUnreadCountChange);
+
+    const handleProfileUpdate = (e) => {
+      setUser(e.detail || getCurrentUser());
+    };
+    const handleStorageChange = (e) => {
+      if (e.key === 'user') {
+        setUser(getCurrentUser());
+      }
+    };
+    window.addEventListener('sellerProfileUpdated', handleProfileUpdate);
+    window.addEventListener('storage', handleStorageChange);
     
     return () => {
       clearInterval(interval);
       window.removeEventListener('chatUnreadCountChanged', handleUnreadCountChange);
+      window.removeEventListener('sellerProfileUpdated', handleProfileUpdate);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
@@ -62,20 +75,24 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
   };
 
   const getUserInitials = () => {
-    if (!user) return 'S';
-    if (user.full_name) {
-      const names = user.full_name.split(' ');
-      return names.length > 1 ? names[0][0] + names[1][0] : names[0][0];
-    }
-    return user.username ? user.username[0].toUpperCase() : 'S';
+    const fallback = 'S';
+    if (!user) return fallback;
+    const baseName = user.store_name || user.full_name || user.username;
+    if (!baseName) return fallback;
+    const names = baseName.split(' ');
+    return names.length > 1 ? (names[0][0] + names[1][0]).toUpperCase() : baseName[0].toUpperCase();
   };
 
   const getUserName = () => {
-    return user?.full_name || user?.username || 'Seller';
+    return user?.store_name || user?.full_name || user?.username || 'Seller';
   };
 
   const getUserEmail = () => {
-    return user?.email || 'seller@ecommerce.com';
+    return user?.store_email || user?.email || 'seller@ecommerce.com';
+  };
+
+  const getProfileImage = () => {
+    return user?.profile_picture || user?.store_logo || null;
   };
 
   const menuItems = [
@@ -133,9 +150,9 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
               }}
               className="w-full flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg hover:from-blue-100 hover:to-blue-200 transition-all duration-200 border-2 border-blue-200 hover:border-blue-300 cursor-pointer"
             >
-              {user?.profile_picture ? (
+              {getProfileImage() ? (
                 <img
-                  src={user.profile_picture}
+                  src={getProfileImage()}
                   alt={getUserName()}
                   className="w-12 h-12 rounded-full object-cover flex-shrink-0 border-2 border-white shadow-md"
                 />

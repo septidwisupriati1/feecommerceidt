@@ -9,6 +9,29 @@ import { formatPrice } from '../data/products';
 import { useCart } from '../context/CartContext';
 import orderAPI from '../services/orderAPI';
 
+// Update seller localStorage data so seller dashboard reflects latest payment status
+const updateSellerLocalStatus = (orderNumber, status) => {
+  if (!orderNumber) return;
+  const ordersKey = 'seller_orders_data';
+  const salesKey = 'seller_sales_data';
+
+  try {
+    const orders = JSON.parse(localStorage.getItem(ordersKey) || '[]');
+    const updated = orders.map((o) => (o.orderNumber === orderNumber ? { ...o, status } : o));
+    localStorage.setItem(ordersKey, JSON.stringify(updated));
+  } catch (err) {
+    console.warn('Failed to update seller_orders_data', err);
+  }
+
+  try {
+    const sales = JSON.parse(localStorage.getItem(salesKey) || '[]');
+    const updatedSales = sales.map((s) => (s.orderNumber === orderNumber ? { ...s, status: status === 'delivered' ? 'delivered' : 'processing' } : s));
+    localStorage.setItem(salesKey, JSON.stringify(updatedSales));
+  } catch (err) {
+    console.warn('Failed to update seller_sales_data', err);
+  }
+};
+
 export default function PaymentStatusPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -22,6 +45,9 @@ export default function PaymentStatusPage() {
   const qpStatusCode = searchParams.get('status_code');
   const qpTxStatus = searchParams.get('transaction_status');
   const qpFraudStatus = searchParams.get('fraud_status');
+
+  const isPaid = useMemo(() => currentStatus === 'success', [currentStatus]);
+  const isPending = useMemo(() => currentStatus === 'pending', [currentStatus]);
 
   // Ensure snap.js is available for retry
   useEffect(() => {
@@ -60,23 +86,45 @@ export default function PaymentStatusPage() {
     const fraudStatus = (paymentResult?.fraud_status || qpFraudStatus || '').toLowerCase();
     const statusCode = paymentResult?.status_code || qpStatusCode;
 
-    if (status === 'success' || txStatus === 'settlement' || txStatus === 'capture' || txStatus === 'success' || statusCode === '200' || (txStatus === 'capture' && fraudStatus === 'accept')) {
+    const isUnpaid = status === 'error' || status === 'closed' || txStatus === 'deny' || txStatus === 'cancel' || txStatus === 'expire';
+    if (isUnpaid) {
+      setCurrentStatus('unpaid');
+      return;
+    }
+
+    const isSuccess = status === 'success' || txStatus === 'settlement' || txStatus === 'capture' || txStatus === 'success' || statusCode === '200' || (txStatus === 'capture' && fraudStatus === 'accept');
+    if (isSuccess) {
       setCurrentStatus('success');
       return;
     }
+
+    // If we have a paymentResult and it is not a failed status, consider it paid (no manual confirmation required)
+    if (paymentResult && !txStatus) {
+      setCurrentStatus('success');
+      return;
+    }
+
     if (status === 'pending' || txStatus === 'pending' || statusCode === '201') {
       setCurrentStatus('pending');
       return;
     }
-    if (status === 'error' || status === 'closed' || txStatus === 'deny' || txStatus === 'cancel' || txStatus === 'expire') {
-      setCurrentStatus('unpaid');
-      return;
-    }
+
     setCurrentStatus((prev) => prev || 'pending');
   }, [status, paymentResult, qpTxStatus, qpStatusCode, qpFraudStatus]);
 
-  const isPaid = useMemo(() => currentStatus === 'success', [currentStatus]);
-  const isPending = useMemo(() => currentStatus === 'pending', [currentStatus]);
+  // Reflect payment status into seller local data for immediate UI updates
+  useEffect(() => {
+    if (!pageOrder?.order_id && !pageOrder?.orderNumber) return;
+    const orderNumber = pageOrder.order_number || pageOrder.order_id || pageOrder.orderNumber;
+    if (isPaid) {
+      updateSellerLocalStatus(orderNumber, 'delivered');
+      return;
+    }
+    if (isPending) {
+      updateSellerLocalStatus(orderNumber, 'pending');
+    }
+  }, [isPaid, isPending, pageOrder]);
+
   const [clearedCart, setClearedCart] = useState(false);
   const [syncedPayment, setSyncedPayment] = useState(false);
 

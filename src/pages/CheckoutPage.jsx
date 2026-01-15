@@ -13,6 +13,117 @@ import { getToken } from "../utils/auth";
 import orderAPI from "../services/orderAPI";
 import { adaptOrderForPaymentStatus } from "../utils/orderAdapter";
 
+// Persist newly created order to seller-facing localStorage so seller pages can display it
+const persistSellerOrderLocal = ({ order, address, itemsPayload, shippingCost, paymentMethod, shippingService }) => {
+  const orderNumber = order?.order_number || order?.order_id;
+  if (!orderNumber) return;
+
+  const ordersKey = 'seller_orders_data';
+  const salesKey = 'seller_sales_data';
+  const nowIso = new Date().toISOString();
+
+  const mappedItems = (itemsPayload || []).map((item) => ({
+    id: item.product_id,
+    name: item.product_name,
+    image: item.product_image,
+    price: item.price,
+    qty: item.quantity,
+    subtotal: Number(item.price) * Number(item.quantity || 0)
+  }));
+
+  const grandTotal = (order.total_amount || order.total || 0) || mappedItems.reduce((sum, i) => sum + i.subtotal, 0) + (shippingCost || 0);
+
+  const nextOrder = {
+    id: orderNumber,
+    orderNumber,
+    buyer: {
+      name: address?.recipient_name || address?.label || 'Pembeli',
+      phone: address?.phone || '',
+      address: address?.full_address || `${address?.regency || ''} ${address?.province || ''}`.trim()
+    },
+    items: mappedItems,
+    totalAmount: grandTotal - (shippingCost || 0),
+    shippingCost: shippingCost || 0,
+    grandTotal,
+    orderDate: nowIso,
+    status: 'pending',
+    paymentMethod: paymentMethod === 'midtrans' ? 'Midtrans' : 'Transfer Bank',
+    shippingService: shippingService || 'JNE',
+    trackingNumber: null
+  };
+
+  try {
+    const existing = JSON.parse(localStorage.getItem(ordersKey) || '[]');
+    const filtered = existing.filter((o) => o.orderNumber !== orderNumber);
+    localStorage.setItem(ordersKey, JSON.stringify([nextOrder, ...filtered]));
+  } catch (err) {
+    console.warn('Failed to persist seller_orders_data', err);
+  }
+
+  const salesEntries = (itemsPayload || []).map((item) => ({
+    id: `${orderNumber}-${item.product_id}`,
+    orderNumber,
+    productName: item.product_name,
+    image: item.product_image,
+    buyer: address?.recipient_name || 'Pembeli',
+    qty: item.quantity,
+    price: item.price,
+    total: Number(item.price) * Number(item.quantity || 0),
+    orderDate: nowIso,
+    status: 'processing',
+    paymentMethod: paymentMethod === 'midtrans' ? 'Midtrans' : 'Transfer Bank',
+    shippingService: shippingService || 'JNE'
+  }));
+
+  try {
+    const existingSales = JSON.parse(localStorage.getItem(salesKey) || '[]');
+    // Remove duplicates for this order number
+    const filteredSales = existingSales.filter((s) => s.orderNumber !== orderNumber);
+    localStorage.setItem(salesKey, JSON.stringify([...salesEntries, ...filteredSales]));
+  } catch (err) {
+    console.warn('Failed to persist seller_sales_data', err);
+  }
+
+  // Decrease local product stock for both seller and buyer views (seller_products + override map)
+  try {
+    const productsKey = 'seller_products';
+    const overrideKey = 'product_stock_overrides';
+    const products = JSON.parse(localStorage.getItem(productsKey) || '[]');
+    const overrides = JSON.parse(localStorage.getItem(overrideKey) || '{}');
+
+    const updatedProducts = products.map((p) => {
+      const match = (itemsPayload || []).find((i) => {
+        const pid = Number(i.product_id || i.id);
+        return pid === Number(p.product_id || p.id) || pid === Number(p.id) || pid === Number(p.product_id);
+      });
+      if (!match) return p;
+      const qty = Number(match.quantity) || 0;
+      const currentStock = Number(p.stock ?? 0);
+      const nextStock = Math.max(0, currentStock - qty);
+      const pidKey = String(p.product_id || p.id);
+      overrides[pidKey] = nextStock;
+      return { ...p, stock: nextStock };
+    });
+
+    // If products list empty, still record overrides based on item.stock if provided
+    if (!products.length) {
+      (itemsPayload || []).forEach((i) => {
+        const pidKey = String(i.product_id || i.id || '');
+        if (!pidKey) return;
+        const baseStock = Number.isFinite(Number(i.stock)) ? Number(i.stock) : undefined;
+        if (baseStock === undefined) return;
+        const qty = Number(i.quantity) || 0;
+        overrides[pidKey] = Math.max(0, baseStock - qty);
+      });
+    }
+
+    localStorage.setItem(productsKey, JSON.stringify(updatedProducts));
+    localStorage.setItem(overrideKey, JSON.stringify(overrides));
+  } catch (err) {
+    console.warn('Failed to decrease local stock', err);
+  }
+};
+
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -273,6 +384,16 @@ export default function CheckoutPage() {
       if (!orderResponse?.order_id) {
         throw new Error('Order backend tidak mengembalikan order_id');
       }
+
+      // Simpan ke localStorage untuk tampilan seller (agar langsung muncul di daftar pesanan/produk terjual)
+      persistSellerOrderLocal({
+        order: orderResponse,
+        address: shippingPayload,
+        itemsPayload,
+        shippingCost,
+        paymentMethod: orderReq.payment_method,
+        shippingService: selectedShipping
+      });
     } catch (err) {
       console.error('Create order error:', err);
       alert(err.response?.data?.message || err.message || 'Gagal membuat pesanan');

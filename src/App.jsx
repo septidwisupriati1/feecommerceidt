@@ -106,8 +106,8 @@ function App() {
           <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
           <Route path="/verify-email" element={<PublicRoute><VerifyEmailPage /></PublicRoute>} />
           
-          {/* Buyer Routes - Open Access (No Login Required) */}
-          <Route path="/buyer/dashboard" element={<BuyerDashboard />} />
+          {/* Buyer Routes */}
+          <Route path="/buyer/dashboard" element={<ProtectedRoute requiredRole="buyer"><BuyerDashboard /></ProtectedRoute>} />
           <Route path="/home" element={<HomePage />} />
           <Route path="/produk" element={<ProductPage />} />
           <Route path="/produk/:id" element={<ProductDetailPage />} />
@@ -115,15 +115,15 @@ function App() {
           <Route path="/ubah-password" element={<ChangePasswordPage />} />
           <Route path="/verifikasi-email" element={<VerifyEmailLocalPage />} />
           <Route path="/verifikasi-telepon" element={<VerifyPhoneLocalPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/payment" element={<PaymentPage />} />
-          <Route path="/payment-status" element={<PaymentStatusPage />} />
-          <Route path="/pesanan-saya" element={<MyOrdersPage />} />
-          <Route path="/pesanan/:id" element={<OrderDetailPage />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/profil" element={<ProfilePage />} />
-          <Route path="/wishlist" element={<WishlistPage />} />
-          <Route path="/notifikasi" element={<NotificationPage />} />
+          <Route path="/checkout" element={<ProtectedRoute requiredRole="buyer"><CheckoutPage /></ProtectedRoute>} />
+          <Route path="/payment" element={<ProtectedRoute requiredRole="buyer"><PaymentPage /></ProtectedRoute>} />
+          <Route path="/payment-status" element={<ProtectedRoute requiredRole="buyer"><PaymentStatusPage /></ProtectedRoute>} />
+          <Route path="/pesanan-saya" element={<ProtectedRoute requiredRole="buyer"><MyOrdersPage /></ProtectedRoute>} />
+          <Route path="/pesanan/:id" element={<ProtectedRoute requiredRole="buyer"><OrderDetailPage /></ProtectedRoute>} />
+          <Route path="/chat" element={<ProtectedRoute requiredRole="buyer"><ChatPage /></ProtectedRoute>} />
+          <Route path="/profil" element={<ProtectedRoute requiredRole="buyer"><ProfilePage /></ProtectedRoute>} />
+          <Route path="/wishlist" element={<ProtectedRoute requiredRole="buyer"><WishlistPage /></ProtectedRoute>} />
+          <Route path="/notifikasi" element={<ProtectedRoute requiredRole="buyer"><NotificationPage /></ProtectedRoute>} />
           
           {/* Seller Routes */}
           <Route path="/seller" element={<ProtectedRoute requiredRole="seller"><SellerProductPage /></ProtectedRoute>} />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -15,6 +15,7 @@ import {
   EyeSlashIcon
 } from '@heroicons/react/24/outline';
 import CartSuccessToast from '../../components/CartSuccessToast';
+import { getCurrentUser } from '../../services/authAPI';
 
 export default function PengaturanPage() {
   const navigate = useNavigate();
@@ -31,22 +32,25 @@ export default function PengaturanPage() {
     storeAddress: "Jl. Sudirman No. 123, Jakarta Pusat, DKI Jakarta 10220",
     storePhone: "+62 812-3456-7890",
     storeEmail: "johns.store@gmail.com",
-    storeLogo: null
+    storeLogo: ''
   });
 
-  // Form Data - Profile
+  const [storeLogoPreview, setStoreLogoPreview] = useState('');
+
   const [profileData, setProfileData] = useState({
-    fullName: "John Doe",
-    email: "john@seller.com",
-    phone: "+62 812-3456-7890",
-    birthDate: "1990-05-15",
-    gender: "male",
-    address: "Jl. Gatot Subroto No. 45, Jakarta Selatan",
-    city: "Jakarta",
-    province: "DKI Jakarta",
-    postalCode: "12950",
-    profilePhoto: null
+    fullName: '',
+    email: '',
+    phone: '',
+    birthDate: '',
+    gender: 'male',
+    address: '',
+    city: '',
+    province: '',
+    postalCode: '',
+    profilePhoto: ''
   });
+
+  const [profilePreview, setProfilePreview] = useState('');
 
   // Form Data - Password
   const [passwordData, setPasswordData] = useState({
@@ -57,11 +61,38 @@ export default function PengaturanPage() {
 
   const handleTokoSubmit = (e) => {
     e.preventDefault();
+
+    const currentUser = getCurrentUser() || {};
+    const updatedUser = {
+      ...currentUser,
+      store_name: tokoData.storeName || currentUser.store_name,
+      store_email: tokoData.storeEmail || currentUser.store_email,
+      store_phone: tokoData.storePhone || currentUser.store_phone,
+      store_address: tokoData.storeAddress || currentUser.store_address,
+      store_logo: storeLogoPreview || tokoData.storeLogo || currentUser.store_logo,
+    };
+
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    window.dispatchEvent(new CustomEvent('sellerProfileUpdated', { detail: updatedUser }));
+
     setToast({ show: true, message: `Pengaturan toko berhasil disimpan!\nNama: ${tokoData.storeName}\nEmail: ${tokoData.storeEmail}` });
   };
 
   const handleProfileSubmit = (e) => {
     e.preventDefault();
+
+    const currentUser = getCurrentUser() || {};
+    const updatedUser = {
+      ...currentUser,
+      full_name: profileData.fullName || currentUser.full_name,
+      email: profileData.email || currentUser.email,
+      phone: profileData.phone || currentUser.phone,
+      profile_picture: profilePreview || profileData.profilePhoto || currentUser.profile_picture,
+    };
+
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    window.dispatchEvent(new CustomEvent('sellerProfileUpdated', { detail: updatedUser }));
+
     setToast({ show: true, message: `Profil berhasil diperbarui!\nNama: ${profileData.fullName}\nEmail: ${profileData.email}` });
   };
 
@@ -88,19 +119,63 @@ export default function PengaturanPage() {
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setToast({ show: true, message: `Logo toko akan diupload: ${file.name}` });
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setToast({ show: true, message: 'Ukuran logo maksimal 2MB' });
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result;
+      setStoreLogoPreview(dataUrl);
+      setTokoData(prev => ({ ...prev, storeLogo: dataUrl }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setToast({ show: true, message: `Foto profil akan diupload: ${file.name}` });
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setToast({ show: true, message: 'Ukuran foto maksimal 2MB' });
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result;
+      setProfilePreview(dataUrl);
+      setProfileData(prev => ({ ...prev, profilePhoto: dataUrl }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const [toast, setToast] = useState({ show: false, message: '' });
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+      setTokoData(prev => ({
+        ...prev,
+        storeName: user.store_name || prev.storeName,
+        storeEmail: user.store_email || prev.storeEmail,
+        storePhone: user.store_phone || prev.storePhone,
+        storeAddress: user.store_address || prev.storeAddress,
+        storeLogo: user.store_logo || prev.storeLogo,
+      }));
+      setStoreLogoPreview(user.store_logo || '');
+
+      setProfileData(prev => ({
+        ...prev,
+        fullName: user.full_name || user.username || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        profilePhoto: user.profile_picture || '',
+      }));
+      setProfilePreview(user.profile_picture || '');
+    }
+  }, []);
 
   return (
     <SellerSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen}>
@@ -169,8 +244,16 @@ export default function PengaturanPage() {
                       Logo Toko
                     </label>
                     <div className="flex items-center gap-4">
-                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-3xl">
-                        JD
+                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-3xl overflow-hidden border-2 border-white shadow">
+                        {storeLogoPreview ? (
+                          <img
+                            src={storeLogoPreview}
+                            alt="Logo toko"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span>{(tokoData.storeName || 'JD').slice(0, 2).toUpperCase()}</span>
+                        )}
                       </div>
                       <div>
                         <input
@@ -308,8 +391,16 @@ export default function PengaturanPage() {
                       Foto Profil
                     </label>
                     <div className="flex items-center gap-4">
-                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-bold text-3xl">
-                        JD
+                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-bold text-3xl overflow-hidden border-2 border-white shadow">
+                        {profilePreview ? (
+                          <img
+                            src={profilePreview}
+                            alt="Foto profil"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span>{(profileData.fullName || 'JD').slice(0, 2).toUpperCase()}</span>
+                        )}
                       </div>
                       <div>
                         <input

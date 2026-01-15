@@ -5,7 +5,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import SellerSidebar from "../../components/SellerSidebar";
 import Footer from '../../components/Footer';
-import { getProductImageUrl, handleImageError } from '../../utils/imageHelper';
+// image helper not needed; use inline fallbacks
 import { 
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -144,13 +144,17 @@ export default function ProdukTerjualPage() {
   };
 
   const filteredProducts = soldProducts.filter(product => {
-    const matchesSearch = 
-      product.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.buyer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.id.toLowerCase().includes(searchQuery.toLowerCase());
-    
+    const name = (product.productName || product.name || '').toLowerCase();
+    const buyer = (product.buyer || '').toLowerCase();
+    const pid = (product.id || product.orderNumber || '').toString().toLowerCase();
+
+    const matchesSearch =
+      name.includes(searchQuery.toLowerCase()) ||
+      buyer.includes(searchQuery.toLowerCase()) ||
+      pid.includes(searchQuery.toLowerCase());
+
     const matchesFilter = filterStatus === 'all' || product.status === filterStatus;
-    
+
     return matchesSearch && matchesFilter;
   });
 
@@ -396,12 +400,12 @@ export default function ProdukTerjualPage() {
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
                               <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                                <img 
-                                  src={getProductImageUrl(product.productImage)} 
-                                  alt={product.productName}
-                                  className="w-full h-full object-cover"
-                                  onError={handleImageError}
-                                />
+                                  <img
+                                    src={product.image || product.product_image || product.primary_image || product.image_url || 'https://via.placeholder.com/80?text=Produk'}
+                                    alt={product.productName || product.name || 'Produk'}
+                                    className="w-full h-full object-cover"
+                                    loading="lazy"
+                                  />
                               </div>
                               <div>
                                 <p className="font-semibold text-gray-900">{product.productName}</p>
@@ -440,6 +444,7 @@ export default function ProdukTerjualPage() {
                               variant="outline"
                               size="sm"
                               className="hover:bg-blue-50"
+                              onClick={() => navigate(`/seller/pesanan/${product.orderNumber || product.id || product.order_id || ''}`)}
                             >
                               <EyeIcon className="h-4 w-4 mr-1" />
                               Detail

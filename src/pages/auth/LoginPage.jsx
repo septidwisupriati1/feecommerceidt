@@ -118,10 +118,10 @@ export default function LoginPage() {
       console.log('📍 Current location:', window.location.pathname);
       
       // Short delay then navigate with replace to prevent back button issues
-      setTimeout(() => {
-        console.log('🚀 Executing navigation to:', dashboardPath);
-        navigate(dashboardPath, { replace: true, state: { fromLogin: true } });
-      }, 800);
+        setTimeout(() => {
+          console.log('🚀 Executing navigation to:', dashboardPath);
+          navigate(dashboardPath, { replace: true, state: { fromLogin: true } });
+        }, 800);
 
     } catch (err) {
       console.error('❌ Login error:', err);

@@ -262,7 +262,7 @@ function ProfileMenu() {
   const confirmLogout = () => {
     clearAuth();
     setShowLogoutConfirm(false);
-    navigate('/login');
+    navigate('/login', { replace: true, state: { fromLogout: true } });
   };
 
   const cancelLogout = () => {

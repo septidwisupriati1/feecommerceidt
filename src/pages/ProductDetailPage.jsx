@@ -30,6 +30,7 @@ export default function ProductDetailPage() {
   useEffect(() => {
     const fetchDetail = async () => {
       setLoading(true);
+      const overrides = JSON.parse(localStorage.getItem('product_stock_overrides') || '{}');
 
       const normalizePayload = (api) => {
         if (!api) return null;
@@ -88,6 +89,10 @@ export default function ProductDetailPage() {
       const trySetProduct = (apiPayload) => {
         const normalized = normalizePayload(apiPayload);
         if (!normalized) return false;
+        const pidKey = String(normalized.product_id || normalized.id || '');
+        if (pidKey && overrides[pidKey] !== undefined) {
+          normalized.stock = overrides[pidKey];
+        }
         setProduct(normalized);
         setSelectedImage(normalized.primary_image);
         setInWishlist(isInWishlist(normalized.product_id));
@@ -121,6 +126,8 @@ export default function ProductDetailPage() {
       // Terkahir: dummy hanya jika kedua API gagal total
       const fallback = products.find(p => p.id === parseInt(id));
       if (fallback) {
+        const pidKey = String(fallback.id);
+        const overriddenStock = overrides[pidKey];
         setProduct({
           product_id: fallback.id,
           name: fallback.name,
@@ -131,10 +138,10 @@ export default function ProductDetailPage() {
           category: fallback.category,
           rating: fallback.rating,
           reviews: fallback.reviews,
-          stock: fallback.stock ?? 100,
+          stock: overriddenStock !== undefined ? overriddenStock : fallback.stock ?? 100,
         });
         setInWishlist(isInWishlist(fallback.id));
-        setQuantity((fallback.stock ?? 0) > 0 ? 1 : 0);
+        setQuantity(((overriddenStock !== undefined ? overriddenStock : fallback.stock) ?? 0) > 0 ? 1 : 0);
         setSelectedImage(getImageUrl(fallback.image));
       }
       setLoading(false);
