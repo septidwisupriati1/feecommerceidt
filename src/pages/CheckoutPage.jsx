@@ -164,17 +164,23 @@ export default function CheckoutPage() {
     postalCode: useRef(null)
   };
 
-  const STORAGE_KEYS = {
-    addresses: 'checkout_addresses',
-    selected: 'checkout_selected_address'
+  const userRef = useRef(null);
+
+  const getStorageKeys = (user) => {
+    const scope = user?.user_id || user?.email || 'guest';
+    return {
+      addresses: `checkout_addresses_${scope}`,
+      selected: `checkout_selected_address_${scope}`
+    };
   };
 
   const persistAddresses = (nextAddresses, nextSelected) => {
-    localStorage.setItem(STORAGE_KEYS.addresses, JSON.stringify(nextAddresses));
+    const keys = getStorageKeys(userRef.current);
+    localStorage.setItem(keys.addresses, JSON.stringify(nextAddresses));
     if (nextSelected) {
-      localStorage.setItem(STORAGE_KEYS.selected, nextSelected);
+      localStorage.setItem(keys.selected, nextSelected);
     } else {
-      localStorage.removeItem(STORAGE_KEYS.selected);
+      localStorage.removeItem(keys.selected);
     }
   };
 
@@ -205,6 +211,10 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     const user = getCurrentUser();
+    userRef.current = user;
+    // Cleanup legacy global storage keys so old shared addresses stop showing up
+    localStorage.removeItem('checkout_addresses');
+    localStorage.removeItem('checkout_selected_address');
     const hasProfileAddress = user && user.address && user.city && user.province;
 
     const profileAddress = hasProfileAddress ? {
@@ -219,9 +229,10 @@ export default function CheckoutPage() {
       notes: user.address_note || ''
     } : null;
 
-    const savedAddressesRaw = localStorage.getItem(STORAGE_KEYS.addresses);
+    const storageKeys = getStorageKeys(user);
+    const savedAddressesRaw = localStorage.getItem(storageKeys.addresses);
     const savedAddresses = JSON.parse(savedAddressesRaw || '[]');
-    const savedSelected = localStorage.getItem(STORAGE_KEYS.selected);
+    const savedSelected = localStorage.getItem(storageKeys.selected);
 
     // Only show addresses when profil sudah ada alamat; otherwise hide all addresses.
     const mergedAddresses = hasProfileAddress
@@ -571,7 +582,8 @@ export default function CheckoutPage() {
                             checked={selectedAddress === addr.id}
                             onChange={(e) => {
                               setSelectedAddress(e.target.value);
-                              localStorage.setItem(STORAGE_KEYS.selected, e.target.value);
+                              const keys = getStorageKeys(userRef.current);
+                              localStorage.setItem(keys.selected, e.target.value);
                             }}
                             className="mt-1"
                           />

@@ -4,6 +4,7 @@
  */
 
 import { saveAuth, clearAuth } from '../utils/auth';
+import profileAPI from './profileAPI';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/ecommerce';
 
@@ -124,18 +125,43 @@ export const login = async (credentials) => {
 
     // Save token and user to localStorage using auth utility
     if (result.data?.token && result.data?.user) {
-      saveAuth(result.data.token, result.data.user);
+      let hydratedUser = result.data.user;
+
+      // Save initial auth to allow authenticated profile fetch
+      saveAuth(result.data.token, hydratedUser);
+
+      try {
+        const profileResponse = await profileAPI.getProfile();
+        if (profileResponse?.success && profileResponse.data) {
+          hydratedUser = {
+            ...hydratedUser,
+            ...profileResponse.data,
+            roles: profileResponse.data.roles || hydratedUser.roles,
+            seller_profile:
+              profileResponse.data.seller_profile !== undefined
+                ? profileResponse.data.seller_profile
+                : hydratedUser.seller_profile,
+          };
+        }
+      } catch (profileError) {
+        console.warn('⚠️ Profile hydration failed, using login payload only:', profileError.message);
+      }
+
+      saveAuth(result.data.token, hydratedUser);
+
       console.log('✅ Login successful:', {
-        username: result.data.user.username,
-        role: result.data.user.role || result.data.user.roles?.[0],
-        userId: result.data.user.user_id
+        username: hydratedUser.username,
+        role: hydratedUser.role || hydratedUser.roles?.[0],
+        userId: hydratedUser.user_id
       });
       
-      // Return with success flag
       return {
         success: true,
         message: result.message || 'Login successful',
-        data: result.data
+        data: {
+          user: hydratedUser,
+          token: result.data.token
+        }
       };
     } else {
       throw new Error('Invalid response format - missing token or user data');
