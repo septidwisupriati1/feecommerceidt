@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import BuyerNavbar from "../components/BuyerNavbar";
 import Footer from "../components/Footer";
 import { Button } from "../components/ui/button";
@@ -21,6 +21,7 @@ import {
 
 export default function MyOrdersPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,6 +32,8 @@ export default function MyOrdersPage() {
     total: 0,
     total_pages: 0
   });
+  const [targetOrderId, setTargetOrderId] = useState(null);
+  const orderRefs = useRef({});
   
   // TODO: Temporarily disabled due to import issue
   // const newBuyer = isNewBuyer();
@@ -61,6 +64,12 @@ export default function MyOrdersPage() {
   useEffect(() => {
     fetchOrders();
   }, [selectedFilter, pagination.page]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const orderIdParam = params.get('order_id');
+    setTargetOrderId(orderIdParam);
+  }, [location.search]);
 
   const fetchOrders = async () => {
     try {
@@ -99,6 +108,24 @@ export default function MyOrdersPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (loading) return;
+    if (!targetOrderId) return;
+    const ref = orderRefs.current[targetOrderId];
+    if (ref) {
+      const headerOffset = 120; // adjust to navbar height
+      const rect = ref.getBoundingClientRect();
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const targetTop = rect.top + scrollTop - headerOffset;
+      window.scrollTo({ top: targetTop, behavior: 'smooth' });
+
+      ref.classList.add('ring-2', 'ring-yellow-400', 'bg-yellow-50');
+      setTimeout(() => {
+        ref.classList.remove('ring-2', 'ring-yellow-400', 'bg-yellow-50');
+      }, 2000);
+    }
+  }, [loading, orders, targetOrderId]);
 
   // Status badges
   const getStatusBadge = (status) => {
@@ -391,6 +418,11 @@ export default function MyOrdersPage() {
               return (
                 <Card 
                   key={order.order_id} 
+                  ref={(el) => {
+                    if (el) {
+                      orderRefs.current[order.order_id] = el;
+                    }
+                  }}
                   className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
                   onClick={() => navigate(`/pesanan/${order.order_id}`)}
                 >
