@@ -15,7 +15,9 @@ import {
   EyeSlashIcon
 } from '@heroicons/react/24/outline';
 import CartSuccessToast from '../../components/CartSuccessToast';
-import { getCurrentUser } from '../../services/authAPI';
+import profileAPI from '../../services/profileAPI';
+import storeAPI from '../../services/storeAPI';
+import { getToken, getUser, saveAuth } from '../../utils/auth';
 
 export default function PengaturanPage() {
   const navigate = useNavigate();
@@ -27,11 +29,11 @@ export default function PengaturanPage() {
 
   // Form Data - Toko
   const [tokoData, setTokoData] = useState({
-    storeName: "John's Store",
-    storeDescription: "Toko online terpercaya menjual berbagai produk elektronik, fashion, dan aksesoris berkualitas dengan harga terbaik.",
-    storeAddress: "Jl. Sudirman No. 123, Jakarta Pusat, DKI Jakarta 10220",
-    storePhone: "+62 812-3456-7890",
-    storeEmail: "johns.store@gmail.com",
+    storeName: '',
+    storeDescription: '',
+    storeAddress: '',
+    storePhone: '',
+    storeEmail: '',
     storeLogo: ''
   });
 
@@ -59,41 +61,70 @@ export default function PengaturanPage() {
     confirmPassword: ''
   });
 
-  const handleTokoSubmit = (e) => {
+  const handleTokoSubmit = async (e) => {
     e.preventDefault();
 
-    const currentUser = getCurrentUser() || {};
-    const updatedUser = {
-      ...currentUser,
-      store_name: tokoData.storeName || currentUser.store_name,
-      store_email: tokoData.storeEmail || currentUser.store_email,
-      store_phone: tokoData.storePhone || currentUser.store_phone,
-      store_address: tokoData.storeAddress || currentUser.store_address,
-      store_logo: storeLogoPreview || tokoData.storeLogo || currentUser.store_logo,
-    };
+    try {
+      const payload = {
+        store_name: tokoData.storeName,
+        full_address: tokoData.storeAddress,
+        about_store: tokoData.storeDescription,
+      };
 
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    window.dispatchEvent(new CustomEvent('sellerProfileUpdated', { detail: updatedUser }));
+      const response = await storeAPI.updateStore(payload);
 
-    setToast({ show: true, message: `Pengaturan toko berhasil disimpan!\nNama: ${tokoData.storeName}\nEmail: ${tokoData.storeEmail}` });
+      // Refresh stored auth user with latest store info
+      const token = getToken();
+      const current = getUser();
+      const updatedUser = {
+        ...current,
+        seller_profile: {
+          ...(current?.seller_profile || {}),
+          seller_id: response?.data?.seller_id ?? current?.seller_profile?.seller_id,
+          store_name: response?.data?.store_name ?? tokoData.storeName,
+          about_store: response?.data?.about_store ?? tokoData.storeDescription,
+        },
+      };
+      if (token && updatedUser) {
+        saveAuth(token, updatedUser);
+        window.dispatchEvent(new CustomEvent('sellerProfileUpdated', { detail: updatedUser }));
+      }
+
+      setToast({ show: true, message: `Pengaturan toko berhasil disimpan!\nNama: ${tokoData.storeName}` });
+    } catch (error) {
+      setToast({ show: true, message: error.response?.data?.error || error.message || 'Gagal menyimpan pengaturan toko' });
+    }
   };
 
-  const handleProfileSubmit = (e) => {
+  const handleProfileSubmit = async (e) => {
     e.preventDefault();
 
-    const currentUser = getCurrentUser() || {};
-    const updatedUser = {
-      ...currentUser,
-      full_name: profileData.fullName || currentUser.full_name,
-      email: profileData.email || currentUser.email,
-      phone: profileData.phone || currentUser.phone,
-      profile_picture: profilePreview || profileData.profilePhoto || currentUser.profile_picture,
-    };
+    try {
+      const payload = {
+        full_name: profileData.fullName,
+        phone: profileData.phone,
+      };
 
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    window.dispatchEvent(new CustomEvent('sellerProfileUpdated', { detail: updatedUser }));
+      await profileAPI.updateProfile(payload);
 
-    setToast({ show: true, message: `Profil berhasil diperbarui!\nNama: ${profileData.fullName}\nEmail: ${profileData.email}` });
+      // Re-fetch profile to keep local auth state in sync
+      const refreshed = await profileAPI.getProfile();
+      const token = getToken();
+      if (token && refreshed?.data) {
+        const mergedUser = {
+          ...(getUser() || {}),
+          ...refreshed.data,
+          roles: refreshed.data.roles || getUser()?.roles,
+          seller_profile: refreshed.data.seller_profile || getUser()?.seller_profile,
+        };
+        saveAuth(token, mergedUser);
+        window.dispatchEvent(new CustomEvent('sellerProfileUpdated', { detail: mergedUser }));
+      }
+
+      setToast({ show: true, message: `Profil berhasil diperbarui!\nNama: ${profileData.fullName || ''}` });
+    } catch (error) {
+      setToast({ show: true, message: error.response?.data?.error || error.message || 'Gagal menyimpan profil' });
+    }
   };
 
   const handlePasswordSubmit = (e) => {
@@ -154,27 +185,59 @@ export default function PengaturanPage() {
   const [toast, setToast] = useState({ show: false, message: '' });
 
   useEffect(() => {
-    const user = getCurrentUser();
-    if (user) {
-      setTokoData(prev => ({
-        ...prev,
-        storeName: user.store_name || prev.storeName,
-        storeEmail: user.store_email || prev.storeEmail,
-        storePhone: user.store_phone || prev.storePhone,
-        storeAddress: user.store_address || prev.storeAddress,
-        storeLogo: user.store_logo || prev.storeLogo,
-      }));
-      setStoreLogoPreview(user.store_logo || '');
+    const loadData = async () => {
+      try {
+        const [storeRes, profileRes] = await Promise.all([
+          storeAPI.getStore().catch((err) => {
+            console.warn('⚠️ Store fetch failed:', err.message);
+            return null;
+          }),
+          profileAPI.getProfile(),
+        ]);
 
-      setProfileData(prev => ({
-        ...prev,
-        fullName: user.full_name || user.username || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        profilePhoto: user.profile_picture || '',
-      }));
-      setProfilePreview(user.profile_picture || '');
-    }
+        if (storeRes?.success && storeRes.data) {
+          setTokoData((prev) => ({
+            ...prev,
+            storeName: storeRes.data.store_name || prev.storeName,
+            storeDescription: storeRes.data.about_store || prev.storeDescription,
+            storeAddress: storeRes.data.full_address || prev.storeAddress,
+            storeEmail: prev.storeEmail,
+            storePhone: prev.storePhone,
+            storeLogo: storeRes.data.store_photo || prev.storeLogo,
+          }));
+          setStoreLogoPreview(storeRes.data.store_photo || '');
+        }
+
+        if (profileRes?.success && profileRes.data) {
+          const p = profileRes.data;
+          setProfileData((prev) => ({
+            ...prev,
+            fullName: p.full_name || p.username || prev.fullName,
+            email: p.email || prev.email,
+            phone: p.phone || prev.phone,
+            profilePhoto: p.profile_picture || prev.profilePhoto,
+          }));
+          setProfilePreview(p.profile_picture || '');
+
+          const token = getToken();
+          if (token) {
+            const mergedUser = {
+              ...(getUser() || {}),
+              ...p,
+              roles: p.roles || getUser()?.roles,
+              seller_profile: p.seller_profile || getUser()?.seller_profile,
+            };
+            saveAuth(token, mergedUser);
+            window.dispatchEvent(new CustomEvent('sellerProfileUpdated', { detail: mergedUser }));
+          }
+        }
+      } catch (error) {
+        console.error('❌ Gagal memuat data pengaturan:', error.message);
+        setToast({ show: true, message: 'Gagal memuat data pengaturan. Coba lagi.' });
+      }
+    };
+
+    loadData();
   }, []);
 
   return (
