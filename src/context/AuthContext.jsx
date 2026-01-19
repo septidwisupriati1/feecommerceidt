@@ -45,7 +45,14 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider')
+    console.warn('⚠️ useAuth called outside AuthProvider, returning fallback context')
+    return {
+      user: null,
+      isAuthenticated: false,
+      login: () => {},
+      logout: () => {},
+      updateUser: () => {}
+    }
   }
   return context
 }

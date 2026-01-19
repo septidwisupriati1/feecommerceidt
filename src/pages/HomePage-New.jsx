@@ -362,7 +362,7 @@ export default function HomePage() {
               </div>
               <div className={styles.previewGrid}>
                 {allProductsPreview.map((product) => renderProductCard(product))}
-                {products.length > 5 && (
+                {products.length > 0 && (
                   <button
                     className={styles.viewAllCard}
                     onClick={() => navigate('/produk')}

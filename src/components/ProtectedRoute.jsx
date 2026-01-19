@@ -12,10 +12,12 @@ import { isAuthenticated, hasRole, getUser } from '../utils/auth';
 export default function ProtectedRoute({ 
   children, 
   requiredRole = null, 
-  redirectTo = '/login' 
+  redirectTo = '/login',
+  allowUnverifiedSeller = false
 }) {
   const authenticated = isAuthenticated();
   const user = getUser();
+  const emailVerified = user?.email_verified === true || !!user?.email_verified_at;
 
   console.log('🔒 [ProtectedRoute] Checking access:', {
     authenticated,
@@ -51,6 +53,12 @@ export default function ProtectedRoute({
     // If no matching role, redirect to login
     console.log('❌ [ProtectedRoute] No matching role, redirecting to login');
     return <Navigate to="/login" replace />;
+  }
+
+  // Seller email verification gate
+  if (requiredRole === 'seller' && !allowUnverifiedSeller && !emailVerified) {
+    console.log('⚠️ [ProtectedRoute] Seller email not verified, redirecting to verification page');
+    return <Navigate to="/seller/verify-email" replace />;
   }
 
   console.log('✅ [ProtectedRoute] Access granted');

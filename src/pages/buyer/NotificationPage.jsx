@@ -24,6 +24,20 @@ import {
 
 export default function NotificationPage() {
   const navigate = useNavigate();
+  const BUYER_ALLOWED_TYPES = [
+    'SYSTEM_WELCOME',
+    'ORDER_PLACED',
+    'ORDER_STATUS_UPDATED',
+    'ORDER_SHIPPED',
+    'ORDER_DELIVERED',
+    'ORDER_CANCELED',
+    'PAYMENT_CONFIRMED',
+    'PAYMENT_FAILED',
+    'REFUND_PROCESSED',
+    'ADMIN_BROADCAST',
+    'ADMIN_DIRECT',
+    'SYSTEM_MAINTENANCE',
+  ];
   
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +54,7 @@ export default function NotificationPage() {
       const params = {
         page: currentPage,
         pageSize: 20,
+        allowedTypes: BUYER_ALLOWED_TYPES,
       };
 
       const data = await getNotifications(params);
@@ -63,7 +78,7 @@ export default function NotificationPage() {
   // Fetch unread count
   const fetchUnreadCount = async () => {
     try {
-      const count = await getUnreadCount();
+      const count = await getUnreadCount(null, { allowedTypes: BUYER_ALLOWED_TYPES });
       setUnreadCount(count);
     } catch (error) {
       console.error('Error fetching unread count:', error);
@@ -259,7 +274,7 @@ export default function NotificationPage() {
                     <div className="flex items-start gap-3">
                       {/* Icon */}
                       <div
-                        className={`flex-shrink-0 p-2 rounded-lg ${
+                        className={`shrink-0 p-2 rounded-lg ${
                           !notification.is_read ? 'bg-blue-100' : 'bg-gray-100'
                         }`}
                       >

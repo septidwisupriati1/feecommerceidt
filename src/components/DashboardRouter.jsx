@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { isAuthenticated, hasRole } from '../utils/auth';
+import { isAuthenticated, hasRole, getUser } from '../utils/auth';
 import LandingPage from '../pages/LandingPage';
 
 /**
@@ -9,6 +9,8 @@ import LandingPage from '../pages/LandingPage';
  */
 export default function DashboardRouter() {
   const authenticated = isAuthenticated();
+  const user = getUser();
+  const emailVerified = user?.email_verified === true || !!user?.email_verified_at;
 
   // If not authenticated, show landing page
   if (!authenticated) {
@@ -19,6 +21,9 @@ export default function DashboardRouter() {
   if (hasRole('admin')) {
     return <Navigate to="/admin/dashboard" replace />;
   } else if (hasRole('seller')) {
+    if (!emailVerified) {
+      return <Navigate to="/seller/verify-email" replace />;
+    }
     return <Navigate to="/seller/dashboard" replace />;
   } else if (hasRole('buyer')) {
     // Send buyers to the main home instead of root to avoid redirect loop

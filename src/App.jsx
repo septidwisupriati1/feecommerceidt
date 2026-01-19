@@ -54,6 +54,7 @@ import SyaratKetentuanPage from './pages/seller/SyaratKetentuanPage';
 import PrivasiKebijakanPage from './pages/seller/PrivasiKebijakanPage';
 import FAQPage from './pages/seller/FAQPage';
 import RekeningPage from './pages/seller/RekeningPage';
+import SellerEmailVerificationPage from './pages/seller/SellerEmailVerificationPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -126,6 +127,7 @@ function App() {
           <Route path="/notifikasi" element={<ProtectedRoute requiredRole="buyer"><NotificationPage /></ProtectedRoute>} />
           
           {/* Seller Routes */}
+          <Route path="/seller/verify-email" element={<ProtectedRoute requiredRole="seller" allowUnverifiedSeller><SellerEmailVerificationPage /></ProtectedRoute>} />
           <Route path="/seller" element={<ProtectedRoute requiredRole="seller"><SellerProductPage /></ProtectedRoute>} />
           <Route path="/seller/dashboard" element={<ProtectedRoute requiredRole="seller"><SellerProductPage /></ProtectedRoute>} />
           <Route path="/seller/product" element={<ProtectedRoute requiredRole="seller"><SellerProductPage /></ProtectedRoute>} />

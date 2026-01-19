@@ -26,22 +26,63 @@ const getUserId = () => {
 };
 
 /**
+ * Get user role from localStorage
+ */
+const getUserRole = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user'));
+    return user?.role || user?.roles?.[0] || 'buyer';
+  } catch {
+    return 'buyer';
+  }
+};
+
+const BUYER_ALLOWED_TYPES = [
+  'SYSTEM_WELCOME',
+  'ORDER_PLACED',
+  'ORDER_STATUS_UPDATED',
+  'ORDER_SHIPPED',
+  'ORDER_DELIVERED',
+  'ORDER_CANCELED',
+  'PAYMENT_CONFIRMED',
+  'PAYMENT_FAILED',
+  'REFUND_PROCESSED',
+  'ADMIN_BROADCAST',
+  'ADMIN_DIRECT',
+  'SYSTEM_MAINTENANCE',
+];
+
+const filterNotificationsByRole = (items, allowedTypes) => {
+  const notifications = items || [];
+  const role = getUserRole();
+  if (allowedTypes?.length) {
+    return notifications.filter(n => allowedTypes.includes(n.type));
+  }
+  if (role === 'buyer') {
+    return notifications.filter(n => BUYER_ALLOWED_TYPES.includes(n.type));
+  }
+  return notifications;
+};
+
+/**
  * Get all notifications for current user
  * @param {Object} params - Query parameters
  * @param {boolean} params.unread - Filter by unread status
  * @param {string} params.type - Filter by notification type
  * @param {number} params.page - Page number (default: 1)
  * @param {number} params.pageSize - Items per page (default: 20, max: 100)
+ * @param {Array<string>} params.allowedTypes - Optional: allowed notification types for client-side filtering
  * @returns {Promise<Object>} Notifications data with pagination
  */
 export const getNotifications = async (params = {}) => {
+  const { allowedTypes, ...queryParamsInput } = params;
   try {
     const queryParams = new URLSearchParams();
     
-    if (params.unread !== undefined) queryParams.append('unread', params.unread);
-    if (params.type) queryParams.append('type', params.type);
-    if (params.page) queryParams.append('page', params.page);
-    if (params.pageSize) queryParams.append('pageSize', params.pageSize);
+    if (queryParamsInput.unread !== undefined) queryParams.append('unread', queryParamsInput.unread);
+    if (queryParamsInput.type) queryParams.append('type', queryParamsInput.type);
+    if (queryParamsInput.page) queryParams.append('page', queryParamsInput.page);
+    if (queryParamsInput.pageSize) queryParams.append('pageSize', queryParamsInput.pageSize);
 
     const response = await fetch(
       `${API_BASE_URL}/notifications?${queryParams.toString()}`,
@@ -59,10 +100,12 @@ export const getNotifications = async (params = {}) => {
     }
 
     const result = await response.json();
-    return result.data;
+    const data = result.data || {};
+    const filteredItems = filterNotificationsByRole(data.items, allowedTypes);
+    return { ...data, items: filteredItems };
   } catch (error) {
     console.warn('Backend unavailable, using fallback notifications:', error);
-    return getFallbackNotifications(params);
+    return getFallbackNotifications({ ...queryParamsInput, allowedTypes });
   }
 };
 
@@ -71,7 +114,8 @@ export const getNotifications = async (params = {}) => {
  * @param {string} type - Optional: filter by notification type
  * @returns {Promise<number>} Unread notification count
  */
-export const getUnreadCount = async (type = null) => {
+export const getUnreadCount = async (type = null, options = {}) => {
+  const { allowedTypes } = options;
   try {
     const queryParams = type ? `?type=${type}` : '';
     
@@ -94,7 +138,7 @@ export const getUnreadCount = async (type = null) => {
     return result.data.count;
   } catch (error) {
     console.warn('Backend unavailable, using fallback count:', error);
-    const notifications = getFallbackNotifications({ unread: true, type });
+    const notifications = getFallbackNotifications({ unread: true, type, allowedTypes });
     return notifications.items.length;
   }
 };
@@ -461,6 +505,8 @@ const getFallbackNotifications = (params = {}) => {
   if (params.type) {
     notifications = notifications.filter(n => n.type === params.type);
   }
+  // Filter by allowed types (e.g., buyer-only)
+  notifications = filterNotificationsByRole(notifications, params.allowedTypes);
   
   // Sort by created_at desc
   notifications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));

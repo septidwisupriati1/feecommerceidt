@@ -12,7 +12,7 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
  * @param {string} fallback - URL fallback jika gambar tidak valid
  * @returns {string} URL lengkap gambar
  */
-export const getImageUrl = (imagePath, fallback = 'https://via.placeholder.com/400x300?text=No+Image') => {
+export const getImageUrl = (imagePath, fallback = 'https://placehold.co/400x300?text=No+Image') => {
   // Jika imagePath kosong atau null, return fallback
   if (!imagePath) {
     return fallback;
@@ -41,7 +41,7 @@ export const getImageUrl = (imagePath, fallback = 'https://via.placeholder.com/4
  * @returns {string} URL lengkap gambar produk
  */
 export const getProductImageUrl = (imagePath) => {
-  return getImageUrl(imagePath, 'https://via.placeholder.com/400x300?text=Product+Image');
+  return getImageUrl(imagePath, 'https://placehold.co/400x300?text=Product+Image');
 };
 
 /**
@@ -50,7 +50,7 @@ export const getProductImageUrl = (imagePath) => {
  * @returns {string} URL lengkap avatar
  */
 export const getUserAvatarUrl = (imagePath) => {
-  return getImageUrl(imagePath, 'https://via.placeholder.com/200x200?text=User');
+  return getImageUrl(imagePath, 'https://placehold.co/200x200?text=User');
 };
 
 /**
@@ -59,7 +59,7 @@ export const getUserAvatarUrl = (imagePath) => {
  * @returns {string} URL lengkap logo toko
  */
 export const getStoreLogoUrl = (imagePath) => {
-  return getImageUrl(imagePath, 'https://via.placeholder.com/200x200?text=Store');
+  return getImageUrl(imagePath, 'https://placehold.co/200x200?text=Store');
 };
 
 /**
@@ -68,7 +68,7 @@ export const getStoreLogoUrl = (imagePath) => {
  * @returns {string} URL lengkap icon
  */
 export const getCategoryIconUrl = (imagePath) => {
-  return getImageUrl(imagePath, 'https://via.placeholder.com/100x100?text=Category');
+  return getImageUrl(imagePath, 'https://placehold.co/100x100?text=Category');
 };
 
 /**
@@ -76,7 +76,7 @@ export const getCategoryIconUrl = (imagePath) => {
  * @param {Event} event - Event error dari tag img
  * @param {string} fallback - URL fallback
  */
-export const handleImageError = (event, fallback = 'https://via.placeholder.com/400x300?text=No+Image') => {
+export const handleImageError = (event, fallback = 'https://placehold.co/400x300?text=No+Image') => {
   event.target.src = fallback;
   event.target.onerror = null; // Prevent infinite loop
 };
@@ -105,7 +105,7 @@ export const getImageUrls = (images) => {
  */
 export const getPrimaryImageUrl = (images) => {
   if (!Array.isArray(images) || images.length === 0) {
-    return 'https://via.placeholder.com/400x300?text=No+Image';
+    return 'https://placehold.co/400x300?text=No+Image';
   }
 
   // Find primary image

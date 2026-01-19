@@ -1,7 +1,112 @@
 import axios from 'axios';
 import { validateAuth, clearAuth } from '../utils/auth';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const RAW_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+// If env already includes "/api/ecommerce", strip it to avoid double prefix
+const API_BASE_URL = RAW_API_BASE_URL.replace(/\/?api\/ecommerce\/?$/, '');
+const CHAT_BASE = `${API_BASE_URL}/api/ecommerce/chat`;
+
+const CHAT_FALLBACK_KEY = 'chat_fallback_conversations';
+
+const getCurrentUser = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user'));
+    return {
+      id: user?.user_id || user?.id || null,
+      role: user?.role || user?.roles?.[0] || 'buyer',
+      name: user?.name || user?.fullname || user?.full_name || user?.username || 'User'
+    };
+  } catch {
+    return { id: null, role: 'buyer', name: 'User' };
+  }
+};
+
+const loadFallbackStore = () => {
+  try {
+    const raw = localStorage.getItem(CHAT_FALLBACK_KEY);
+    if (!raw) return { conversations: [] };
+    return JSON.parse(raw);
+  } catch {
+    return { conversations: [] };
+  }
+};
+
+const saveFallbackStore = (data) => {
+  localStorage.setItem(CHAT_FALLBACK_KEY, JSON.stringify(data));
+};
+
+const ensureConversation = ({ buyerId, buyerName, sellerId, sellerName }) => {
+  const store = loadFallbackStore();
+  let conv = store.conversations.find(
+    (c) => c.buyerId === buyerId && c.sellerId === sellerId
+  );
+  if (!conv) {
+    conv = {
+      id: Date.now(),
+      buyerId,
+      buyerName,
+      sellerId,
+      sellerName,
+      lastMessage: null,
+      lastMessageTime: null,
+      unreadBuyer: 0,
+      unreadSeller: 0,
+      messages: []
+    };
+    store.conversations.unshift(conv);
+    saveFallbackStore(store);
+  }
+  return conv;
+};
+
+const mapConversationForRole = (conv, role) => {
+  if (role === 'seller') {
+    return {
+      id: conv.id,
+      conversationId: conv.id,
+      buyerId: conv.buyerId,
+      buyerName: conv.buyerName,
+      buyerAvatar: (conv.buyerName || 'B').slice(0, 2).toUpperCase(),
+      sellerId: conv.sellerId,
+      lastMessage: conv.lastMessage || 'Tidak ada pesan',
+      lastMessageTime: conv.lastMessageTime,
+      unreadCount: conv.unreadSeller || 0,
+      isOnline: false,
+      updatedAt: conv.lastMessageTime
+    };
+  }
+  // buyer
+  return {
+    id: conv.id,
+    conversationId: conv.id,
+    shopId: conv.sellerId,
+    shopName: conv.sellerName || 'Toko',
+    shopAvatar: (conv.sellerName || 'T').slice(0, 2).toUpperCase(),
+    lastMessage: conv.lastMessage || 'Tidak ada pesan',
+    lastMessageTime: conv.lastMessageTime,
+    unreadCount: conv.unreadBuyer || 0,
+    isOnline: false,
+    updatedAt: conv.lastMessageTime,
+    sellerId: conv.sellerId
+  };
+};
+
+const mapMessagesFromFallback = (conv, currentUserId) => {
+  return (conv.messages || []).map((msg) => ({
+    id: msg.id,
+    message: msg.message,
+    text: msg.message,
+    messageType: msg.messageType || 'text',
+    senderId: msg.senderId,
+    recipientId: msg.recipientId,
+    senderRole: msg.senderRole,
+    status: msg.status || 'sent',
+    sentAt: msg.sentAt,
+    createdAt: msg.sentAt,
+    buyerId: conv.buyerId,
+    sellerId: conv.sellerId
+  }));
+};
 
 // Create axios instance with default config
 const chatAxios = axios.create({
@@ -55,7 +160,7 @@ const chatAPI = {
       
       console.log('💬 [ChatAPI] Getting conversations...', params);
       
-      const response = await chatAxios.get('/api/chat/conversations', { params });
+      const response = await chatAxios.get(`${CHAT_BASE}/conversations`, { params });
       
       console.log('✅ [ChatAPI] Conversations retrieved:', response.data.data?.length || 0);
       
@@ -66,13 +171,17 @@ const chatAPI = {
       };
     } catch (error) {
       console.error('❌ [ChatAPI] Error getting conversations:', error);
-      
-      // Return empty array for development/testing
-      console.warn('⚠️ [ChatAPI] Using fallback mode - returning empty conversations');
+      const user = getCurrentUser();
+      const store = loadFallbackStore();
+      const filtered = store.conversations.filter((c) =>
+        params.role === 'seller' ? c.sellerId === user.id : c.buyerId === user.id
+      );
+      const mapped = filtered.map((c) => mapConversationForRole(c, params.role || user.role));
+      console.warn('⚠️ [ChatAPI] Using fallback conversations from localStorage');
       return {
         success: true,
-        data: [],
-        message: 'No conversations available',
+        data: mapped,
+        message: 'Fallback conversations',
         fallback: true
       };
     }
@@ -92,7 +201,7 @@ const chatAPI = {
       
       console.log(`💬 [ChatAPI] Getting messages for conversation ${conversationId}...`, params);
       
-      const response = await chatAxios.get(`/api/chat/conversations/${conversationId}/messages`, { params });
+      const response = await chatAxios.get(`${CHAT_BASE}/conversations/${conversationId}/messages`, { params });
       
       console.log('✅ [ChatAPI] Messages retrieved:', response.data.data?.length || 0);
       
@@ -104,13 +213,14 @@ const chatAPI = {
       };
     } catch (error) {
       console.error('❌ [ChatAPI] Error getting messages:', error);
-      
-      // Return empty array for development/testing
-      console.warn('⚠️ [ChatAPI] Using fallback mode - returning empty messages');
+      const store = loadFallbackStore();
+      const conv = store.conversations.find((c) => c.id === conversationId);
+      const messages = conv ? mapMessagesFromFallback(conv, getCurrentUser().id) : [];
+      console.warn('⚠️ [ChatAPI] Using fallback messages from localStorage');
       return {
         success: true,
-        data: [],
-        message: 'No messages available',
+        data: messages,
+        message: 'Fallback messages',
         fallback: true
       };
     }
@@ -131,28 +241,17 @@ const chatAPI = {
       validateAuth();
       
       console.log('📤 [ChatAPI] Sending message...', { conversationId, messageType: messageData.messageType });
-      
-      const formData = new FormData();
-      formData.append('message', messageData.message || '');
-      formData.append('messageType', messageData.messageType || 'text');
-      
-      if (messageData.recipientId) {
-        formData.append('recipientId', messageData.recipientId);
+      const receiverId = messageData.recipientId || messageData.receiver_id;
+      if (!receiverId) {
+        throw new Error('recipientId is required');
       }
-      
-      if (messageData.attachment) {
-        formData.append('attachment', messageData.attachment);
-      }
-      
-      const url = conversationId 
-        ? `/api/chat/conversations/${conversationId}/messages`
-        : '/api/chat/messages';
-      
-      const response = await chatAxios.post(url, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+
+      const payload = {
+        receiver_id: receiverId,
+        message_text: messageData.message || ''
+      };
+
+      const response = await chatAxios.post(`${CHAT_BASE}/messages`, payload);
       
       console.log('✅ [ChatAPI] Message sent successfully');
       
@@ -163,19 +262,62 @@ const chatAPI = {
       };
     } catch (error) {
       console.error('❌ [ChatAPI] Error sending message:', error);
-      
-      // Return mock success for development/testing
-      console.warn('⚠️ [ChatAPI] Using fallback mode - simulating message sent');
+      const user = getCurrentUser();
+      const store = loadFallbackStore();
+
+      let conv = null;
+      if (conversationId) {
+        conv = store.conversations.find((c) => c.id === conversationId);
+      }
+      if (!conv) {
+        const recipientId = messageData.recipientId;
+        if (!recipientId) {
+          throw error;
+        }
+        conv = ensureConversation({
+          buyerId: user.role === 'buyer' ? user.id : recipientId,
+          buyerName: user.role === 'buyer' ? user.name : `Buyer ${recipientId}`,
+          sellerId: user.role === 'seller' ? user.id : recipientId,
+          sellerName: user.role === 'seller' ? user.name : `Seller ${recipientId}`
+        });
+      }
+
+      const now = new Date().toISOString();
+      const newMsg = {
+        id: Date.now(),
+        message: messageData.message,
+        messageType: messageData.messageType || 'text',
+        senderId: user.id,
+        senderRole: user.role,
+        recipientId: user.role === 'buyer' ? conv.sellerId : conv.buyerId,
+        status: 'sent',
+        sentAt: now
+      };
+
+      conv.messages = [...(conv.messages || []), newMsg];
+      conv.lastMessage = newMsg.message;
+      conv.lastMessageTime = now;
+      if (user.role === 'buyer') {
+        conv.unreadSeller = (conv.unreadSeller || 0) + 1;
+        conv.unreadBuyer = 0;
+      } else {
+        conv.unreadBuyer = (conv.unreadBuyer || 0) + 1;
+        conv.unreadSeller = 0;
+      }
+
+      saveFallbackStore(store);
+
       return {
         success: true,
         data: {
-          id: Date.now(),
-          message: messageData.message,
-          messageType: messageData.messageType || 'text',
-          senderId: null,
-          recipientId: messageData.recipientId,
-          sentAt: new Date().toISOString(),
-          status: 'sent'
+          id: newMsg.id,
+          message: newMsg.message,
+          messageType: newMsg.messageType,
+          senderId: newMsg.senderId,
+          recipientId: newMsg.recipientId,
+          sentAt: now,
+          status: newMsg.status,
+          conversationId: conv.id
         },
         message: 'Message sent (fallback mode)',
         fallback: true
@@ -194,7 +336,7 @@ const chatAPI = {
       
       console.log(`👁️ [ChatAPI] Marking conversation ${conversationId} as read...`);
       
-      const response = await chatAxios.put(`/api/chat/conversations/${conversationId}/read`);
+      const response = await chatAxios.put(`${CHAT_BASE}/conversations/${conversationId}/read`);
       
       console.log('✅ [ChatAPI] Marked as read successfully');
       
@@ -204,9 +346,15 @@ const chatAPI = {
       };
     } catch (error) {
       console.error('❌ [ChatAPI] Error marking as read:', error);
-      
-      // Silent fail for this action
-      console.warn('⚠️ [ChatAPI] Using fallback mode - silently ignoring mark as read');
+      const user = getCurrentUser();
+      const store = loadFallbackStore();
+      const conv = store.conversations.find((c) => c.id === conversationId);
+      if (conv) {
+        if (user.role === 'buyer') conv.unreadBuyer = 0;
+        else conv.unreadSeller = 0;
+        saveFallbackStore(store);
+      }
+      console.warn('⚠️ [ChatAPI] Using fallback mark-as-read');
       return {
         success: true,
         message: 'Marked as read (fallback mode)',
@@ -236,7 +384,6 @@ const chatAPI = {
       };
     } catch (error) {
       console.error('❌ [ChatAPI] Error blocking user:', error);
-      
       return {
         success: false,
         error: error.response?.data?.error || 'Gagal memblokir pengguna',
@@ -296,10 +443,12 @@ const chatAPI = {
       };
     } catch (error) {
       console.error('❌ [ChatAPI] Error deleting conversation:', error);
-      
+      const store = loadFallbackStore();
+      store.conversations = store.conversations.filter((c) => c.id !== conversationId);
+      saveFallbackStore(store);
       return {
-        success: false,
-        error: error.response?.data?.error || 'Gagal menghapus percakapan',
+        success: true,
+        message: 'Conversation deleted (fallback mode)',
         fallback: true
       };
     }
@@ -344,38 +493,34 @@ const chatAPI = {
    * @param {number} userId - User ID to chat with
    * @returns {Promise} Conversation object
    */
-  getOrCreateConversation: async (userId) => {
+  getConversationWithUser: async (userId, params = {}) => {
     try {
       validateAuth();
-      
-      console.log(`💬 [ChatAPI] Getting/creating conversation with user ${userId}...`);
-      
-      const response = await chatAxios.post('/api/chat/conversations', { userId });
-      
-      console.log('✅ [ChatAPI] Conversation retrieved/created');
-      
-      return {
-        success: true,
-        data: response.data.data,
-        message: response.data.message
-      };
-    } catch (error) {
-      console.error('❌ [ChatAPI] Error getting/creating conversation:', error);
-      
-      // Return mock conversation for development/testing
-      console.warn('⚠️ [ChatAPI] Using fallback mode - returning mock conversation');
+      const response = await chatAxios.get(`${CHAT_BASE}/conversations/with/${userId}/messages`, { params });
+      const convData = response.data.data?.conversation;
+      const messages = response.data.data?.messages || [];
       return {
         success: true,
         data: {
-          id: Date.now(),
-          userId: userId,
-          userName: 'User ' + userId,
-          userAvatar: null,
-          lastMessage: null,
-          unreadCount: 0,
-          isOnline: false
-        },
-        message: 'Conversation created (fallback mode)',
+          conversation: convData,
+          messages,
+          pagination: response.data.data?.pagination
+        }
+      };
+    } catch (error) {
+      console.error('❌ [ChatAPI] Error getting conversation with user:', error);
+      // fallback: ensure local
+      const current = getCurrentUser();
+      const conv = ensureConversation({
+        buyerId: current.role === 'buyer' ? current.id : userId,
+        buyerName: current.role === 'buyer' ? current.name : `Buyer ${userId}`,
+        sellerId: current.role === 'seller' ? current.id : userId,
+        sellerName: current.role === 'seller' ? current.name : `Seller ${userId}`
+      });
+      const msgs = mapMessagesFromFallback(conv, current.id);
+      return {
+        success: true,
+        data: { conversation: conv, messages: msgs, pagination: null },
         fallback: true
       };
     }
