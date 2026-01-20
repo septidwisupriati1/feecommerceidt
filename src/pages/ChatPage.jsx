@@ -29,12 +29,40 @@ const formatTimestamp = (value) => {
   return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 };
 
+const apiOrigin = import.meta.env.VITE_API_BASE_URL ? new URL(import.meta.env.VITE_API_BASE_URL).origin : '';
+const buildImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return apiOrigin ? `${apiOrigin}${url}` : url;
+};
+
 const normalizeConversation = (conv) => {
   const other = conv?.other_user || conv?.otherUser || {};
+  const storeName =
+    other.seller_profile?.store_name ||
+    other.store_profile?.store_name ||
+    other.store_name ||
+    other.store?.store_name ||
+    conv?.store?.store_name ||
+    conv?.shop_name ||
+    conv?.shopName ||
+    conv?.sellerName ||
+    conv?.storeName ||
+    conv?.store_name ||
+    other.full_name ||
+    other.username;
+  const storePhoto =
+    other.seller_profile?.store_photo ||
+    other.store_profile?.store_photo ||
+    other.store_photo ||
+    other.store?.store_photo ||
+    conv?.store?.store_photo ||
+    conv?.shopAvatar ||
+    other.profile_picture;
   return {
     id: conv?.conversation_id || conv?.id || conv?.conversationId,
-    name: other.full_name || other.username || conv?.shopName || conv?.sellerName || 'Pengguna',
-    avatar: other.profile_picture || conv?.shopAvatar || null,
+    name: storeName || 'Pengguna',
+    avatar: buildImageUrl(storePhoto),
     otherUserId: other.user_id || conv?.otherUserId || conv?.shopId || conv?.sellerId,
     lastMessage: conv?.last_message_text || conv?.lastMessage || 'Tidak ada pesan',
     lastTime: conv?.last_message_at || conv?.updated_at || conv?.lastMessageTime || conv?.created_at,
