@@ -17,6 +17,13 @@ import {
   ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline';
 
+const apiOrigin = import.meta.env.VITE_API_BASE_URL ? new URL(import.meta.env.VITE_API_BASE_URL).origin : '';
+const buildImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return apiOrigin ? `${apiOrigin}${url}` : url;
+};
+
 const ProfilePage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -47,11 +54,17 @@ const ProfilePage = () => {
       };
 
       setProfileData({
-        fullName: currentUser.full_name || currentUser.username || 'User',
+        fullName: currentUser.seller_profile?.store_name || currentUser.store_name || currentUser.full_name || currentUser.username || 'User',
         email: currentUser.email || 'user@email.com',
         joinDate: getJoinDate(),
         avatarText: getUserInitials(),
-        avatarUrl: currentUser.profile_picture || currentUser.store_logo || ''
+        avatarUrl: buildImageUrl(
+          currentUser.profile_picture ||
+          currentUser.seller_profile?.store_photo ||
+          currentUser.store_photo ||
+          currentUser.store_logo ||
+          ''
+        )
       });
     };
 

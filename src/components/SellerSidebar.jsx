@@ -29,6 +29,13 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+  const apiOrigin = import.meta.env.VITE_API_BASE_URL ? new URL(import.meta.env.VITE_API_BASE_URL).origin : '';
+  const buildImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return apiOrigin ? `${apiOrigin}${url}` : url;
+  };
+
   useEffect(() => {
     const currentUser = getCurrentUser();
     setUser(currentUser);
@@ -90,14 +97,24 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
   const getUserInitials = () => {
     const fallback = 'S';
     if (!user) return fallback;
-    const baseName = user.store_name || user.full_name || user.username;
+    const baseName =
+      user.seller_profile?.store_name ||
+      user.store_name ||
+      user.full_name ||
+      user.username;
     if (!baseName) return fallback;
     const names = baseName.split(' ');
     return names.length > 1 ? (names[0][0] + names[1][0]).toUpperCase() : baseName[0].toUpperCase();
   };
 
   const getUserName = () => {
-    return user?.store_name || user?.full_name || user?.username || 'Seller';
+    return (
+      user?.seller_profile?.store_name ||
+      user?.store_name ||
+      user?.full_name ||
+      user?.username ||
+      'Seller'
+    );
   };
 
   const getUserEmail = () => {
@@ -105,7 +122,13 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
   };
 
   const getProfileImage = () => {
-    return user?.profile_picture || user?.store_logo || null;
+    const photo =
+      user?.seller_profile?.store_photo ||
+      user?.store_photo ||
+      user?.profile_picture ||
+      user?.store_logo ||
+      null;
+    return buildImageUrl(photo);
   };
 
   const menuItems = [

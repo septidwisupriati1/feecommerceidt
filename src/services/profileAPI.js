@@ -47,7 +47,34 @@ export const updateProfile = async (payload) => {
   }
 };
 
+export const uploadProfilePicture = async (file) => {
+  try {
+    validateAuth();
+    debugAuth();
+
+    const formData = new FormData();
+    formData.append('profile_picture', file);
+
+    const response = await axios.post(`${BASE_URL}/profile/picture`, formData, {
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('❌ [profileAPI] Error uploading profile picture:', error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      clearAuth();
+      window.location.href = '/login';
+    }
+    throw error;
+  }
+};
+
 export default {
   getProfile,
   updateProfile,
+  uploadProfilePicture,
 };

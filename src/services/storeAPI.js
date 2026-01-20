@@ -43,7 +43,34 @@ export const updateStore = async (payload) => {
   }
 };
 
+export const uploadStorePhoto = async (file) => {
+  try {
+    validateAuth();
+    debugAuth();
+
+    const formData = new FormData();
+    formData.append('store_photo', file);
+
+    const response = await axios.post(`${BASE_URL}/store/photo`, formData, {
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('❌ [storeAPI] Error uploading store photo:', error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      clearAuth();
+      window.location.href = '/login';
+    }
+    throw error;
+  }
+};
+
 export default {
   getStore,
   updateStore,
+  uploadStorePhoto,
 };

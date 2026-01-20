@@ -14,6 +14,13 @@ import { MinusIcon, PlusIcon } from '@heroicons/react/24/solid';
 import { isInWishlist, toggleWishlist } from '../utils/wishlist';
 import { useCart } from '../context/CartContext';
 
+const apiOrigin = import.meta.env.VITE_API_BASE_URL ? new URL(import.meta.env.VITE_API_BASE_URL).origin : '';
+const buildImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return apiOrigin ? `${apiOrigin}${url}` : url;
+};
+
 export default function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -91,6 +98,19 @@ export default function ProductDetailPage() {
             api.sellerId ||
             api.user_id ||
             api.userId,
+          seller_name:
+            api.seller?.store_name ||
+            api.seller?.name ||
+            api.seller_name ||
+            api.store_name ||
+            api.seller?.full_name,
+          seller_photo:
+            api.seller?.store_photo ||
+            api.seller?.profile_picture ||
+            api.seller?.photo ||
+            api.seller_photo ||
+            api.store_photo ||
+            api.seller?.seller_profile?.store_photo,
         };
       };
 
@@ -101,7 +121,10 @@ export default function ProductDetailPage() {
         if (pidKey && overrides[pidKey] !== undefined) {
           normalized.stock = overrides[pidKey];
         }
-        setProduct(normalized);
+        setProduct({
+          ...normalized,
+          seller_photo: buildImageUrl(normalized.seller_photo),
+        });
         setSelectedImage(normalized.primary_image);
         setInWishlist(isInWishlist(normalized.product_id));
         setQuantity(normalized.stock > 0 ? 1 : 0);
@@ -197,6 +220,9 @@ export default function ProductDetailPage() {
     product?.seller?.id ||
     product?.sellerId ||
     product?.user_id;
+
+  const sellerPhoto = buildImageUrl(product?.seller_photo);
+  const sellerName = product?.seller_name || 'Toko';
 
   const handleChatSeller = () => {
     if (!sellerUserId) {
@@ -415,14 +441,21 @@ export default function ProductDetailPage() {
                 <Card className="bg-gray-50">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
-                        <span className="text-2xl text-white font-bold">
-                          {(product.name || '?').charAt(0)}
-                        </span>
+                      <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-2xl">
+                        {sellerPhoto ? (
+                          <img
+                            src={sellerPhoto}
+                            alt={sellerName}
+                            className="w-full h-full object-cover"
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <span>{(sellerName || 'TK').slice(0, 2).toUpperCase()}</span>
+                        )}
                       </div>
                       <div className="flex-1">
                         <h3 className="font-bold text-lg text-gray-900">{product.seller_name || 'Toko'}</h3>
-                        <p className="text-sm text-gray-600">{product.location || 'Lokasi tidak tersedia'}</p>
+                        <p className="text-sm text-gray-600">Seller</p>
                       </div>
                         <div className="flex gap-2">
                         <Button
