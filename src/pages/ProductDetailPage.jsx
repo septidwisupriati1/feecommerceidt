@@ -83,6 +83,14 @@ export default function ProductDetailPage() {
           sold: api.sold ?? api.total_sold ?? 0,
           shipping: api.shipping || api.shipping_method || 'Reguler',
           badge: api.badge || null,
+          seller_user_id:
+            api.seller_user_id ||
+            api.seller?.user_id ||
+            api.seller?.id ||
+            api.seller?.userId ||
+            api.sellerId ||
+            api.user_id ||
+            api.userId,
         };
       };
 
@@ -180,6 +188,22 @@ export default function ProductDetailPage() {
         }
       }
     });
+  };
+
+  const sellerUserId =
+    product?.seller_user_id ||
+    product?.sellerUserId ||
+    product?.seller?.user_id ||
+    product?.seller?.id ||
+    product?.sellerId ||
+    product?.user_id;
+
+  const handleChatSeller = () => {
+    if (!sellerUserId) {
+      alert('ID penjual tidak ditemukan. Coba muat ulang halaman.');
+      return;
+    }
+    navigate(`/chat?sellerId=${sellerUserId}`);
   };
 
   if (loading) {
@@ -401,7 +425,12 @@ export default function ProductDetailPage() {
                         <p className="text-sm text-gray-600">{product.location || 'Lokasi tidak tersedia'}</p>
                       </div>
                         <div className="flex gap-2">
-                        <Button variant="outline" className="bg-red-600 text-white hover:bg-red-700 border-none cursor-pointer">
+                        <Button
+                          variant="outline"
+                          className="bg-red-600 text-white hover:bg-red-700 border-none cursor-pointer"
+                          onClick={handleChatSeller}
+                          disabled={!sellerUserId}
+                        >
                           <ChatBubbleLeftIcon className="h-5 w-5 mr-1" />
                           Chat
                         </Button>

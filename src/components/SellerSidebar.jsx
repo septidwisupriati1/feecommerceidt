@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getCurrentUser, logout } from '../services/authAPI';
 import NotificationDropdown from './NotificationDropdown';
-import { getTotalUnreadCount } from '../utils/chatUtils';
+import chatAPI from '../services/chatAPI';
 import { 
   ShoppingBagIcon,
   ChatBubbleLeftRightIcon,
@@ -69,9 +69,22 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [location.pathname]);
   
-  const updateUnreadCount = () => {
-    const count = getTotalUnreadCount();
-    setUnreadChatCount(count);
+  const updateUnreadCount = async () => {
+    try {
+      const res = await chatAPI.getConversations({ role: 'seller' });
+      if (res.success && Array.isArray(res.data)) {
+        const total = res.data.reduce(
+          (sum, conv) => sum + (conv.unread_count ?? conv.unreadCount ?? 0),
+          0
+        );
+        setUnreadChatCount(total);
+      } else {
+        setUnreadChatCount(0);
+      }
+    } catch (err) {
+      console.error('❌ [SellerSidebar] unread fetch failed', err);
+      setUnreadChatCount(0);
+    }
   };
 
   const getUserInitials = () => {

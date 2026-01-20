@@ -236,22 +236,27 @@ const chatAPI = {
    * @param {File} messageData.attachment - Attachment file (optional)
    * @returns {Promise} Sent message object
    */
-  sendMessage: async (conversationId, messageData) => {
+  sendMessage: async (conversationIdOrPayload, maybeMessageData) => {
+    let payload;
     try {
       validateAuth();
       
-      console.log('📤 [ChatAPI] Sending message...', { conversationId, messageType: messageData.messageType });
-      const receiverId = messageData.recipientId || messageData.receiver_id;
+      // Support legacy signature (conversationId, messageData) and new signature (payload only)
+      payload = maybeMessageData ? { conversationId: conversationIdOrPayload, ...maybeMessageData } : conversationIdOrPayload;
+
+      const receiverId = payload.recipientId || payload.receiverId || payload.receiver_id;
       if (!receiverId) {
-        throw new Error('recipientId is required');
+        throw new Error('recipientId/receiverId is required');
       }
 
-      const payload = {
+      const requestBody = {
         receiver_id: receiverId,
-        message_text: messageData.message || ''
+        message_text: payload.message || payload.message_text || ''
       };
 
-      const response = await chatAxios.post(`${CHAT_BASE}/messages`, payload);
+      console.log('📤 [ChatAPI] Sending message...', { receiverId, hasConversationId: Boolean(payload.conversationId) });
+
+      const response = await chatAxios.post(`${CHAT_BASE}/messages`, requestBody);
       
       console.log('✅ [ChatAPI] Message sent successfully');
       
@@ -265,15 +270,19 @@ const chatAPI = {
       const user = getCurrentUser();
       const store = loadFallbackStore();
 
+      const recipientId = payload?.recipientId || payload?.receiverId || payload?.receiver_id;
+      const conversationId = payload?.conversationId;
+      const messageText = payload?.message || payload?.message_text;
+
+      if (!recipientId || !messageText) {
+        throw error;
+      }
+
       let conv = null;
       if (conversationId) {
         conv = store.conversations.find((c) => c.id === conversationId);
       }
       if (!conv) {
-        const recipientId = messageData.recipientId;
-        if (!recipientId) {
-          throw error;
-        }
         conv = ensureConversation({
           buyerId: user.role === 'buyer' ? user.id : recipientId,
           buyerName: user.role === 'buyer' ? user.name : `Buyer ${recipientId}`,
@@ -285,8 +294,8 @@ const chatAPI = {
       const now = new Date().toISOString();
       const newMsg = {
         id: Date.now(),
-        message: messageData.message,
-        messageType: messageData.messageType || 'text',
+        message: messageText,
+        messageType: payload?.messageType || 'text',
         senderId: user.id,
         senderRole: user.role,
         recipientId: user.role === 'buyer' ? conv.sellerId : conv.buyerId,
@@ -522,6 +531,27 @@ const chatAPI = {
         success: true,
         data: { conversation: conv, messages: msgs, pagination: null },
         fallback: true
+      };
+    }
+  },
+
+  /**
+   * Get unread message count for the current user
+   */
+  getUnreadCount: async () => {
+    try {
+      validateAuth();
+      const response = await chatAxios.get(`${CHAT_BASE}/unread-count`);
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message
+      };
+    } catch (error) {
+      console.error('❌ [ChatAPI] Error getting unread count:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Gagal mengambil jumlah pesan belum dibaca'
       };
     }
   }
