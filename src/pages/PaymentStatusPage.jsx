@@ -8,6 +8,7 @@ import { CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/so
 import { formatPrice } from '../data/products';
 import { useCart } from '../context/CartContext';
 import orderAPI from '../services/orderAPI';
+import { getToken } from '../utils/auth';
 
 // Update seller localStorage data so seller dashboard reflects latest payment status
 const updateSellerLocalStatus = (orderNumber, status) => {
@@ -36,9 +37,10 @@ export default function PaymentStatusPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { orders, removeSelectedItems } = useCart();
-  const { order, paymentResult, status, snapToken } = location.state || {};
+  const { order, paymentResult, status, snapToken: initialSnapToken } = location.state || {};
   const [pageOrder, setPageOrder] = useState(order || null);
   const [currentStatus, setCurrentStatus] = useState(status || 'pending');
+  const [snapToken, setSnapToken] = useState(initialSnapToken || null);
 
   const searchParams = new URLSearchParams(location.search || '');
   const qpOrderId = searchParams.get('order_id');
@@ -127,6 +129,8 @@ export default function PaymentStatusPage() {
 
   const [clearedCart, setClearedCart] = useState(false);
   const [syncedPayment, setSyncedPayment] = useState(false);
+  const [isPayingAgain, setIsPayingAgain] = useState(false);
+  const [payError, setPayError] = useState(null);
 
   // When payment is confirmed, remove selected items from cart
   useEffect(() => {
@@ -162,20 +166,80 @@ export default function PaymentStatusPage() {
     syncPaid();
   }, [isPaid, pageOrder, paymentResult, status, syncedPayment]);
 
-  const handlePayAgain = () => {
-    if (!snapToken) return;
-    window.snap?.pay(snapToken, {
-      onSuccess: (result) => {
-        setCurrentStatus('success');
-        navigate('/pesanan-saya', { state: { paymentResult: result } });
+  const waitForSnap = () => new Promise((resolve) => {
+    if (window.snap) return resolve();
+    const check = setInterval(() => {
+      if (window.snap) {
+        clearInterval(check);
+        resolve();
+      }
+    }, 50);
+    setTimeout(() => {
+      clearInterval(check);
+      resolve();
+    }, 1500);
+  });
+
+  const requestSnapToken = async () => {
+    const token = getToken();
+    const orderId = pageOrder?.order_number || pageOrder?.order_id || pageOrder?.orderNumber || qpOrderId;
+    if (!orderId) throw new Error('Order tidak ditemukan, tidak bisa melanjutkan pembayaran');
+
+    const itemsPayload = (pageOrder?.items || []).map((item, idx) => ({
+      product_id: item.product_id || item.id || `item-${idx}`,
+      product_name: item.name,
+      price: Number(item.price) || 0,
+      quantity: Number(item.quantity) || 1,
+      product_image: item.image || item.product_image || item.primary_image || item.image_url,
+    }));
+
+    const shipping = pageOrder?.shipping_address || pageOrder?.address || {};
+    const customer = {
+      name: shipping.recipient_name || shipping.receiver || shipping.name,
+      phone: shipping.phone,
+      address: shipping.full_address || shipping.address,
+      city: shipping.city || shipping.regency,
+      province: shipping.province,
+      postal_code: shipping.postal_code || shipping.postalCode,
+    };
+
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/payments/snap-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      onPending: (result) => {
-        setCurrentStatus('pending');
-        navigate('/payment-status', { state: { order: pageOrder, paymentResult: result, status: 'pending', snapToken } });
-      },
-      onError: () => setCurrentStatus('unpaid'),
-      onClose: () => setCurrentStatus('unpaid')
+      body: JSON.stringify({
+        order_id: orderId,
+        amount: pageOrder?.total_amount ?? pageOrder?.total ?? totalAmount,
+        items: itemsPayload,
+        customer,
+      }),
     });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Gagal meminta token pembayaran');
+    }
+
+    const data = await res.json();
+    const tokenFromApi = data?.data?.token || data?.token;
+    if (!tokenFromApi) throw new Error('Token pembayaran tidak ditemukan');
+    return tokenFromApi;
+  };
+
+  const handleContinuePayment = () => {
+    setPayError(null);
+    setIsPayingAgain(true);
+    navigate('/checkout', {
+      state: {
+        restartPayment: true,
+        order: pageOrder,
+        order_id: pageOrder?.order_id || pageOrder?.order_number || pageOrder?.orderNumber,
+        snapToken,
+      }
+    });
+    setTimeout(() => setIsPayingAgain(false), 300);
   };
 
   const statusBadge = () => {
@@ -275,10 +339,12 @@ export default function PaymentStatusPage() {
                     <p className="text-xs text-gray-500">Jika Anda menutup popup atau salah memilih metode, lanjutkan pembayaran di sini.</p>
                     <Button
                       className="w-full bg-red-600 hover:bg-red-700 text-white"
-                      onClick={() => navigate('/checkout', { state: { restartPayment: true, order_id: pageOrder?.order_id } })}
+                      disabled={isPayingAgain}
+                      onClick={handleContinuePayment}
                     >
-                      Lanjutkan Pembayaran
+                      {isPayingAgain ? 'Membuka checkout...' : 'Lanjutkan Pembayaran'}
                     </Button>
+                    {payError && <p className="text-xs text-red-600">{payError}</p>}
                     <div className="border-t border-gray-200 pt-3" />
                   </div>
                 )}

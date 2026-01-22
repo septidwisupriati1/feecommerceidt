@@ -148,7 +148,14 @@ export default function CheckoutPage() {
     notes: ''
   });
   const [missingProfileAddress, setMissingProfileAddress] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState('transfer');
+  const resumeOrder = location.state?.order || null;
+  const restartPayment = Boolean(location.state?.restartPayment && resumeOrder);
+  const carriedSnapToken = location.state?.snapToken || null;
+  const [selectedPayment, setSelectedPayment] = useState(() => {
+    if (resumeOrder?.payment_method === 'midtrans') return 'midtrans';
+    if (resumeOrder?.payment_method === 'manual_transfer') return 'transfer';
+    return 'transfer';
+  });
   const [selectedShipping, setSelectedShipping] = useState('regular');
   const [showSuccess, setShowSuccess] = useState(false);
   const [addressAlert, setAddressAlert] = useState(null);
@@ -189,18 +196,30 @@ export default function CheckoutPage() {
   const buyNowQuantity = Number.isFinite(buyNowState?.quantity) ? buyNowState.quantity : 1;
   const isBuyNow = Boolean(buyNowProduct);
 
+  const resumeItems = resumeOrder?.items?.map((item, idx) => ({
+    id: item.product_id || item.id || `resume-${idx}`,
+    product_id: item.product_id || item.id,
+    name: item.name,
+    price: Number(item.price) || 0,
+    quantity: Number(item.quantity) || 1,
+    image: item.image || item.product_image || item.primary_image || item.image_url,
+    variant_name: item.variant_name,
+    variant_value: item.variant_value,
+  })) || [];
+
   // Determine checkout items: buy-now payload or selected cart items
   const checkoutItems = isBuyNow
     ? [{ ...buyNowProduct, quantity: buyNowQuantity }]
-    : cartItems.filter(item => selectedItems.includes(item.id));
+    : resumeItems.length
+      ? resumeItems
+      : cartItems.filter(item => selectedItems.includes(item.id));
 
-  const shippingCost = selectedShipping === 'regular' ? 0 : selectedShipping === 'same-day' ? 15000 : 30000;
-  const subtotal = isBuyNow
-    ? checkoutItems.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 0)), 0)
-    : getSelectedTotal();
-  const itemsCount = isBuyNow
-    ? checkoutItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
-    : getSelectedItemsCount();
+  const shippingCostFromOrder = resumeOrder?.shipping_cost ?? resumeOrder?.shippingCost;
+  const shippingCost = shippingCostFromOrder != null
+    ? Number(shippingCostFromOrder)
+    : selectedShipping === 'regular' ? 0 : selectedShipping === 'same-day' ? 15000 : 30000;
+  const subtotal = checkoutItems.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 0)), 0);
+  const itemsCount = checkoutItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const total = subtotal + shippingCost;
 
   const getItemImage = (item) => {
@@ -245,8 +264,28 @@ export default function CheckoutPage() {
         ? profileAddress?.id || mergedAddresses[0]?.id || null
         : null;
 
-    setAddresses(mergedAddresses);
-    setSelectedAddress(defaultSelected);
+    let nextAddresses = mergedAddresses;
+    let nextSelected = defaultSelected;
+
+    const resumeShipping = resumeOrder?.shipping_address || resumeOrder?.address;
+    if (resumeShipping) {
+      const resumeAddr = {
+        id: 'resume-order-address',
+        label: resumeShipping.label || 'Alamat Pesanan',
+        receiver: resumeShipping.recipient_name || resumeShipping.receiver || resumeShipping.name,
+        phone: resumeShipping.phone,
+        address: resumeShipping.full_address || resumeShipping.address,
+        city: resumeShipping.city || resumeShipping.regency,
+        province: resumeShipping.province,
+        postalCode: resumeShipping.postal_code || resumeShipping.postalCode,
+        notes: resumeShipping.notes,
+      };
+      nextAddresses = [resumeAddr, ...mergedAddresses];
+      nextSelected = resumeAddr.id;
+    }
+
+    setAddresses(nextAddresses);
+    setSelectedAddress(nextSelected);
     setMissingProfileAddress(!hasProfileAddress);
     setHasProfileAddress(!!hasProfileAddress);
     setShowAddressForm(false);
@@ -380,31 +419,35 @@ export default function CheckoutPage() {
     let orderResponse;
 
     try {
-      const orderReq = {
-        seller_id: sellerId,
-        items: itemsPayload,
-        shipping_address: shippingPayload,
-        shipping_cost: shippingCost,
-        buyer_notes: shippingAddress.notes,
-        payment_method: selectedPayment === 'transfer' ? 'manual_transfer' : 'midtrans',
-      };
+      if (restartPayment) {
+        orderResponse = resumeOrder;
+      } else {
+        const orderReq = {
+          seller_id: sellerId,
+          items: itemsPayload,
+          shipping_address: shippingPayload,
+          shipping_cost: shippingCost,
+          buyer_notes: shippingAddress.notes,
+          payment_method: selectedPayment === 'transfer' ? 'manual_transfer' : 'midtrans',
+        };
 
-      const created = await orderAPI.createOrder(orderReq);
-      orderResponse = created?.data;
+        const created = await orderAPI.createOrder(orderReq);
+        orderResponse = created?.data;
 
-      if (!orderResponse?.order_id) {
-        throw new Error('Order backend tidak mengembalikan order_id');
+        if (!orderResponse?.order_id) {
+          throw new Error('Order backend tidak mengembalikan order_id');
+        }
+
+        // Simpan ke localStorage untuk tampilan seller (agar langsung muncul di daftar pesanan/produk terjual)
+        persistSellerOrderLocal({
+          order: orderResponse,
+          address: shippingPayload,
+          itemsPayload,
+          shippingCost,
+          paymentMethod: orderReq.payment_method,
+          shippingService: selectedShipping
+        });
       }
-
-      // Simpan ke localStorage untuk tampilan seller (agar langsung muncul di daftar pesanan/produk terjual)
-      persistSellerOrderLocal({
-        order: orderResponse,
-        address: shippingPayload,
-        itemsPayload,
-        shippingCost,
-        paymentMethod: orderReq.payment_method,
-        shippingService: selectedShipping
-      });
     } catch (err) {
       console.error('Create order error:', err);
       alert(err.response?.data?.message || err.message || 'Gagal membuat pesanan');
@@ -412,37 +455,41 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Request snap token from backend (using backend order id/number)
+    // Request snap token from backend (using backend order id/number) or reuse carried token
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/payments/snap-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          order_id: orderResponse.order_number || orderResponse.order_id,
-          amount: orderResponse.total_amount || orderResponse.total || total,
-          items: itemsPayload,
-          customer: {
-            name: shippingAddress.receiver,
-            phone: shippingAddress.phone,
-            address: shippingAddress.address,
-            city: shippingAddress.city,
-            province: shippingAddress.province,
-            postal_code: shippingAddress.postalCode
-          }
-        })
-      });
+      let snapToken = carriedSnapToken;
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || 'Gagal membuat transaksi Midtrans');
+      if (!snapToken) {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/payments/snap-token`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            order_id: orderResponse.order_number || orderResponse.order_id,
+            amount: orderResponse.total_amount || orderResponse.total || total,
+            items: itemsPayload,
+            customer: {
+              name: shippingAddress.receiver,
+              phone: shippingAddress.phone,
+              address: shippingAddress.address,
+              city: shippingAddress.city,
+              province: shippingAddress.province,
+              postal_code: shippingAddress.postalCode
+            }
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || 'Gagal membuat transaksi Midtrans');
+        }
+
+        const data = await res.json();
+        snapToken = data?.data?.token || data?.token;
+        if (!snapToken) throw new Error('Snap token tidak ditemukan');
       }
-
-      const data = await res.json();
-      const snapToken = data?.data?.token || data?.token;
-      if (!snapToken) throw new Error('Snap token tidak ditemukan');
 
       const normalizedOrder = adaptOrderForPaymentStatus({
         orderResponse,
