@@ -33,6 +33,16 @@ export default function MyOrdersPage() {
     total: 0,
     total_pages: 0
   });
+  // Review modal states
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewOrder, setReviewOrder] = useState(null);
+  const [selectedReviewItem, setSelectedReviewItem] = useState(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewFile, setReviewFile] = useState(null);
+  const [reviewPreview, setReviewPreview] = useState(null);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   
   // TODO: Temporarily disabled due to import issue
   // const newBuyer = isNewBuyer();
@@ -168,6 +178,126 @@ export default function MyOrdersPage() {
     };
     return labels[method] || method;
   };
+
+    // Review handlers
+    const handleReviewFileChange = (e) => {
+      const f = e.target.files[0];
+      if (f) {
+        setReviewFile(f);
+        setReviewPreview(URL.createObjectURL(f));
+      } else {
+        setReviewFile(null);
+        setReviewPreview(null);
+      }
+    };
+
+    const submitReview = async () => {
+      if (!selectedReviewItem) return alert('Pilih produk untuk diberi ulasan');
+      if (!reviewRating || !reviewText) return alert('Rating dan teks ulasan wajib diisi');
+
+      const getProductIdFromItem = (item) => {
+        if (!item) return null;
+        return (
+          item.product_id ||
+          item.productId ||
+          item.id ||
+          (item.product && (item.product.product_id || item.product.id)) ||
+          (item.product_info && (item.product_info.product_id || item.product_info.id)) ||
+          null
+        );
+      };
+
+      const productIdRaw = getProductIdFromItem(selectedReviewItem);
+      let productId = Number(productIdRaw);
+      if (!productId) {
+        // Try resolving via order_item_id by calling backend
+        const orderItemId = selectedReviewItem.order_item_id || selectedReviewItem.id || selectedReviewItem.orderItemId;
+        if (!orderItemId) {
+          console.error('Selected review item missing product id and order_item_id', selectedReviewItem);
+          return alert('Tidak dapat menentukan product id untuk item ini. Silakan hubungi admin. (cek console untuk detail)');
+        }
+
+        try {
+          const apiBase = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || 'http://localhost:5000/api/ecommerce';
+          const tokenKeys = ['token', 'auth_token', 'access_token', 'ecom_token'];
+          let token = null;
+          for (const k of tokenKeys) {
+            const t = localStorage.getItem(k) || sessionStorage.getItem(k);
+            if (t) { token = t; break; }
+          }
+          const headers = token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+
+          const resResolve = await fetch(`${apiBase}/products/resolve-product-by-order-item`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ order_item_id: Number(orderItemId) })
+          });
+
+          if (!resResolve.ok) {
+            const txt = await resResolve.text().catch(() => null);
+            console.error('Resolve product id failed', resResolve.status, txt);
+            return alert('Gagal menentukan product id untuk item ini. Silakan hubungi admin.');
+          }
+
+          const jsonResolve = await resResolve.json().catch(() => null);
+          productId = Number(jsonResolve?.data?.product_id || 0);
+          if (!productId) {
+            console.error('Resolved product id missing', jsonResolve);
+            return alert('Gagal menentukan product id untuk item ini. Silakan hubungi admin.');
+          }
+        } catch (err) {
+          console.error('Error resolving product id', err);
+          return alert('Gagal menentukan product id untuk item ini. Silakan hubungi admin.');
+        }
+      }
+      if (isNaN(productId)) {
+        console.error('Product id is not a number', productIdRaw);
+        return alert('Product id tidak valid. Silakan hubungi admin.');
+      }
+      if (isNaN(productId)) {
+        console.error('Product id is not a number', productIdRaw);
+        return alert('Product id tidak valid. Silakan hubungi admin.');
+      }
+
+      setIsSubmittingReview(true);
+      try {
+        const fd = new FormData();
+        fd.append('rating', Number(reviewRating));
+        fd.append('review_text', reviewText);
+        if (reviewFile) fd.append('review_image', reviewFile);
+
+        // try common token keys
+        const tokenKeys = ['token', 'auth_token', 'access_token', 'ecom_token'];
+        let token = null;
+        for (const k of tokenKeys) {
+          const t = localStorage.getItem(k) || sessionStorage.getItem(k);
+          if (t) { token = t; break; }
+        }
+
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const apiBase = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || 'http://localhost:5000/api/ecommerce';
+        const res = await fetch(`${apiBase}/products/${productId}/reviews`, {
+          method: 'POST',
+          headers,
+          body: fd
+        });
+
+        const json = await res.json().catch(() => null);
+        if (res.ok) {
+          alert('Ulasan berhasil dikirim. Terima kasih!');
+          setShowReviewModal(false);
+          setSelectedReviewItem(null);
+        } else {
+          const msg = json?.error || json?.message || 'Gagal mengirim ulasan';
+          alert(msg);
+        }
+      } catch (err) {
+        console.error('Submit review error', err);
+        alert('Terjadi kesalahan saat mengirim ulasan');
+      } finally {
+        setIsSubmittingReview(false);
+      }
+    };
 
   // Loading state
   if (loading) {
@@ -641,7 +771,15 @@ export default function MyOrdersPage() {
                             </Button>
                             <Button 
                               className="flex-1 bg-yellow-600 hover:bg-yellow-700"
-                              onClick={() => alert('Fitur ulasan akan segera tersedia')}
+                              onClick={() => {
+                                setReviewOrder(order);
+                                setSelectedReviewItem(null);
+                                setReviewRating(0);
+                                setReviewText("");
+                                setReviewFile(null);
+                                setReviewPreview(null);
+                                setShowReviewModal(true);
+                              }}
                             >
                               ⭐ Beri Ulasan
                             </Button>
@@ -658,7 +796,15 @@ export default function MyOrdersPage() {
                             </Button>
                             <Button 
                               className="flex-1 bg-yellow-600 hover:bg-yellow-700"
-                              onClick={() => alert('Fitur ulasan akan segera tersedia')}
+                              onClick={() => {
+                                setReviewOrder(order);
+                                setSelectedReviewItem(null);
+                                setReviewRating(0);
+                                setReviewText("");
+                                setReviewFile(null);
+                                setReviewPreview(null);
+                                setShowReviewModal(true);
+                              }}
                             >
                               ⭐ Beri Ulasan
                             </Button>
@@ -753,6 +899,100 @@ export default function MyOrdersPage() {
                         </div>
                       </div>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Review Modal */}
+        {showReviewModal && reviewOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black opacity-50" onClick={() => setShowReviewModal(false)}></div>
+            <div className="relative w-full max-w-2xl mx-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-bold">Beri Ulasan - Pesanan {reviewOrder.order_number}</h3>
+                    <Button variant="outline" onClick={() => setShowReviewModal(false)}>Tutup</Button>
+                  </div>
+
+                  <div className="space-y-3 max-h-[60vh] overflow-auto pr-2">
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Pilih produk yang ingin Anda ulas:</p>
+                      <div className="space-y-2">
+                        {reviewOrder.items?.map((item) => (
+                          <div key={item.order_item_id} className={`p-3 rounded-lg border ${selectedReviewItem && selectedReviewItem.order_item_id === item.order_item_id ? 'border-blue-500 bg-blue-50' : 'bg-white'}`}>
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
+                                <img src={item.product_image || 'https://via.placeholder.com/80'} alt={item.product_name} className="w-full h-full object-cover" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-semibold text-sm">{item.product_name}</div>
+                                <div className="text-xs text-gray-500">{formatPrice(item.price)} x {item.quantity}</div>
+                              </div>
+                              <div>
+                                <Button variant={selectedReviewItem && selectedReviewItem.order_item_id === item.order_item_id ? 'default' : 'outline'} onClick={() => { setSelectedReviewItem(item); setReviewRating(0); setReviewText(''); setReviewFile(null); setReviewPreview(null); }}>
+                                  Pilih
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {selectedReviewItem && (
+                      <div className="mt-3">
+                        <h4 className="font-semibold">Ulasan untuk: {selectedReviewItem.product_name}</h4>
+                        <div className="mt-2 grid grid-cols-1 gap-2">
+                          <label className="text-sm">Rating</label>
+                          <div className="flex items-center gap-2 mt-1">
+                            {[1,2,3,4,5].map((i) => {
+                              const filled = i <= (hoverRating || reviewRating);
+                              return (
+                                <button
+                                  type="button"
+                                  key={i}
+                                  aria-label={`Beri ${i} bintang`}
+                                  onClick={() => setReviewRating(i)}
+                                  onMouseEnter={() => setHoverRating(i)}
+                                  onMouseLeave={() => setHoverRating(0)}
+                                  className="focus:outline-none"
+                                >
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                    className={`w-7 h-7 ${filled ? 'text-yellow-400' : 'text-gray-300'}`}
+                                  >
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.97a1 1 0 00.95.69h4.18c.969 0 1.371 1.24.588 1.81l-3.384 2.455a1 1 0 00-.364 1.118l1.287 3.97c.3.921-.755 1.688-1.54 1.118L10 13.347l-3.453 2.721c-.784.57-1.839-.197-1.54-1.118l1.287-3.97a1 1 0 00-.364-1.118L2.545 9.397c-.783-.57-.38-1.81.588-1.81h4.18a1 1 0 00.95-.69l1.286-3.97z" />
+                                  </svg>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1">{(hoverRating || reviewRating)} bintang</div>
+
+                          <label className="text-sm">Teks Ulasan</label>
+                          <textarea rows={4} value={reviewText} onChange={(e) => setReviewText(e.target.value)} className="w-full p-2 border rounded" />
+
+                          <label className="text-sm">Foto (opsional)</label>
+                          <input type="file" accept="image/*" onChange={handleReviewFileChange} />
+                          {reviewPreview && <img src={reviewPreview} alt="preview" className="mt-2 w-32 h-32 object-cover rounded" />}
+
+                          <div className="flex gap-2 mt-3">
+                            <Button className="flex-1" onClick={submitReview} disabled={isSubmittingReview}>
+                              {isSubmittingReview ? 'Mengirim...' : 'Kirim Ulasan'}
+                            </Button>
+                            <Button variant="outline" onClick={() => { setSelectedReviewItem(null); setReviewFile(null); setReviewPreview(null); }}>
+                              Batal
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

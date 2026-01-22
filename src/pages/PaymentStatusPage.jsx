@@ -350,10 +350,10 @@ export default function PaymentStatusPage() {
                 )}
                 <div className="space-y-3 pt-1">
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <Button className="bg-red-600 hover:bg-red-700 text-white flex-1" onClick={() => navigate('/pesanan-saya')}>
+                    <Button className="bg-red-600 hover:bg-red-700 hover:cursor-pointer text-white flex-1" onClick={() => navigate('/pesanan-saya')}>
                       Lihat Pesanan Saya
                     </Button>
-                    <Button variant="outline" className="flex-1" onClick={() => navigate('/home')}>
+                    <Button variant="outline" className="flex-1 hover:cursor-pointer" onClick={() => navigate('/home')}>
                       Belanja Lagi
                     </Button>
                   </div>
