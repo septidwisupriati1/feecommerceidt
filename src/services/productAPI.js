@@ -3,7 +3,9 @@
  * For buyers and guests to browse products
  * Base URL: /api/ecommerce/browse
  */
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/ecommerce'}/browse`;
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/ecommerce'}/buyer/products`;
+// Paksa nonaktif fallback dummy agar data selalu dari backend
+const allowDummyFallback = false;
 
 /**
  * Browse products (public access)
@@ -31,7 +33,7 @@ export const browseProducts = async (params = {}) => {
     if (params.sort_order) queryParams.append('sort_order', params.sort_order);
 
     const queryString = queryParams.toString();
-    const url = `${API_BASE_URL}/products${queryString ? `?${queryString}` : ''}`;
+    const url = `${API_BASE_URL}${queryString ? `?${queryString}` : ''}`;
 
     const response = await fetch(url, {
       method: 'GET',
@@ -41,13 +43,15 @@ export const browseProducts = async (params = {}) => {
     });
 
     if (!response.ok) {
-      return useFallbackProducts(params);
+      if (allowDummyFallback) return useFallbackProducts(params);
+      throw new Error('Failed to fetch products');
     }
 
     const data = await response.json();
     
     if (!data.success) {
-      return useFallbackProducts(params);
+      if (allowDummyFallback) return useFallbackProducts(params);
+      throw new Error(data.error || 'Failed to fetch products');
     }
 
     return {
@@ -57,7 +61,8 @@ export const browseProducts = async (params = {}) => {
     };
   } catch (error) {
     console.error('Error browsing products:', error);
-    return useFallbackProducts(params);
+    if (allowDummyFallback) return useFallbackProducts(params);
+    throw error;
   }
 };
 
@@ -68,7 +73,7 @@ export const browseProducts = async (params = {}) => {
  */
 export const getProductDetail = async (productId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
+    const response = await fetch(`${API_BASE_URL}/${productId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -76,13 +81,13 @@ export const getProductDetail = async (productId) => {
     });
 
     if (!response.ok) {
-      return useFallbackProductDetail(productId);
+      return { success: false, error: 'Failed to fetch product detail' };
     }
 
     const data = await response.json();
     
     if (!data.success) {
-      return useFallbackProductDetail(productId);
+      return { success: false, error: data.error || 'Failed to fetch product detail' };
     }
 
     return {
@@ -91,7 +96,7 @@ export const getProductDetail = async (productId) => {
     };
   } catch (error) {
     console.error('Error getting product detail:', error);
-    return useFallbackProductDetail(productId);
+    return { success: false, error: error.message };
   }
 };
 
@@ -101,7 +106,7 @@ export const getProductDetail = async (productId) => {
  */
 export const getCategories = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/categories`, {
+    const response = await fetch(`${API_BASE_URL}/categories/list`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -109,13 +114,15 @@ export const getCategories = async () => {
     });
 
     if (!response.ok) {
-      return useFallbackCategories();
+      if (allowDummyFallback) return useFallbackCategories();
+      throw new Error('Failed to fetch categories');
     }
 
     const data = await response.json();
     
     if (!data.success) {
-      return useFallbackCategories();
+      if (allowDummyFallback) return useFallbackCategories();
+      throw new Error(data.error || 'Failed to fetch categories');
     }
 
     return {
@@ -124,7 +131,8 @@ export const getCategories = async () => {
     };
   } catch (error) {
     console.error('Error getting categories:', error);
-    return useFallbackCategories();
+    if (allowDummyFallback) return useFallbackCategories();
+    throw error;
   }
 };
 

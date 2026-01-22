@@ -6,6 +6,7 @@ import Footer from "../components/Footer";
 import CartSuccessToast from "../components/CartSuccessToast";
 import { getCurrentUser } from '../services/authAPI';
 import authAPI from '../services/authAPI';
+import profileAPI from '../services/profileAPI';
 import { saveAuth } from '../utils/auth';
 import buyerTransactionAPI from '../services/buyerTransactionAPI';
 import { Button } from "../components/ui/button";
@@ -49,28 +50,50 @@ export default function ProfilePage() {
   const [recentOrders, setRecentOrders] = useState([]);
   const [profileToast, setProfileToast] = useState({ show: false, message: '' });
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const mapUserToProfileState = (userData = {}) => ({
+    name: userData.full_name || userData.username || 'User',
+    email: userData.email || '',
+    phone: userData.phone || '',
+    birthDate: userData.birth_date || '',
+    gender: userData.gender || '',
+    address: userData.address || '',
+    addressLabel: userData.address_label || '',
+    addressNotes: userData.address_note || '',
+    province: userData.province || '',
+    city: userData.city || '',
+    postalCode: userData.postal_code || '',
+    avatar: userData.profile_picture || null
+  });
   
   useEffect(() => {
     const currentUser = getCurrentUser();
     setUser(currentUser);
     if (currentUser) {
-      setProfileData({
-        name: currentUser.full_name || currentUser.username || 'User',
-        email: currentUser.email || '',
-        phone: currentUser.phone || '',
-        birthDate: currentUser.birth_date || '',
-        gender: currentUser.gender || '',
-        address: currentUser.address || '',
-        addressLabel: currentUser.address_label || '',
-        addressNotes: currentUser.address_note || '',
-        province: currentUser.province || '',
-        city: currentUser.city || '',
-        postalCode: currentUser.postal_code || '',
-        avatar: currentUser.profile_picture || null
-      });
+      const mapped = mapUserToProfileState(currentUser);
+      setProfileData(mapped);
+      setEditData(mapped);
     }
+    refreshProfileFromApi();
     fetchDashboardData();
   }, []);
+
+  const refreshProfileFromApi = async () => {
+    try {
+      const response = await profileAPI.getProfile();
+      if (response?.success && response.data) {
+        const token = localStorage.getItem('token') || '';
+        const mergedUser = { ...(getCurrentUser() || {}), ...response.data };
+        saveAuth(token, mergedUser);
+        setUser(mergedUser);
+        const mapped = mapUserToProfileState(mergedUser);
+        setProfileData(mapped);
+        setEditData(mapped);
+      }
+    } catch (error) {
+      console.warn('⚠️ Gagal memuat profil terbaru:', error.message);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -88,7 +111,11 @@ export default function ProfilePage() {
         sort_order: 'desc'
       });
       if (ordersResponse.success) {
-        setRecentOrders(ordersResponse.data.transactions || []);
+        const normalized = (ordersResponse.data.transactions || []).map((order) => ({
+          ...order,
+          order_status: normalizeOrderStatus(order),
+        }));
+        setRecentOrders(normalized);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -135,7 +162,7 @@ export default function ProfilePage() {
     setEditData({ ...profileData });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const requiredFields = [
       { key: 'name', label: 'Nama Lengkap' },
       { key: 'email', label: 'Email' },
@@ -154,30 +181,37 @@ export default function ProfilePage() {
       return;
     }
 
-    const existingUser = getCurrentUser() || {};
-    const token = localStorage.getItem('token') || '';
+    try {
+      const updatePayload = {
+        full_name: editData.name,
+        phone: editData.phone,
+        address: editData.address,
+        address_label: editData.addressLabel,
+        address_note: editData.addressNotes,
+        province: editData.province,
+        city: editData.city,
+        postal_code: editData.postalCode,
+      };
 
-    const updatedUser = {
-      ...existingUser,
-      full_name: editData.name,
-      email: editData.email,
-      phone: editData.phone,
-      birth_date: editData.birthDate,
-      gender: editData.gender,
-      address: editData.address,
-      address_label: editData.addressLabel,
-      address_note: editData.addressNotes,
-      province: editData.province,
-      city: editData.city,
-      postal_code: editData.postalCode,
-      profile_picture: editData.avatar
-    };
+      const response = await profileAPI.updateProfile(updatePayload);
 
-    saveAuth(token, updatedUser);
-    setUser(updatedUser);
-    setProfileData({ ...editData });
-    setIsEditing(false);
-    setProfileToast({ show: true, message: 'Profil berhasil diperbarui.', variant: 'success' });
+      if (!response?.success) {
+        throw new Error(response?.message || 'Gagal memperbarui profil');
+      }
+
+      const token = localStorage.getItem('token') || '';
+      const mergedUser = { ...(getCurrentUser() || {}), ...response.data };
+      saveAuth(token, mergedUser);
+      setUser(mergedUser);
+      const mapped = mapUserToProfileState(mergedUser);
+      setProfileData(mapped);
+      setEditData(mapped);
+      setIsEditing(false);
+      setProfileToast({ show: true, message: 'Profil berhasil diperbarui.', variant: 'success' });
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      setProfileToast({ show: true, message: error.response?.data?.error || error.message || 'Gagal menyimpan profil.', variant: 'error' });
+    }
   };
 
   const handleCancel = () => {
@@ -187,6 +221,26 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     setShowLogoutConfirm(true);
+  };
+
+  const normalizeOrderStatus = (order) => {
+    const raw = (order?.order_status || order?.status || order?.payment_status || '').toString().toLowerCase();
+    if (['pending', 'paid', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'].includes(raw)) return raw;
+    if (raw === 'unpaid') return 'pending';
+    return 'pending';
+  };
+
+  const getStatusBadge = (status) => {
+    const badges = {
+      pending: { label: 'Menunggu Pembayaran', className: 'bg-yellow-100 text-yellow-700' },
+      paid: { label: 'Sudah Dibayar', className: 'bg-green-100 text-green-800' },
+      processing: { label: 'Diproses', className: 'bg-orange-100 text-orange-800' },
+      shipped: { label: 'Dikirim', className: 'bg-purple-100 text-purple-800' },
+      delivered: { label: 'Telah Sampai', className: 'bg-green-100 text-green-800' },
+      completed: { label: 'Selesai', className: 'bg-teal-100 text-teal-800' },
+      cancelled: { label: 'Dibatalkan', className: 'bg-red-100 text-red-800' },
+    };
+    return badges[status] || badges.pending;
   };
 
   const confirmLogout = () => {
@@ -402,32 +456,28 @@ export default function ProfilePage() {
                       <div
                         key={order.order_id}
                         className="p-4 border border-gray-200 rounded-lg hover:bg-yellow-50 hover:border-yellow-300 cursor-pointer transition-all"
-                        onClick={() => navigate('/pesanan-saya')}
+                        onClick={() => navigate(`/pesanan-saya?order_id=${order.order_id}`)}
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-semibold text-gray-900">{order.order_number}</span>
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            order.order_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                            order.order_status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                            order.order_status === 'shipped' ? 'bg-purple-100 text-purple-800' :
-                            order.order_status === 'delivered' ? 'bg-green-100 text-green-800' :
-                            order.order_status === 'completed' ? 'bg-teal-100 text-teal-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {order.order_status === 'pending' ? 'Menunggu Pembayaran' :
-                             order.order_status === 'processing' ? 'Diproses' :
-                             order.order_status === 'shipped' ? 'Dikirim' :
-                             order.order_status === 'delivered' ? 'Telah Sampai' :
-                             order.order_status === 'completed' ? 'Selesai' :
-                             'Dibatalkan'}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">{order.total_items || 0} produk</span>
-                          <span className="font-bold text-yellow-600">
-                            Rp {order.total_amount?.toLocaleString('id-ID') || 0}
-                          </span>
-                        </div>
+                        {(() => {
+                          const status = normalizeOrderStatus(order);
+                          const badge = getStatusBadge(status);
+                          return (
+                            <>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="font-semibold text-gray-900">{order.order_number}</span>
+                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${badge.className}`}>
+                                  {badge.label}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-gray-600">{order.total_items || 0} produk</span>
+                                <span className="font-bold text-yellow-600">
+                                  Rp {order.total_amount?.toLocaleString('id-ID') || 0}
+                                </span>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>

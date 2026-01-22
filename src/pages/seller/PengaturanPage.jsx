@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -15,6 +15,16 @@ import {
   EyeSlashIcon
 } from '@heroicons/react/24/outline';
 import CartSuccessToast from '../../components/CartSuccessToast';
+import profileAPI from '../../services/profileAPI';
+import storeAPI from '../../services/storeAPI';
+import { getToken, getUser, saveAuth } from '../../utils/auth';
+
+const apiOrigin = import.meta.env.VITE_API_BASE_URL ? new URL(import.meta.env.VITE_API_BASE_URL).origin : '';
+const buildImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return apiOrigin ? `${apiOrigin}${url}` : url;
+};
 
 export default function PengaturanPage() {
   const navigate = useNavigate();
@@ -26,27 +36,32 @@ export default function PengaturanPage() {
 
   // Form Data - Toko
   const [tokoData, setTokoData] = useState({
-    storeName: "John's Store",
-    storeDescription: "Toko online terpercaya menjual berbagai produk elektronik, fashion, dan aksesoris berkualitas dengan harga terbaik.",
-    storeAddress: "Jl. Sudirman No. 123, Jakarta Pusat, DKI Jakarta 10220",
-    storePhone: "+62 812-3456-7890",
-    storeEmail: "johns.store@gmail.com",
-    storeLogo: null
+    storeName: '',
+    storeDescription: '',
+    storeAddress: '',
+    storePhone: '',
+    storeEmail: '',
+    storeLogo: ''
   });
 
-  // Form Data - Profile
+  const [storeLogoPreview, setStoreLogoPreview] = useState('');
+
   const [profileData, setProfileData] = useState({
-    fullName: "John Doe",
-    email: "john@seller.com",
-    phone: "+62 812-3456-7890",
-    birthDate: "1990-05-15",
-    gender: "male",
-    address: "Jl. Gatot Subroto No. 45, Jakarta Selatan",
-    city: "Jakarta",
-    province: "DKI Jakarta",
-    postalCode: "12950",
-    profilePhoto: null
+    fullName: '',
+    email: '',
+    phone: '',
+    birthDate: '',
+    gender: 'male',
+    address: '',
+    city: '',
+    province: '',
+    postalCode: '',
+    profilePhoto: ''
   });
+
+  const [profilePreview, setProfilePreview] = useState('');
+  const [isUploadingStoreLogo, setIsUploadingStoreLogo] = useState(false);
+  const [isUploadingProfilePhoto, setIsUploadingProfilePhoto] = useState(false);
 
   // Form Data - Password
   const [passwordData, setPasswordData] = useState({
@@ -55,14 +70,82 @@ export default function PengaturanPage() {
     confirmPassword: ''
   });
 
-  const handleTokoSubmit = (e) => {
+  const handleTokoSubmit = async (e) => {
     e.preventDefault();
-    setToast({ show: true, message: `Pengaturan toko berhasil disimpan!\nNama: ${tokoData.storeName}\nEmail: ${tokoData.storeEmail}` });
+
+    try {
+      const payload = {
+        store_name: tokoData.storeName,
+        full_address: tokoData.storeAddress,
+        about_store: tokoData.storeDescription,
+      };
+
+      const response = await storeAPI.updateStore(payload);
+
+      // Sync phone with profile so it persists
+      if (tokoData.storePhone) {
+        try {
+          await profileAPI.updateProfile({ phone: tokoData.storePhone });
+        } catch (err) {
+          console.warn('⚠️ Gagal sinkron telepon toko ke profil:', err?.message);
+        }
+      }
+
+      // Refresh stored auth user with latest store info
+      const token = getToken();
+      const current = getUser();
+      const updatedUser = {
+        ...current,
+        seller_profile: {
+          ...(current?.seller_profile || {}),
+          seller_id: response?.data?.seller_id ?? current?.seller_profile?.seller_id,
+          store_name: response?.data?.store_name ?? tokoData.storeName,
+          about_store: response?.data?.about_store ?? tokoData.storeDescription,
+            store_phone: tokoData.storePhone || current?.seller_profile?.store_phone,
+        },
+          phone: tokoData.storePhone || current?.phone,
+          email: tokoData.storeEmail || current?.email,
+      };
+      if (token && updatedUser) {
+        saveAuth(token, updatedUser);
+        window.dispatchEvent(new CustomEvent('sellerProfileUpdated', { detail: updatedUser }));
+      }
+
+      setToast({ show: true, message: `Pengaturan toko berhasil disimpan!\nNama: ${tokoData.storeName}` });
+    } catch (error) {
+      setToast({ show: true, message: error.response?.data?.error || error.message || 'Gagal menyimpan pengaturan toko' });
+    }
   };
 
-  const handleProfileSubmit = (e) => {
+  const handleProfileSubmit = async (e) => {
     e.preventDefault();
-    setToast({ show: true, message: `Profil berhasil diperbarui!\nNama: ${profileData.fullName}\nEmail: ${profileData.email}` });
+
+    try {
+      const payload = {
+        full_name: profileData.fullName,
+        phone: profileData.phone,
+      };
+
+      await profileAPI.updateProfile(payload);
+
+      // Re-fetch profile to keep local auth state in sync
+      const refreshed = await profileAPI.getProfile();
+      const token = getToken();
+      if (token && refreshed?.data) {
+        const mergedUser = {
+          ...(getUser() || {}),
+          ...refreshed.data,
+          roles: refreshed.data.roles || getUser()?.roles,
+          seller_profile: refreshed.data.seller_profile || getUser()?.seller_profile,
+        };
+        saveAuth(token, mergedUser);
+        window.dispatchEvent(new CustomEvent('sellerProfileUpdated', { detail: mergedUser }));
+      }
+
+      setToast({ show: true, message: `Profil berhasil diperbarui!\nNama: ${profileData.fullName || ''}` });
+    } catch (error) {
+      setToast({ show: true, message: error.response?.data?.error || error.message || 'Gagal menyimpan profil' });
+    }
   };
 
   const handlePasswordSubmit = (e) => {
@@ -86,21 +169,150 @@ export default function PengaturanPage() {
     });
   };
 
-  const handleLogoUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setToast({ show: true, message: `Logo toko akan diupload: ${file.name}` });
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setToast({ show: true, message: 'Ukuran logo maksimal 2MB' });
+      e.target.value = '';
+      return;
+    }
+
+    setIsUploadingStoreLogo(true);
+    try {
+      const response = await storeAPI.uploadStorePhoto(file);
+      const photoUrl = response?.data?.data?.store_photo || response?.data?.store_photo || '';
+      const previewUrl = buildImageUrl(photoUrl) || URL.createObjectURL(file);
+
+      setStoreLogoPreview(previewUrl);
+      setTokoData((prev) => ({ ...prev, storeLogo: photoUrl || prev.storeLogo }));
+
+      const token = getToken();
+      const current = getUser();
+      if (token && current) {
+        const updatedUser = {
+          ...current,
+          seller_profile: {
+            ...(current?.seller_profile || {}),
+            store_photo: photoUrl,
+            store_name: response?.data?.data?.store_name || response?.data?.store_name || current?.seller_profile?.store_name,
+          },
+        };
+        saveAuth(token, updatedUser);
+        window.dispatchEvent(new CustomEvent('sellerProfileUpdated', { detail: updatedUser }));
+      }
+
+      setToast({ show: true, message: 'Logo toko berhasil diupload!' });
+    } catch (error) {
+      setToast({ show: true, message: error.response?.data?.error || error.message || 'Gagal mengupload logo toko' });
+    } finally {
+      setIsUploadingStoreLogo(false);
+      e.target.value = '';
     }
   };
 
-  const handlePhotoUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setToast({ show: true, message: `Foto profil akan diupload: ${file.name}` });
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setToast({ show: true, message: 'Ukuran foto maksimal 2MB' });
+      e.target.value = '';
+      return;
+    }
+
+    setIsUploadingProfilePhoto(true);
+    try {
+      const response = await profileAPI.uploadProfilePicture(file);
+      const photoUrl = response?.data?.data?.profile_picture || response?.data?.profile_picture || '';
+      const previewUrl = buildImageUrl(photoUrl) || URL.createObjectURL(file);
+
+      setProfilePreview(previewUrl);
+      setProfileData((prev) => ({ ...prev, profilePhoto: photoUrl || prev.profilePhoto }));
+
+      const token = getToken();
+      const current = getUser();
+      if (token && current) {
+        const updatedUser = {
+          ...current,
+          profile_picture: photoUrl,
+          username: response?.data?.data?.username || response?.data?.username || current.username,
+        };
+        saveAuth(token, updatedUser);
+        window.dispatchEvent(new CustomEvent('sellerProfileUpdated', { detail: updatedUser }));
+      }
+
+      setToast({ show: true, message: 'Foto profil berhasil diupload!' });
+    } catch (error) {
+      setToast({ show: true, message: error.response?.data?.error || error.message || 'Gagal mengupload foto profil' });
+    } finally {
+      setIsUploadingProfilePhoto(false);
+      e.target.value = '';
     }
   };
 
   const [toast, setToast] = useState({ show: false, message: '' });
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [storeRes, profileRes] = await Promise.all([
+          storeAPI.getStore().catch((err) => {
+            console.warn('⚠️ Store fetch failed:', err.message);
+            return null;
+          }),
+          profileAPI.getProfile(),
+        ]);
+
+        if (storeRes?.success && storeRes.data) {
+          setTokoData((prev) => ({
+            ...prev,
+            storeName: storeRes.data.store_name || prev.storeName,
+            storeDescription: storeRes.data.about_store || prev.storeDescription,
+            storeAddress: storeRes.data.full_address || prev.storeAddress,
+            storeEmail: prev.storeEmail,
+            storePhone: prev.storePhone,
+            storeLogo: storeRes.data.store_photo || prev.storeLogo,
+          }));
+          setStoreLogoPreview(buildImageUrl(storeRes.data.store_photo) || '');
+        }
+
+        if (profileRes?.success && profileRes.data) {
+          const p = profileRes.data;
+          setProfileData((prev) => ({
+            ...prev,
+            fullName: p.full_name || p.username || prev.fullName,
+            email: p.email || prev.email,
+            phone: p.phone || prev.phone,
+            profilePhoto: p.profile_picture || prev.profilePhoto,
+          }));
+          setProfilePreview(buildImageUrl(p.profile_picture) || '');
+
+          setTokoData((prev) => ({
+            ...prev,
+            storeEmail: p.email || prev.storeEmail,
+            storePhone: p.phone || prev.storePhone,
+          }));
+
+          const token = getToken();
+          if (token) {
+            const mergedUser = {
+              ...(getUser() || {}),
+              ...p,
+              roles: p.roles || getUser()?.roles,
+              seller_profile: p.seller_profile || getUser()?.seller_profile,
+            };
+            saveAuth(token, mergedUser);
+            window.dispatchEvent(new CustomEvent('sellerProfileUpdated', { detail: mergedUser }));
+          }
+        }
+      } catch (error) {
+        console.error('❌ Gagal memuat data pengaturan:', error.message);
+        setToast({ show: true, message: 'Gagal memuat data pengaturan. Coba lagi.' });
+      }
+    };
+
+    loadData();
+  }, []);
 
   return (
     <SellerSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen}>
@@ -169,8 +381,16 @@ export default function PengaturanPage() {
                       Logo Toko
                     </label>
                     <div className="flex items-center gap-4">
-                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-3xl">
-                        JD
+                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-3xl overflow-hidden border-2 border-white shadow">
+                        {storeLogoPreview ? (
+                          <img
+                            src={storeLogoPreview}
+                            alt="Logo toko"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span>{(tokoData.storeName || 'JD').slice(0, 2).toUpperCase()}</span>
+                        )}
                       </div>
                       <div>
                         <input
@@ -181,9 +401,16 @@ export default function PengaturanPage() {
                           className="hidden"
                         />
                         <label htmlFor="logo-upload">
-                          <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('logo-upload').click()} className="cursor-pointer">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => document.getElementById('logo-upload').click()}
+                            disabled={isUploadingStoreLogo}
+                            className="cursor-pointer"
+                          >
                             <PhotoIcon className="h-4 w-4 mr-2" />
-                            Upload Logo
+                            {isUploadingStoreLogo ? 'Mengupload...' : 'Upload Logo'}
                           </Button>
                         </label>
                         <p className="text-xs text-gray-500 mt-2">Format: JPG, PNG. Max 2MB</p>
@@ -230,8 +457,9 @@ export default function PengaturanPage() {
                         value={tokoData.storeEmail}
                         onChange={(e) => setTokoData({...tokoData, storeEmail: e.target.value})}
                         placeholder="email@toko.com"
-                        required
+                        readOnly
                       />
+                      <p className="text-xs text-gray-500 mt-1">Email mengikuti akun dan tidak dapat diubah di sini.</p>
                     </div>
 
                     {/* Telepon Toko */}
@@ -308,8 +536,16 @@ export default function PengaturanPage() {
                       Foto Profil
                     </label>
                     <div className="flex items-center gap-4">
-                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-bold text-3xl">
-                        JD
+                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-bold text-3xl overflow-hidden border-2 border-white shadow">
+                        {profilePreview ? (
+                          <img
+                            src={profilePreview}
+                            alt="Foto profil"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span>{(profileData.fullName || 'JD').slice(0, 2).toUpperCase()}</span>
+                        )}
                       </div>
                       <div>
                         <input
@@ -320,9 +556,16 @@ export default function PengaturanPage() {
                           className="hidden"
                         />
                         <label htmlFor="photo-upload">
-                          <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('photo-upload').click()} className="cursor-pointer">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => document.getElementById('photo-upload').click()}
+                            disabled={isUploadingProfilePhoto}
+                            className="cursor-pointer"
+                          >
                             <PhotoIcon className="h-4 w-4 mr-2" />
-                            Upload Foto
+                            {isUploadingProfilePhoto ? 'Mengupload...' : 'Upload Foto'}
                           </Button>
                         </label>
                         <p className="text-xs text-gray-500 mt-2">Format: JPG, PNG. Max 2MB</p>

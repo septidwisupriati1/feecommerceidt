@@ -120,53 +120,73 @@ export default function ProductPage() {
 
   const fetchProducts = async () => {
     setLoading(true);
+    try {
+      const response = await browseProducts({
+        page: pagination.page,
+        limit: pagination.limit,
+        category_id: selectedCategory === 'all' ? undefined : selectedCategory,
+        search: searchQuery,
+        min_price: minPrice || undefined,
+        max_price: maxPrice || undefined,
+        sort_by: sortBy,
+        sort_order: sortOrder
+      });
 
-    // Offline/static fallback: gunakan data lokal agar gambar dan ID konsisten
-    const filtered = staticProducts
-      .filter(p => selectedCategory === 'all' || p.category_id === Number(selectedCategory))
-      .filter(p => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()))
-      .filter(p => !minPrice || p.price >= parseInt(minPrice))
-      .filter(p => !maxPrice || p.price <= parseInt(maxPrice));
+      if (response?.success) {
+        setProducts(response.data || []);
+        if (response.pagination) {
+          setPagination(prev => ({ ...prev, ...response.pagination }));
+        }
+        return;
+      }
+    } catch (err) {
+      console.warn('Browse API failed, fallback to static products', err.message);
 
-    // Sorting sederhana sesuai sortBy/sortOrder
-    const sorted = [...filtered].sort((a, b) => {
-      const order = sortOrder === 'asc' ? 1 : -1;
-      if (sortBy === 'price') return order * (a.price - b.price);
-      if (sortBy === 'rating_average' || sortBy === 'rating') return order * ((a.rating || 0) - (b.rating || 0));
-      if (sortBy === 'total_views') return order * ((a.views || 0) - (b.views || 0));
-      // default created_at not available; keep original order
-      return 0;
-    });
+      // fallback to static data when API not reachable
+      const filtered = staticProducts
+        .filter(p => selectedCategory === 'all' || p.category_id === Number(selectedCategory))
+        .filter(p => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        .filter(p => !minPrice || p.price >= parseInt(minPrice))
+        .filter(p => !maxPrice || p.price <= parseInt(maxPrice));
 
-    const pageSize = pagination.limit;
-    const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
-    const currentPage = Math.min(pagination.page, totalPages);
-    const start = (currentPage - 1) * pageSize;
-    const paged = sorted.slice(start, start + pageSize);
+      const sorted = [...filtered].sort((a, b) => {
+        const order = sortOrder === 'asc' ? 1 : -1;
+        if (sortBy === 'price') return order * (a.price - b.price);
+        if (sortBy === 'rating_average' || sortBy === 'rating') return order * ((a.rating || 0) - (b.rating || 0));
+        if (sortBy === 'total_views') return order * ((a.views || 0) - (b.views || 0));
+        return 0;
+      });
 
-    const mapped = paged.map(p => ({
-      ...p,
-      product_id: p.id,
-      rating_average: p.rating,
-      total_reviews: p.reviews,
-      primary_image: p.image,
-      stock: p.stock ?? 100,
-      total_views: p.views || 0,
-      category: { category_id: p.category_id, name: p.category },
-      seller: { store_name: "Toko" }
-    }));
+      const pageSize = pagination.limit;
+      const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+      const currentPage = Math.min(pagination.page, totalPages);
+      const start = (currentPage - 1) * pageSize;
+      const paged = sorted.slice(start, start + pageSize);
 
-    setProducts(mapped);
-    setPagination(prev => ({
-      ...prev,
-      page: currentPage,
-      total: sorted.length,
-      totalPages,
-      hasNext: currentPage < totalPages,
-      hasPrev: currentPage > 1
-    }));
+      const mapped = paged.map(p => ({
+        ...p,
+        product_id: p.id,
+        rating_average: p.rating,
+        total_reviews: p.reviews,
+        primary_image: p.image,
+        stock: p.stock ?? 100,
+        total_views: p.views || 0,
+        category: { category_id: p.category_id, name: p.category },
+        seller: { store_name: "Toko" }
+      }));
 
-    setLoading(false);
+      setProducts(mapped);
+      setPagination(prev => ({
+        ...prev,
+        page: currentPage,
+        total: sorted.length,
+        totalPages,
+        hasNext: currentPage < totalPages,
+        hasPrev: currentPage > 1
+      }));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleFilter = () => {

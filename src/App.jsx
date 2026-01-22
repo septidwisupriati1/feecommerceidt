@@ -54,6 +54,7 @@ import SyaratKetentuanPage from './pages/seller/SyaratKetentuanPage';
 import PrivasiKebijakanPage from './pages/seller/PrivasiKebijakanPage';
 import FAQPage from './pages/seller/FAQPage';
 import RekeningPage from './pages/seller/RekeningPage';
+import SellerEmailVerificationPage from './pages/seller/SellerEmailVerificationPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -74,6 +75,7 @@ import AdminKebijakanPrivasiPage from './pages/admin/KebijakanPrivasiPage';
 import AdminFAQPage from './pages/admin/FAQPage';
 import ProfilSTPPage from './pages/admin/ProfilSTPPage';
 import AdminProfilePage from './pages/admin/ProfilePage';
+import StoreProfilePage from './pages/StoreProfilePage';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -106,8 +108,8 @@ function App() {
           <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
           <Route path="/verify-email" element={<PublicRoute><VerifyEmailPage /></PublicRoute>} />
           
-          {/* Buyer Routes - Open Access (No Login Required) */}
-          <Route path="/buyer/dashboard" element={<BuyerDashboard />} />
+          {/* Buyer Routes */}
+          <Route path="/buyer/dashboard" element={<ProtectedRoute requiredRole="buyer"><BuyerDashboard /></ProtectedRoute>} />
           <Route path="/home" element={<HomePage />} />
           <Route path="/produk" element={<ProductPage />} />
           <Route path="/produk/:id" element={<ProductDetailPage />} />
@@ -115,17 +117,18 @@ function App() {
           <Route path="/ubah-password" element={<ChangePasswordPage />} />
           <Route path="/verifikasi-email" element={<VerifyEmailLocalPage />} />
           <Route path="/verifikasi-telepon" element={<VerifyPhoneLocalPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/payment" element={<PaymentPage />} />
-          <Route path="/payment-status" element={<PaymentStatusPage />} />
-          <Route path="/pesanan-saya" element={<MyOrdersPage />} />
-          <Route path="/pesanan/:id" element={<OrderDetailPage />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/profil" element={<ProfilePage />} />
-          <Route path="/wishlist" element={<WishlistPage />} />
-          <Route path="/notifikasi" element={<NotificationPage />} />
+          <Route path="/checkout" element={<ProtectedRoute requiredRole="buyer"><CheckoutPage /></ProtectedRoute>} />
+          <Route path="/payment" element={<ProtectedRoute requiredRole="buyer"><PaymentPage /></ProtectedRoute>} />
+          <Route path="/payment-status" element={<ProtectedRoute requiredRole="buyer"><PaymentStatusPage /></ProtectedRoute>} />
+          <Route path="/pesanan-saya" element={<ProtectedRoute requiredRole="buyer"><MyOrdersPage /></ProtectedRoute>} />
+          <Route path="/pesanan/:id" element={<ProtectedRoute requiredRole="buyer"><OrderDetailPage /></ProtectedRoute>} />
+          <Route path="/chat" element={<ProtectedRoute requiredRole="buyer"><ChatPage /></ProtectedRoute>} />
+          <Route path="/profil" element={<ProtectedRoute requiredRole="buyer"><ProfilePage /></ProtectedRoute>} />
+          <Route path="/wishlist" element={<ProtectedRoute requiredRole="buyer"><WishlistPage /></ProtectedRoute>} />
+          <Route path="/notifikasi" element={<ProtectedRoute requiredRole="buyer"><NotificationPage /></ProtectedRoute>} />
           
           {/* Seller Routes */}
+          <Route path="/seller/verify-email" element={<ProtectedRoute requiredRole="seller" allowUnverifiedSeller><SellerEmailVerificationPage /></ProtectedRoute>} />
           <Route path="/seller" element={<ProtectedRoute requiredRole="seller"><SellerProductPage /></ProtectedRoute>} />
           <Route path="/seller/dashboard" element={<ProtectedRoute requiredRole="seller"><SellerProductPage /></ProtectedRoute>} />
           <Route path="/seller/product" element={<ProtectedRoute requiredRole="seller"><SellerProductPage /></ProtectedRoute>} />
@@ -165,6 +168,8 @@ function App() {
           <Route path="/admin/faq" element={<ProtectedRoute requiredRole="admin"><AdminFAQPage /></ProtectedRoute>} />
           <Route path="/admin/profil-stp" element={<ProtectedRoute requiredRole="admin"><ProfilSTPPage /></ProtectedRoute>} />
           <Route path="/admin/profile" element={<ProtectedRoute requiredRole="admin"><AdminProfilePage /></ProtectedRoute>} />
+          {/* Public store profile by store name (placed last to avoid clashing with other routes) */}
+          <Route path="/:storeName" element={<StoreProfilePage />} />
         </Routes>
         
         {/* Debug Panel - Only shows in development */}

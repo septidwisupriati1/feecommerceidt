@@ -259,7 +259,7 @@ export default function NotificationPage() {
                     <div className="flex items-start gap-3">
                       {/* Icon */}
                       <div
-                        className={`flex-shrink-0 p-2 rounded-lg ${
+                        className={`shrink-0 p-2 rounded-lg ${
                           !notification.is_read ? 'bg-blue-100' : 'bg-gray-100'
                         }`}
                       >

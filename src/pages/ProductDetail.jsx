@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useProducts } from '../context/ProductsContext.jsx'
 
@@ -14,6 +14,8 @@ export default function ProductDetail() {
   ] : []
   const [selectedVar, setSelectedVar] = useState(variants[0]?.label || '')
   const [qty, setQty] = useState(1)
+
+  const navigate = useNavigate()
 
   // WhatsApp number seller (format: 628xxx tanpa +)
   const sellerWhatsApp = '6281234567890'
@@ -104,7 +106,14 @@ export default function ProductDetail() {
                   </svg>
                   Chat
                 </button>
-                <button className="btn btn-ghost">Profil Toko</button>
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => {
+                    const sellerName = product?.seller_name || 'toko'
+                    const slug = String(sellerName || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+                    navigate(`/${encodeURIComponent(slug)}`)
+                  }}
+                >Profil Toko</button>
               </div>
             </div>
           </div>

@@ -14,6 +14,7 @@ import {
   Bars3Icon
 } from '@heroicons/react/24/outline';
 import CartSuccessToast from '../../components/CartSuccessToast';
+import { getProductDetail, updateProduct, getCategories as fetchCategoriesApi } from '../../services/sellerProductAPI';
 
 export default function EditProductPage() {
   const navigate = useNavigate();
@@ -23,17 +24,29 @@ export default function EditProductPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [productNotFound, setProductNotFound] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [productStatus, setProductStatus] = useState('inactive');
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
+  const normalizeImageValue = (img) => {
+    if (!img) return '';
+    if (typeof img === 'string') return img;
+    if (typeof img === 'object') return img.image_url || img.url || img.path || img.src || img.image || img.imageUrl || '';
+    return '';
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
     stock: '',
-    category: '',
+    category_id: '',
     weight: '',
     length: '',
     width: '',
     height: '',
+    weight_unit: 'gram',
     condition: 'new',
     images: []
   });
@@ -42,59 +55,62 @@ export default function EditProductPage() {
   const [toast, setToast] = useState({ show: false, message: '' });
   const [navigateAfterToast, setNavigateAfterToast] = useState(false);
 
-  const categories = [
-    'Elektronik',
-    'Fashion Pria',
-    'Fashion Wanita',
-    'Kesehatan & Kecantikan',
-    'Makanan & Minuman',
-    'Rumah Tangga',
-    'Olahraga',
-    'Mainan & Hobi',
-    'Buku & Alat Tulis',
-    'Otomotif'
-  ];
-
-  // Load product data on mount
   useEffect(() => {
-    const loadProduct = () => {
+    const loadInitial = async () => {
       try {
-        const products = JSON.parse(localStorage.getItem('seller_products') || '[]');
-        const product = products.find(p => p.id === parseInt(id) || p.product_id === parseInt(id));
-        
-        if (!product) {
+        setLoading(true);
+        // categories
+        try {
+          const catRes = await fetchCategoriesApi();
+          if (catRes?.data && Array.isArray(catRes.data)) setCategories(catRes.data);
+        } catch (err) {
+          console.warn('Gagal memuat kategori', err.message);
+        }
+
+        const res = await getProductDetail(id);
+        const data = res?.data || res;
+        if (!data) {
           setProductNotFound(true);
           return;
         }
 
-        // Populate form with existing data
+        const imagesFromApi = Array.isArray(data.images)
+          ? data.images.map(normalizeImageValue).filter(Boolean)
+          : [
+              normalizeImageValue(data.primary_image),
+              normalizeImageValue(data.image_url),
+              normalizeImageValue(data.image),
+              normalizeImageValue(data.thumbnail),
+              normalizeImageValue(data.cover_image)
+            ].filter(Boolean);
+
         setFormData({
-          name: product.name || '',
-          description: product.description || '',
-          price: product.price?.toString() || '',
-          stock: product.stock?.toString() || '',
-          category: product.category || '',
-          weight: product.weight?.toString() || '',
-          length: product.length?.toString() || '',
-          width: product.width?.toString() || '',
-          height: product.height?.toString() || '',
-          condition: product.condition || 'new',
+          name: data.name || '',
+          description: data.description || '',
+          price: data.price?.toString() || '',
+          stock: data.stock?.toString() || '',
+          category_id: data.category_id || data.category?.category_id || data.category || '',
+          weight: data.weight?.toString() || '',
+          length: data.length?.toString() || '',
+          width: data.width?.toString() || '',
+          height: data.height?.toString() || '',
+          weight_unit: data.weight_unit || 'gram',
+          condition: data.condition || 'new',
           images: []
         });
 
-        // Load existing images
-        if (product.images && Array.isArray(product.images)) {
-          setImagePreviews(product.images);
-        } else if (product.primary_image) {
-          setImagePreviews([product.primary_image]);
-        }
+        setProductStatus(data.status || 'inactive');
+
+        setImagePreviews(imagesFromApi);
       } catch (error) {
         console.error('Error loading product:', error);
         setProductNotFound(true);
+      } finally {
+        setLoading(false);
       }
     };
 
-    loadProduct();
+    loadInitial();
   }, [id]);
 
   const handleInputChange = (e) => {
@@ -103,6 +119,7 @@ export default function EditProductPage() {
       ...prev,
       [name]: value
     }));
+    setHasUnsavedChanges(true);
     // Clear error when user types
     if (errors[name]) {
       setErrors(prev => ({
@@ -133,6 +150,7 @@ export default function EditProductPage() {
           ...prev,
           images: [...prev.images, file]
         }));
+        setHasUnsavedChanges(true);
       };
       reader.readAsDataURL(file);
     });
@@ -147,6 +165,7 @@ export default function EditProductPage() {
       ...prev,
       images: prev.images.filter((_, i) => i !== index)
     }));
+    setHasUnsavedChanges(true);
   };
 
   const handleDragOver = (e) => {
@@ -179,6 +198,7 @@ export default function EditProductPage() {
           ...prev,
           images: [...prev.images, file]
         }));
+        setHasUnsavedChanges(true);
       };
       reader.readAsDataURL(file);
     });
@@ -203,17 +223,28 @@ export default function EditProductPage() {
       newErrors.stock = 'Stok tidak boleh negatif';
     }
 
-    if (!formData.category) {
-      newErrors.category = 'Kategori harus dipilih';
+    if (!formData.category_id) {
+      newErrors.category_id = 'Kategori harus dipilih';
     }
 
-    if (!formData.weight || parseFloat(formData.weight) <= 0) {
-      newErrors.weight = 'Berat harus lebih dari 0';
+    // Optional numeric fields: validate only if filled (weight, length, width, height)
+    if (formData.weight && parseFloat(formData.weight) <= 0) {
+      newErrors.weight = 'Berat harus lebih dari 0 jika diisi';
     }
 
-    if (imagePreviews.length === 0) {
-      newErrors.images = 'Minimal 1 gambar produk';
+    if (formData.length && parseFloat(formData.length) <= 0) {
+      newErrors.length = 'Panjang harus lebih dari 0 jika diisi';
     }
+
+    if (formData.width && parseFloat(formData.width) <= 0) {
+      newErrors.width = 'Lebar harus lebih dari 0 jika diisi';
+    }
+
+    if (formData.height && parseFloat(formData.height) <= 0) {
+      newErrors.height = 'Tinggi harus lebih dari 0 jika diisi';
+    }
+
+    // Images optional on edit; allow keep existing
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -230,102 +261,79 @@ export default function EditProductPage() {
     setLoading(true);
 
     try {
-      // Get existing products from localStorage
-      const products = JSON.parse(localStorage.getItem('seller_products') || '[]');
-      const productIndex = products.findIndex(p => p.id === parseInt(id) || p.product_id === parseInt(id));
-      
-      if (productIndex === -1) {
-        throw new Error('Produk tidak ditemukan');
-      }
-
-      // Update product data
-      const updatedProduct = {
-        ...products[productIndex],
+      const payload = {
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
-        category: formData.category,
-        weight: parseFloat(formData.weight),
-        length: formData.length ? parseFloat(formData.length) : null,
-        width: formData.width ? parseFloat(formData.width) : null,
-        height: formData.height ? parseFloat(formData.height) : null,
+        category_id: formData.category_id ? parseInt(formData.category_id) : undefined,
+        weight: formData.weight ? parseFloat(formData.weight) : undefined,
+        weight_unit: formData.weight_unit || 'gram',
+        length: formData.length ? parseFloat(formData.length) : undefined,
+        width: formData.width ? parseFloat(formData.width) : undefined,
+        height: formData.height ? parseFloat(formData.height) : undefined,
         condition: formData.condition,
-        images: imagePreviews, // Base64 images
-        primary_image: imagePreviews[0] || null,
-        updated_at: new Date().toISOString()
+        status: productStatus,
+        images: imagePreviews.map((url) => ({ url: normalizeImageValue(url) })),
       };
 
-      // Update in array
-      products[productIndex] = updatedProduct;
-      localStorage.setItem('seller_products', JSON.stringify(products));
-
-      // Simulasi delay API
-      await new Promise(resolve => setTimeout(resolve, 500));
-
+      await updateProduct(id, payload);
       setToast({ show: true, message: 'Produk berhasil diperbarui!' });
       setNavigateAfterToast(true);
+      setHasUnsavedChanges(false);
     } catch (error) {
       console.error('Error updating product:', error);
       setToast({ show: true, message: error.message || 'Terjadi kesalahan saat memperbarui produk' });
     } finally {
       setLoading(false);
     }
-
-    /* TODO: Uncomment untuk backend integration
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Token tidak ditemukan. Silakan login kembali.');
-      }
-
-      const formDataToSend = new FormData();
-      formDataToSend.append('name', formData.name);
-      formDataToSend.append('description', formData.description);
-      formDataToSend.append('price', formData.price);
-      formDataToSend.append('stock', formData.stock);
-      formDataToSend.append('category', formData.category);
-      formDataToSend.append('weight', formData.weight);
-      
-      if (formData.length) formDataToSend.append('length', formData.length);
-      if (formData.width) formDataToSend.append('width', formData.width);
-      if (formData.height) formDataToSend.append('height', formData.height);
-      formDataToSend.append('condition', formData.condition);
-
-      // Append new images
-      formData.images.forEach((image, index) => {
-        formDataToSend.append('images', image);
-      });
-
-      // Keep existing images that are base64 strings
-      const existingImages = imagePreviews.filter(img => img.startsWith('data:'));
-      if (existingImages.length > 0) {
-        formDataToSend.append('existing_images', JSON.stringify(existingImages));
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/ecommerce'}/products/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formDataToSend
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Gagal memperbarui produk');
-      }
-
-      alert('Produk berhasil diperbarui!');
-      navigate('/seller/product');
-    } catch (error) {
-      console.error('Error updating product:', error);
-      alert(error.message || 'Terjadi kesalahan saat memperbarui produk');
-    } finally {
-      setLoading(false);
-    }
-    */
   };
+
+  const handleToggleStatus = async () => {
+    try {
+      setStatusUpdating(true);
+      const newStatus = productStatus === 'active' ? 'inactive' : 'active';
+      setProductStatus(newStatus);
+      setHasUnsavedChanges(true);
+      setToast({ show: true, message: `Status diubah menjadi ${newStatus === 'active' ? 'Aktif' : 'Nonaktif'}. Simpan perubahan untuk menerapkan.` });
+    } catch (error) {
+      console.error('Error toggling status:', error);
+      setToast({ show: true, message: error.message || 'Terjadi kesalahan saat mengubah status produk' });
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
+  const handleNavigateAway = (path) => {
+    if (hasUnsavedChanges) {
+      const confirmLeave = window.confirm('Perubahan belum disimpan. Tinggalkan halaman?');
+      if (!confirmLeave) return;
+    }
+    navigate(path);
+  };
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    const handlePopState = () => {
+      if (hasUnsavedChanges && !window.confirm('Perubahan belum disimpan. Tinggalkan halaman?')) {
+        window.history.pushState(null, '', window.location.href);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [hasUnsavedChanges]);
 
   if (productNotFound) {
     return (
@@ -370,13 +378,14 @@ export default function EditProductPage() {
                 </Button>
 
                 <Button
-                  onClick={() => navigate('/seller/product')}
+                  onClick={() => handleNavigateAway('/seller/product')}
                   variant="ghost"
                   className="text-white hover:bg-blue-500"
                   size="sm"
                 >
                   <ArrowLeftIcon className="h-5 w-5" />
                 </Button>
+
                 <div>
                   <h1 className="text-xl md:text-2xl font-bold">Edit Produk</h1>
                   <p className="text-blue-100 text-xs md:text-sm">Perbarui informasi produk Anda</p>
@@ -389,6 +398,34 @@ export default function EditProductPage() {
         {/* Form Container */}
         <div className="container mx-auto px-4 py-6 md:py-8">
           <form onSubmit={handleSubmit} className="max-w-5xl mx-auto space-y-6">
+
+            {/* Status Produk */}
+            <Card className="shadow-md border-t-4 border-t-gray-600">
+              <CardContent className="p-4 md:p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Status Produk</p>
+                  <p className="text-xl font-bold text-gray-900">{productStatus === 'active' ? 'Aktif' : 'Nonaktif'}</p>
+                </div>
+                <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                  <Button
+                    type="button"
+                    onClick={handleToggleStatus}
+                    disabled={statusUpdating || loading}
+                    className={`w-full md:w-48 ${
+                      productStatus === 'active'
+                        ? 'bg-red-600 hover:bg-red-700'
+                        : 'bg-green-600 hover:bg-green-700'
+                    } text-white`}
+                  >
+                    {statusUpdating
+                      ? 'Memproses...'
+                      : productStatus === 'active'
+                        ? 'Nonaktifkan Produk'
+                        : 'Aktifkan Produk'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
             
             {/* Informasi Dasar Produk */}
             <Card className="shadow-md border-t-4 border-t-blue-600">
@@ -442,20 +479,22 @@ export default function EditProductPage() {
                       Kategori <span className="text-red-500">*</span>
                     </label>
                     <select
-                      name="category"
-                      value={formData.category}
+                      name="category_id"
+                      value={formData.category_id || ''}
                       onChange={handleInputChange}
                       className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        errors.category ? 'border-red-500' : 'border-gray-300'
+                        errors.category_id ? 'border-red-500' : 'border-gray-300'
                       }`}
                     >
                       <option value="">Pilih Kategori</option>
                       {categories.map((cat) => (
-                        <option key={cat} value={cat}>{cat}</option>
+                        <option key={cat.category_id || cat.name} value={cat.category_id || cat.name}>
+                          {cat.name || cat}
+                        </option>
                       ))}
                     </select>
-                    {errors.category && (
-                      <p className="text-red-500 text-xs mt-1">{errors.category}</p>
+                    {errors.category_id && (
+                      <p className="text-red-500 text-xs mt-1">{errors.category_id}</p>
                     )}
                   </div>
 
@@ -550,7 +589,7 @@ export default function EditProductPage() {
                   {/* Berat */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Berat (gram) <span className="text-red-500">*</span>
+                      Berat (gram) <span className="text-gray-400 text-xs">(opsional)</span>
                     </label>
                     <Input
                       type="number"
@@ -569,7 +608,7 @@ export default function EditProductPage() {
                   {/* Panjang */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Panjang (cm)
+                      Panjang (cm) <span className="text-gray-400 text-xs">(opsional)</span>
                     </label>
                     <Input
                       type="number"
@@ -578,14 +617,17 @@ export default function EditProductPage() {
                       onChange={handleInputChange}
                       placeholder="30"
                       min="0"
-                      className="w-full border-gray-300"
+                      className={`w-full ${errors.length ? 'border-red-500' : 'border-gray-300'}`}
                     />
+                    {errors.length && (
+                      <p className="text-red-500 text-xs mt-1">{errors.length}</p>
+                    )}
                   </div>
 
                   {/* Lebar */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Lebar (cm)
+                      Lebar (cm) <span className="text-gray-400 text-xs">(opsional)</span>
                     </label>
                     <Input
                       type="number"
@@ -594,14 +636,17 @@ export default function EditProductPage() {
                       onChange={handleInputChange}
                       placeholder="20"
                       min="0"
-                      className="w-full border-gray-300"
+                      className={`w-full ${errors.width ? 'border-red-500' : 'border-gray-300'}`}
                     />
+                    {errors.width && (
+                      <p className="text-red-500 text-xs mt-1">{errors.width}</p>
+                    )}
                   </div>
 
                   {/* Tinggi */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tinggi (cm)
+                      Tinggi (cm) <span className="text-gray-400 text-xs">(opsional)</span>
                     </label>
                     <Input
                       type="number"
@@ -610,8 +655,11 @@ export default function EditProductPage() {
                       onChange={handleInputChange}
                       placeholder="10"
                       min="0"
-                      className="w-full border-gray-300"
+                      className={`w-full ${errors.height ? 'border-red-500' : 'border-gray-300'}`}
                     />
+                    {errors.height && (
+                      <p className="text-red-500 text-xs mt-1">{errors.height}</p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -704,7 +752,7 @@ export default function EditProductPage() {
             <div className="flex flex-col sm:flex-row gap-3 justify-end pb-6">
               <Button
                 type="button"
-                onClick={() => navigate('/seller/product')}
+                onClick={() => handleNavigateAway('/seller/product')}
                 variant="outline"
                 className="border-gray-300 text-gray-700 hover:bg-gray-50 w-full sm:w-auto"
                 disabled={loading}

@@ -5,6 +5,7 @@ import { ShoppingCart, MessageCircle, Bell, User, Search, Clock } from "lucide-r
 import { isAuthenticated, clearAuth } from "../utils/auth";
 import { useCart } from "../context/CartContext";
 import { getUnreadCount } from "../services/notificationAPI";
+import chatAPI from "../services/chatAPI";
 import styles from "./BuyerNavbar.module.css";
 
 export default function BuyerNavbar() {
@@ -40,6 +41,41 @@ export default function BuyerNavbar() {
     const interval = setInterval(fetchUnreadCount, 30000);
     
     return () => clearInterval(interval);
+  }, []);
+
+  // Fetch unread chat messages count
+  useEffect(() => {
+    const fetchUnreadMessages = async () => {
+      if (!isAuthenticated()) {
+        setUnreadMessages(0);
+        return;
+      }
+      try {
+        const res = await chatAPI.getConversations();
+        if (res.success && Array.isArray(res.data)) {
+          const total = res.data.reduce(
+            (sum, conv) => sum + (conv.unread_count ?? conv.unreadCount ?? 0),
+            0
+          );
+          setUnreadMessages(total);
+        } else {
+          setUnreadMessages(0);
+        }
+      } catch (error) {
+        console.error('Error fetching unread chat count:', error);
+        setUnreadMessages(0);
+      }
+    };
+
+    fetchUnreadMessages();
+    const interval = setInterval(fetchUnreadMessages, 15000);
+    const handler = () => fetchUnreadMessages();
+    window.addEventListener('chatUnreadCountChanged', handler);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('chatUnreadCountChanged', handler);
+    };
   }, []);
 
   // Sync search box with query param `q`
@@ -262,7 +298,7 @@ function ProfileMenu() {
   const confirmLogout = () => {
     clearAuth();
     setShowLogoutConfirm(false);
-    navigate('/login');
+    navigate('/login', { replace: true, state: { fromLogout: true } });
   };
 
   const cancelLogout = () => {

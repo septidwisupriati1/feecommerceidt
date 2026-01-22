@@ -17,27 +17,33 @@ import {
   ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline';
 
+const apiOrigin = import.meta.env.VITE_API_BASE_URL ? new URL(import.meta.env.VITE_API_BASE_URL).origin : '';
+const buildImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return apiOrigin ? `${apiOrigin}${url}` : url;
+};
+
 const ProfilePage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [profileData, setProfileData] = useState({
-    fullName: "User",
-    email: "user@email.com",
-    joinDate: "Januari 2024",
-    avatar: "U"
+    fullName: 'User',
+    email: 'user@email.com',
+    joinDate: 'Januari 2024',
+    avatarText: 'U',
+    avatarUrl: ''
   });
   
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
-    
-    if (currentUser) {
+    const applyUser = (currentUser) => {
+      setUser(currentUser);
+      if (!currentUser) return;
+
       const getUserInitials = () => {
-        if (currentUser.full_name) {
-          const names = currentUser.full_name.split(' ');
-          return names.length > 1 ? names[0][0] + names[1][0] : names[0][0];
-        }
-        return currentUser.username ? currentUser.username[0].toUpperCase() : 'U';
+        const baseName = currentUser.full_name || currentUser.username || 'U';
+        const names = baseName.split(' ');
+        return names.length > 1 ? (names[0][0] + names[1][0]).toUpperCase() : baseName[0].toUpperCase();
       };
 
       const getJoinDate = () => {
@@ -48,12 +54,34 @@ const ProfilePage = () => {
       };
 
       setProfileData({
-        fullName: currentUser.full_name || currentUser.username || "User",
-        email: currentUser.email || "user@email.com",
+        fullName: currentUser.seller_profile?.store_name || currentUser.store_name || currentUser.full_name || currentUser.username || 'User',
+        email: currentUser.email || 'user@email.com',
         joinDate: getJoinDate(),
-        avatar: getUserInitials()
+        avatarText: getUserInitials(),
+        avatarUrl: buildImageUrl(
+          currentUser.profile_picture ||
+          currentUser.seller_profile?.store_photo ||
+          currentUser.store_photo ||
+          currentUser.store_logo ||
+          ''
+        )
       });
-    }
+    };
+
+    applyUser(getCurrentUser());
+
+    const handleProfileUpdate = (e) => applyUser(e.detail || getCurrentUser());
+    const handleStorageChange = (e) => {
+      if (e.key === 'user') applyUser(getCurrentUser());
+    };
+
+    window.addEventListener('sellerProfileUpdated', handleProfileUpdate);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('sellerProfileUpdated', handleProfileUpdate);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const stats = [
@@ -116,19 +144,13 @@ const ProfilePage = () => {
             {/* Avatar Section */}
             <div className="flex flex-col items-center mb-6">
               <div className="relative mb-4">
-                {/* Avatar Circle */}
-                <div className="w-28 h-28 bg-blue-500 rounded-full flex items-center justify-center">
-                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-                    <svg className="w-10 h-10 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                    </svg>
-                  </div>
+                <div className="w-28 h-28 rounded-full bg-blue-500 flex items-center justify-center overflow-hidden border-2 border-white shadow">
+                  {profileData.avatarUrl ? (
+                    <img src={profileData.avatarUrl} alt={profileData.fullName} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-3xl text-white font-bold">{profileData.avatarText}</span>
+                  )}
                 </div>
-                
-                {/* Camera Button */}
-                <button className="absolute bottom-0 right-0 bg-red-500 p-2 rounded-full shadow-lg hover:bg-red-600 transition">
-                  <CameraIcon className="h-4 w-4 text-white" />
-                </button>
               </div>
 
               {/* Name and Email */}

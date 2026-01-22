@@ -13,6 +13,117 @@ import { getToken } from "../utils/auth";
 import orderAPI from "../services/orderAPI";
 import { adaptOrderForPaymentStatus } from "../utils/orderAdapter";
 
+// Persist newly created order to seller-facing localStorage so seller pages can display it
+const persistSellerOrderLocal = ({ order, address, itemsPayload, shippingCost, paymentMethod, shippingService }) => {
+  const orderNumber = order?.order_number || order?.order_id;
+  if (!orderNumber) return;
+
+  const ordersKey = 'seller_orders_data';
+  const salesKey = 'seller_sales_data';
+  const nowIso = new Date().toISOString();
+
+  const mappedItems = (itemsPayload || []).map((item) => ({
+    id: item.product_id,
+    name: item.product_name,
+    image: item.product_image,
+    price: item.price,
+    qty: item.quantity,
+    subtotal: Number(item.price) * Number(item.quantity || 0)
+  }));
+
+  const grandTotal = (order.total_amount || order.total || 0) || mappedItems.reduce((sum, i) => sum + i.subtotal, 0) + (shippingCost || 0);
+
+  const nextOrder = {
+    id: orderNumber,
+    orderNumber,
+    buyer: {
+      name: address?.recipient_name || address?.label || 'Pembeli',
+      phone: address?.phone || '',
+      address: address?.full_address || `${address?.regency || ''} ${address?.province || ''}`.trim()
+    },
+    items: mappedItems,
+    totalAmount: grandTotal - (shippingCost || 0),
+    shippingCost: shippingCost || 0,
+    grandTotal,
+    orderDate: nowIso,
+    status: 'pending',
+    paymentMethod: paymentMethod === 'midtrans' ? 'Midtrans' : 'Transfer Bank',
+    shippingService: shippingService || 'JNE',
+    trackingNumber: null
+  };
+
+  try {
+    const existing = JSON.parse(localStorage.getItem(ordersKey) || '[]');
+    const filtered = existing.filter((o) => o.orderNumber !== orderNumber);
+    localStorage.setItem(ordersKey, JSON.stringify([nextOrder, ...filtered]));
+  } catch (err) {
+    console.warn('Failed to persist seller_orders_data', err);
+  }
+
+  const salesEntries = (itemsPayload || []).map((item) => ({
+    id: `${orderNumber}-${item.product_id}`,
+    orderNumber,
+    productName: item.product_name,
+    image: item.product_image,
+    buyer: address?.recipient_name || 'Pembeli',
+    qty: item.quantity,
+    price: item.price,
+    total: Number(item.price) * Number(item.quantity || 0),
+    orderDate: nowIso,
+    status: 'processing',
+    paymentMethod: paymentMethod === 'midtrans' ? 'Midtrans' : 'Transfer Bank',
+    shippingService: shippingService || 'JNE'
+  }));
+
+  try {
+    const existingSales = JSON.parse(localStorage.getItem(salesKey) || '[]');
+    // Remove duplicates for this order number
+    const filteredSales = existingSales.filter((s) => s.orderNumber !== orderNumber);
+    localStorage.setItem(salesKey, JSON.stringify([...salesEntries, ...filteredSales]));
+  } catch (err) {
+    console.warn('Failed to persist seller_sales_data', err);
+  }
+
+  // Decrease local product stock for both seller and buyer views (seller_products + override map)
+  try {
+    const productsKey = 'seller_products';
+    const overrideKey = 'product_stock_overrides';
+    const products = JSON.parse(localStorage.getItem(productsKey) || '[]');
+    const overrides = JSON.parse(localStorage.getItem(overrideKey) || '{}');
+
+    const updatedProducts = products.map((p) => {
+      const match = (itemsPayload || []).find((i) => {
+        const pid = Number(i.product_id || i.id);
+        return pid === Number(p.product_id || p.id) || pid === Number(p.id) || pid === Number(p.product_id);
+      });
+      if (!match) return p;
+      const qty = Number(match.quantity) || 0;
+      const currentStock = Number(p.stock ?? 0);
+      const nextStock = Math.max(0, currentStock - qty);
+      const pidKey = String(p.product_id || p.id);
+      overrides[pidKey] = nextStock;
+      return { ...p, stock: nextStock };
+    });
+
+    // If products list empty, still record overrides based on item.stock if provided
+    if (!products.length) {
+      (itemsPayload || []).forEach((i) => {
+        const pidKey = String(i.product_id || i.id || '');
+        if (!pidKey) return;
+        const baseStock = Number.isFinite(Number(i.stock)) ? Number(i.stock) : undefined;
+        if (baseStock === undefined) return;
+        const qty = Number(i.quantity) || 0;
+        overrides[pidKey] = Math.max(0, baseStock - qty);
+      });
+    }
+
+    localStorage.setItem(productsKey, JSON.stringify(updatedProducts));
+    localStorage.setItem(overrideKey, JSON.stringify(overrides));
+  } catch (err) {
+    console.warn('Failed to decrease local stock', err);
+  }
+};
+
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,7 +148,14 @@ export default function CheckoutPage() {
     notes: ''
   });
   const [missingProfileAddress, setMissingProfileAddress] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState('transfer');
+  const resumeOrder = location.state?.order || null;
+  const restartPayment = Boolean(location.state?.restartPayment && resumeOrder);
+  const carriedSnapToken = location.state?.snapToken || null;
+  const [selectedPayment, setSelectedPayment] = useState(() => {
+    if (resumeOrder?.payment_method === 'midtrans') return 'midtrans';
+    if (resumeOrder?.payment_method === 'manual_transfer') return 'transfer';
+    return 'transfer';
+  });
   const [selectedShipping, setSelectedShipping] = useState('regular');
   const [showSuccess, setShowSuccess] = useState(false);
   const [addressAlert, setAddressAlert] = useState(null);
@@ -53,17 +171,23 @@ export default function CheckoutPage() {
     postalCode: useRef(null)
   };
 
-  const STORAGE_KEYS = {
-    addresses: 'checkout_addresses',
-    selected: 'checkout_selected_address'
+  const userRef = useRef(null);
+
+  const getStorageKeys = (user) => {
+    const scope = user?.user_id || user?.email || 'guest';
+    return {
+      addresses: `checkout_addresses_${scope}`,
+      selected: `checkout_selected_address_${scope}`
+    };
   };
 
   const persistAddresses = (nextAddresses, nextSelected) => {
-    localStorage.setItem(STORAGE_KEYS.addresses, JSON.stringify(nextAddresses));
+    const keys = getStorageKeys(userRef.current);
+    localStorage.setItem(keys.addresses, JSON.stringify(nextAddresses));
     if (nextSelected) {
-      localStorage.setItem(STORAGE_KEYS.selected, nextSelected);
+      localStorage.setItem(keys.selected, nextSelected);
     } else {
-      localStorage.removeItem(STORAGE_KEYS.selected);
+      localStorage.removeItem(keys.selected);
     }
   };
 
@@ -72,18 +196,30 @@ export default function CheckoutPage() {
   const buyNowQuantity = Number.isFinite(buyNowState?.quantity) ? buyNowState.quantity : 1;
   const isBuyNow = Boolean(buyNowProduct);
 
+  const resumeItems = resumeOrder?.items?.map((item, idx) => ({
+    id: item.product_id || item.id || `resume-${idx}`,
+    product_id: item.product_id || item.id,
+    name: item.name,
+    price: Number(item.price) || 0,
+    quantity: Number(item.quantity) || 1,
+    image: item.image || item.product_image || item.primary_image || item.image_url,
+    variant_name: item.variant_name,
+    variant_value: item.variant_value,
+  })) || [];
+
   // Determine checkout items: buy-now payload or selected cart items
   const checkoutItems = isBuyNow
     ? [{ ...buyNowProduct, quantity: buyNowQuantity }]
-    : cartItems.filter(item => selectedItems.includes(item.id));
+    : resumeItems.length
+      ? resumeItems
+      : cartItems.filter(item => selectedItems.includes(item.id));
 
-  const shippingCost = selectedShipping === 'regular' ? 0 : selectedShipping === 'same-day' ? 15000 : 30000;
-  const subtotal = isBuyNow
-    ? checkoutItems.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 0)), 0)
-    : getSelectedTotal();
-  const itemsCount = isBuyNow
-    ? checkoutItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
-    : getSelectedItemsCount();
+  const shippingCostFromOrder = resumeOrder?.shipping_cost ?? resumeOrder?.shippingCost;
+  const shippingCost = shippingCostFromOrder != null
+    ? Number(shippingCostFromOrder)
+    : selectedShipping === 'regular' ? 0 : selectedShipping === 'same-day' ? 15000 : 30000;
+  const subtotal = checkoutItems.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 0)), 0);
+  const itemsCount = checkoutItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const total = subtotal + shippingCost;
 
   const getItemImage = (item) => {
@@ -94,6 +230,10 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     const user = getCurrentUser();
+    userRef.current = user;
+    // Cleanup legacy global storage keys so old shared addresses stop showing up
+    localStorage.removeItem('checkout_addresses');
+    localStorage.removeItem('checkout_selected_address');
     const hasProfileAddress = user && user.address && user.city && user.province;
 
     const profileAddress = hasProfileAddress ? {
@@ -108,9 +248,10 @@ export default function CheckoutPage() {
       notes: user.address_note || ''
     } : null;
 
-    const savedAddressesRaw = localStorage.getItem(STORAGE_KEYS.addresses);
+    const storageKeys = getStorageKeys(user);
+    const savedAddressesRaw = localStorage.getItem(storageKeys.addresses);
     const savedAddresses = JSON.parse(savedAddressesRaw || '[]');
-    const savedSelected = localStorage.getItem(STORAGE_KEYS.selected);
+    const savedSelected = localStorage.getItem(storageKeys.selected);
 
     // Only show addresses when profil sudah ada alamat; otherwise hide all addresses.
     const mergedAddresses = hasProfileAddress
@@ -123,8 +264,28 @@ export default function CheckoutPage() {
         ? profileAddress?.id || mergedAddresses[0]?.id || null
         : null;
 
-    setAddresses(mergedAddresses);
-    setSelectedAddress(defaultSelected);
+    let nextAddresses = mergedAddresses;
+    let nextSelected = defaultSelected;
+
+    const resumeShipping = resumeOrder?.shipping_address || resumeOrder?.address;
+    if (resumeShipping) {
+      const resumeAddr = {
+        id: 'resume-order-address',
+        label: resumeShipping.label || 'Alamat Pesanan',
+        receiver: resumeShipping.recipient_name || resumeShipping.receiver || resumeShipping.name,
+        phone: resumeShipping.phone,
+        address: resumeShipping.full_address || resumeShipping.address,
+        city: resumeShipping.city || resumeShipping.regency,
+        province: resumeShipping.province,
+        postalCode: resumeShipping.postal_code || resumeShipping.postalCode,
+        notes: resumeShipping.notes,
+      };
+      nextAddresses = [resumeAddr, ...mergedAddresses];
+      nextSelected = resumeAddr.id;
+    }
+
+    setAddresses(nextAddresses);
+    setSelectedAddress(nextSelected);
     setMissingProfileAddress(!hasProfileAddress);
     setHasProfileAddress(!!hasProfileAddress);
     setShowAddressForm(false);
@@ -258,20 +419,34 @@ export default function CheckoutPage() {
     let orderResponse;
 
     try {
-      const orderReq = {
-        seller_id: sellerId,
-        items: itemsPayload,
-        shipping_address: shippingPayload,
-        shipping_cost: shippingCost,
-        buyer_notes: shippingAddress.notes,
-        payment_method: selectedPayment === 'transfer' ? 'manual_transfer' : 'midtrans',
-      };
+      if (restartPayment) {
+        orderResponse = resumeOrder;
+      } else {
+        const orderReq = {
+          seller_id: sellerId,
+          items: itemsPayload,
+          shipping_address: shippingPayload,
+          shipping_cost: shippingCost,
+          buyer_notes: shippingAddress.notes,
+          payment_method: selectedPayment === 'transfer' ? 'manual_transfer' : 'midtrans',
+        };
 
-      const created = await orderAPI.createOrder(orderReq);
-      orderResponse = created?.data;
+        const created = await orderAPI.createOrder(orderReq);
+        orderResponse = created?.data;
 
-      if (!orderResponse?.order_id) {
-        throw new Error('Order backend tidak mengembalikan order_id');
+        if (!orderResponse?.order_id) {
+          throw new Error('Order backend tidak mengembalikan order_id');
+        }
+
+        // Simpan ke localStorage untuk tampilan seller (agar langsung muncul di daftar pesanan/produk terjual)
+        persistSellerOrderLocal({
+          order: orderResponse,
+          address: shippingPayload,
+          itemsPayload,
+          shippingCost,
+          paymentMethod: orderReq.payment_method,
+          shippingService: selectedShipping
+        });
       }
     } catch (err) {
       console.error('Create order error:', err);
@@ -280,37 +455,41 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Request snap token from backend (using backend order id/number)
+    // Request snap token from backend (using backend order id/number) or reuse carried token
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/payments/snap-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          order_id: orderResponse.order_number || orderResponse.order_id,
-          amount: orderResponse.total_amount || orderResponse.total || total,
-          items: itemsPayload,
-          customer: {
-            name: shippingAddress.receiver,
-            phone: shippingAddress.phone,
-            address: shippingAddress.address,
-            city: shippingAddress.city,
-            province: shippingAddress.province,
-            postal_code: shippingAddress.postalCode
-          }
-        })
-      });
+      let snapToken = carriedSnapToken;
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || 'Gagal membuat transaksi Midtrans');
+      if (!snapToken) {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/payments/snap-token`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            order_id: orderResponse.order_number || orderResponse.order_id,
+            amount: orderResponse.total_amount || orderResponse.total || total,
+            items: itemsPayload,
+            customer: {
+              name: shippingAddress.receiver,
+              phone: shippingAddress.phone,
+              address: shippingAddress.address,
+              city: shippingAddress.city,
+              province: shippingAddress.province,
+              postal_code: shippingAddress.postalCode
+            }
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || 'Gagal membuat transaksi Midtrans');
+        }
+
+        const data = await res.json();
+        snapToken = data?.data?.token || data?.token;
+        if (!snapToken) throw new Error('Snap token tidak ditemukan');
       }
-
-      const data = await res.json();
-      const snapToken = data?.data?.token || data?.token;
-      if (!snapToken) throw new Error('Snap token tidak ditemukan');
 
       const normalizedOrder = adaptOrderForPaymentStatus({
         orderResponse,
@@ -450,7 +629,8 @@ export default function CheckoutPage() {
                             checked={selectedAddress === addr.id}
                             onChange={(e) => {
                               setSelectedAddress(e.target.value);
-                              localStorage.setItem(STORAGE_KEYS.selected, e.target.value);
+                              const keys = getStorageKeys(userRef.current);
+                              localStorage.setItem(keys.selected, e.target.value);
                             }}
                             className="mt-1"
                           />
@@ -696,8 +876,8 @@ export default function CheckoutPage() {
                 <div className="mb-4">
                   <h3 className="text-sm font-semibold text-gray-700 mb-2">Produk</h3>
                   <div className="divide-y border rounded-lg">
-                    {checkoutItems.map((item) => (
-                      <div key={item.id} className="py-2 px-3 flex items-center justify-between">
+                    {checkoutItems.map((item, idx) => (
+                      <div key={item.id || item.product_id || idx} className="py-2 px-3 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <img src={getItemImage(item)} alt={item.name} className="w-12 h-12 object-cover rounded-md border" loading="lazy" />
                           <div className="min-w-0">

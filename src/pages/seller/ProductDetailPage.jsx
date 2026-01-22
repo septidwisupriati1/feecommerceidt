@@ -8,8 +8,6 @@ import {
   ArrowLeftIcon,
   PencilIcon,
   TrashIcon,
-  CheckCircleIcon,
-  XCircleIcon,
   ExclamationTriangleIcon,
   ChartBarIcon,
   ClockIcon,
@@ -25,9 +23,10 @@ import {
   formatCurrency,
   formatDate,
   getProductStatusLabel,
-  getProductStatusColor,
   getStockStatus
 } from '../../services/sellerProductAPI';
+import { getProductDetail } from '../../services/sellerProductAPI';
+import buyerProductAPI from '../../services/buyerProductAPI';
 
 export default function ProductDetailPage() {
   const navigate = useNavigate();
@@ -39,18 +38,76 @@ export default function ProductDetailPage() {
   const [toast, setToast] = useState({ show: false, message: '' });
   const [navigateAfterToast, setNavigateAfterToast] = useState(false);
 
+  const normalizeImageValue = (img) => {
+    if (!img) return '';
+    if (typeof img === 'string') return img;
+    if (typeof img === 'object') return img.image_url || img.url || img.path || img.src || img.image || img.imageUrl || '';
+    return '';
+  };
+
   useEffect(() => {
     loadProduct();
   }, [id]);
 
-  const loadProduct = () => {
+  const loadProduct = async () => {
     try {
       setLoading(true);
-      const products = JSON.parse(localStorage.getItem('seller_products') || '[]');
-      const foundProduct = products.find(p => p.id === parseInt(id) || p.product_id === parseInt(id));
-      
-      if (foundProduct) {
-        setProduct(foundProduct);
+      let res = await getProductDetail(id);
+      // Support multiple response shapes: {success,data:{...}}, {data:{...}}, or direct product
+      let payload = res?.data?.data || res?.data || res;
+
+      // If seller endpoint fails or returns empty, fallback to buyer public API
+      if (!payload || res?.success === false) {
+        try {
+          const buyerRes = await buyerProductAPI.getProductDetail(id);
+          payload = buyerRes?.data || buyerRes?.data?.data || buyerRes;
+        } catch (e) {
+          console.warn('Fallback buyer product detail failed', e);
+        }
+      }
+
+      if (payload) {
+        const rawImages =
+          payload.images ||
+          payload.product_images ||
+          payload.images_url ||
+          payload.gallery || [];
+
+        const normalizedImages = Array.isArray(rawImages)
+          ? rawImages.map(normalizeImageValue).filter(Boolean)
+          : [
+              normalizeImageValue(payload.primary_image),
+              normalizeImageValue(payload.image_url),
+              normalizeImageValue(payload.image),
+              normalizeImageValue(payload.thumbnail),
+              normalizeImageValue(payload.cover_image)
+            ].filter(Boolean);
+
+        const normalized = {
+          ...payload,
+          product_id: payload.product_id || payload.id,
+          id: payload.product_id || payload.id,
+          name: payload.name,
+          price: payload.price,
+          stock: payload.stock,
+          status: payload.status,
+          category: payload.category?.name || payload.category,
+          condition: payload.condition || 'new',
+          images: normalizedImages,
+          primary_image:
+            normalizeImageValue(payload.primary_image) ||
+            normalizeImageValue(payload.image) ||
+            normalizeImageValue(payload.image_url) ||
+            normalizedImages[0],
+          description: payload.description,
+          created_at: payload.created_at,
+          updated_at: payload.updated_at,
+          weight: payload.weight,
+          length: payload.length,
+          width: payload.width,
+          height: payload.height,
+        };
+        setProduct(normalized);
       } else {
         setProduct(null);
       }
@@ -79,30 +136,6 @@ export default function ProductDetailPage() {
     } catch (error) {
       console.error('Error deleting product:', error);
       setToast({ show: true, message: 'Terjadi kesalahan saat menghapus produk' });
-    }
-  };
-
-  const handleToggleStatus = async () => {
-    try {
-      const products = JSON.parse(localStorage.getItem('seller_products') || '[]');
-      const productIndex = products.findIndex(p => 
-        p.id === parseInt(id) || p.product_id === parseInt(id)
-      );
-      
-      if (productIndex !== -1) {
-        const newStatus = products[productIndex].status === 'active' ? 'inactive' : 'active';
-        products[productIndex] = {
-          ...products[productIndex],
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        };
-        localStorage.setItem('seller_products', JSON.stringify(products));
-        setProduct(products[productIndex]);
-        setToast({ show: true, message: `Produk berhasil ${newStatus === 'active' ? 'diaktifkan' : 'dinonaktifkan'}!` });
-      }
-    } catch (error) {
-      console.error('Error toggling status:', error);
-      setToast({ show: true, message: 'Terjadi kesalahan saat mengubah status produk' });
     }
   };
 
@@ -143,9 +176,12 @@ export default function ProductDetailPage() {
     );
   }
 
-  const statusBadge = getProductStatusColor(product.status);
   const stockStatus = getStockStatus(product.stock);
-  const images = product.images || (product.primary_image ? [product.primary_image] : []);
+  const images = Array.isArray(product.images) && product.images.length
+    ? product.images.map(normalizeImageValue).filter(Boolean)
+    : normalizeImageValue(product.primary_image)
+      ? [normalizeImageValue(product.primary_image)]
+      : [];
   const isBase64 = (img) => typeof img === 'string' && img.startsWith('data:');
 
   return (
@@ -180,14 +216,6 @@ export default function ProductDetailPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button
-                  onClick={() => navigate(`/seller/product/edit/${id}`)}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white"
-                  size="sm"
-                >
-                  <PencilIcon className="h-4 w-4 md:mr-2" />
-                  <span className="hidden md:inline">Edit</span>
-                </Button>
               </div>
             </div>
           </div>
@@ -246,7 +274,7 @@ export default function ProductDetailPage() {
                 <CardContent className="p-6">
                   <div className="mb-4">
                     <div className="flex items-center gap-2 mb-3">
-                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusBadge}`}>
+                      <span className={`text-sm font-medium ${product.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>
                         {getProductStatusLabel(product.status)}
                       </span>
                       <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-semibold">
@@ -316,29 +344,26 @@ export default function ProductDetailPage() {
 
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <p className="text-sm text-gray-600 mb-2">Status Produk</p>
+                      <div className="px-3 py-2 rounded-md border border-gray-200 bg-white mb-3 text-center">
+                        <span className={`text-sm font-semibold ${product.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>
+                          {getProductStatusLabel(product.status)}
+                        </span>
+                      </div>
+                      <hr className="my-4 border-gray-200" />
                       <Button
-                        onClick={handleToggleStatus}
-                        className={`w-full ${
-                          product.status === 'active' 
-                            ? 'bg-green-600 hover:bg-green-700' 
-                            : 'bg-gray-600 hover:bg-gray-700'
-                        } text-white`}
+                        onClick={() => navigate(`/seller/product/edit/${id}`)}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white mb-3"
                       >
-                        {product.status === 'active' ? (
-                          <>
-                            <CheckCircleIcon className="h-5 w-5 mr-2" />
-                            Aktif
-                          </>
-                        ) : (
-                          <>
-                            <XCircleIcon className="h-5 w-5 mr-2" />
-                            Nonaktif
-                          </>
-                        )}
+                        <PencilIcon className="h-5 w-5 mr-2" />
+                        Edit Produk
                       </Button>
-                      <p className="text-xs text-gray-500 text-center mt-2">
-                        Klik untuk {product.status === 'active' ? 'menonaktifkan' : 'mengaktifkan'}
-                      </p>
+                      <Button
+                        onClick={handleDelete}
+                        className="w-full bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        <TrashIcon className="h-5 w-5 mr-2" />
+                        Hapus Produk
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -421,51 +446,6 @@ export default function ProductDetailPage() {
                 </CardContent>
               </Card>
 
-              {/* Action Buttons */}
-              <Card className="shadow-lg border-t-4 border-t-red-600">
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Aksi</h3>
-                  
-                  <div className="space-y-3">
-                    <Button
-                      onClick={() => navigate(`/seller/product/edit/${id}`)}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      <PencilIcon className="h-5 w-5 mr-2" />
-                      Edit Produk
-                    </Button>
-
-                    <Button
-                      onClick={handleToggleStatus}
-                      className={`w-full ${
-                        product.status === 'active' 
-                          ? 'bg-gray-600 hover:bg-gray-700' 
-                          : 'bg-green-600 hover:bg-green-700'
-                      } text-white`}
-                    >
-                      {product.status === 'active' ? (
-                        <>
-                          <XCircleIcon className="h-5 w-5 mr-2" />
-                          Nonaktifkan
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircleIcon className="h-5 w-5 mr-2" />
-                          Aktifkan
-                        </>
-                      )}
-                    </Button>
-
-                    <Button
-                      onClick={handleDelete}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white"
-                    >
-                      <TrashIcon className="h-5 w-5 mr-2" />
-                      Hapus Produk
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </div>

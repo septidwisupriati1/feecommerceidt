@@ -123,25 +123,22 @@ export const createProduct = async (productData) => {
       throw new Error('Token tidak ditemukan. Silakan login kembali.');
     }
     
-    const headers = {
-      'Authorization': `Bearer ${token}`
-      // Don't set Content-Type for FormData, browser will set it automatically with boundary
-    };
+    const isFormData = typeof FormData !== 'undefined' && productData instanceof FormData;
 
-    console.log('Creating product with URL:', `${API_BASE_URL}/products`);
-    console.log('Token present:', !!token);
+    const headers = isFormData
+      ? { 'Authorization': `Bearer ${token}` }
+      : {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        };
 
     const response = await fetch(`${API_BASE_URL}/products`, {
       method: 'POST',
-      headers: headers,
-      body: productData // FormData object, not JSON
+      headers,
+      body: isFormData ? productData : JSON.stringify(productData)
     });
 
-    console.log('Response status:', response.status);
-    console.log('Response ok:', response.ok);
-
     const data = await response.json();
-    console.log('Response data:', data);
 
     if (!response.ok) {
       throw new Error(data.error || data.message || 'Gagal membuat produk');
@@ -150,6 +147,42 @@ export const createProduct = async (productData) => {
     return data;
   } catch (error) {
     console.error('Error creating product:', error);
+    throw error;
+  }
+};
+
+/**
+ * Upload product images (multipart/form-data)
+ * @param {File[]} filesArray - Array of File objects
+ * @returns {Promise<Object>} Upload response containing image URLs
+ */
+export const uploadProductImages = async (filesArray = []) => {
+  try {
+    const token = getAuthToken();
+    if (!token) throw new Error('Token tidak ditemukan. Silakan login kembali.');
+
+    const formData = new FormData();
+    filesArray.forEach((file) => {
+      formData.append('product_images', file);
+    });
+
+    const response = await fetch(`${API_BASE_URL}/products/images/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || data.message || 'Gagal mengupload gambar produk');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error uploading product images:', error);
     throw error;
   }
 };

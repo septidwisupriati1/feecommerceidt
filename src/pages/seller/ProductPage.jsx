@@ -4,10 +4,8 @@ import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import SellerSidebar from "../../components/SellerSidebar";
-import EmptyState from "../../components/EmptyState";
 import Footer from '../../components/Footer';
 import { getProductImageUrl, handleImageError } from '../../utils/imageHelper';
-import { isNewSeller } from '../../utils/sellerStatus';
 import {
   MagnifyingGlassIcon,
   PlusIcon,
@@ -30,9 +28,7 @@ import {
   getProductStatusLabel,
   getProductStatusColor,
   getStockStatus,
-  getProductStats
 } from '../../services/sellerProductAPI';
-import { getDummyStats } from '../../utils/dummyProducts';
 
 export default function ProductPage() {
   const navigate = useNavigate();
@@ -45,7 +41,6 @@ export default function ProductPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
-  const [isNewSeller, setIsNewSeller] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -67,28 +62,12 @@ export default function ProductPage() {
 
   const fetchCategories = async () => {
     try {
-      // TEMPORARY: Gunakan kategori statis untuk frontend testing
-      const staticCategories = [
-        { id: 1, name: 'Elektronik' },
-        { id: 2, name: 'Fashion Pria' },
-        { id: 3, name: 'Fashion Wanita' },
-        { id: 4, name: 'Kesehatan & Kecantikan' },
-        { id: 5, name: 'Makanan & Minuman' },
-        { id: 6, name: 'Rumah Tangga' },
-        { id: 7, name: 'Olahraga' },
-        { id: 8, name: 'Mainan & Hobi' },
-        { id: 9, name: 'Buku & Alat Tulis' },
-        { id: 10, name: 'Otomotif' }
-      ];
-      setCategories(staticCategories);
-
-      // TODO: Uncomment when backend ready
-      /*
       const response = await getCategories();
-      if (response.success) {
+      if (response?.success && Array.isArray(response.data)) {
+        setCategories(response.data);
+      } else if (Array.isArray(response?.data)) {
         setCategories(response.data);
       }
-      */
     } catch (err) {
       console.error('Error fetching categories:', err);
     }
@@ -99,56 +78,6 @@ export default function ProductPage() {
       setLoading(true);
       setError(null);
 
-      // TEMPORARY: Ambil dari localStorage untuk frontend testing
-      const localProducts = JSON.parse(localStorage.getItem('seller_products') || '[]');
-      
-      // Filter berdasarkan status
-      let filteredProducts = localProducts;
-      if (filterStatus) {
-        filteredProducts = filteredProducts.filter(p => p.status === filterStatus);
-      }
-      
-      // Filter berdasarkan kategori (mendukung array atau string)
-      if (filterCategory) {
-        filteredProducts = filteredProducts.filter(p => {
-          if (Array.isArray(p.category)) {
-            return p.category.includes(filterCategory);
-          }
-          if (Array.isArray(p.categories)) {
-            return p.categories.includes(filterCategory) || p.categories.some(c => c?.name === filterCategory || c?.category_id === filterCategory);
-          }
-          if (typeof p.category === 'object' && p.category !== null) {
-            return p.category.name === filterCategory || p.category.category_id === filterCategory;
-          }
-          return p.category === filterCategory;
-        });
-      }
-      
-      // Filter berdasarkan search query
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        filteredProducts = filteredProducts.filter(p => 
-          p.name.toLowerCase().includes(query) || 
-          p.description.toLowerCase().includes(query)
-        );
-      }
-
-      // Simulasi pagination
-      const startIndex = (pagination.page - 1) * pagination.limit;
-      const endIndex = startIndex + pagination.limit;
-      const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
-      
-      setProducts(paginatedProducts);
-      setPagination({
-        ...pagination,
-        total: filteredProducts.length,
-        totalPages: Math.ceil(filteredProducts.length / pagination.limit),
-        hasNext: endIndex < filteredProducts.length,
-        hasPrev: pagination.page > 1
-      });
-
-      // TODO: Uncomment when backend ready
-      /*
       const response = await getProducts({
         status: filterStatus,
         category_id: filterCategory,
@@ -157,13 +86,14 @@ export default function ProductPage() {
         search: searchQuery
       });
 
-      if (response.success) {
-        setProducts(response.data);
-        setPagination(response.pagination);
+      if (response?.success) {
+        setProducts(response.data || []);
+        if (response.pagination) {
+          setPagination(response.pagination);
+        }
       } else {
-        setError(response.error || 'Gagal mengambil data produk');
+        setError(response?.error || response?.message || 'Gagal mengambil data produk');
       }
-      */
     } catch (err) {
       setError(err.message || 'Terjadi kesalahan saat mengambil data');
     } finally {
@@ -187,64 +117,27 @@ export default function ProductPage() {
 
     try {
       setLoading(true);
-      
-      // TEMPORARY: Delete dari localStorage
-      const localProducts = JSON.parse(localStorage.getItem('seller_products') || '[]');
-      const updatedProducts = localProducts.filter(p => p.id !== productId);
-      localStorage.setItem('seller_products', JSON.stringify(updatedProducts));
-      
-      setToast({ show: true, message: 'Produk berhasil dihapus' });
-      fetchProducts();
 
-      // TODO: Uncomment when backend ready
-      /*
       const response = await deleteProduct(productId);
-      
-      if (response.success) {
+      if (response?.success) {
         setToast({ show: true, message: 'Produk berhasil dihapus' });
         fetchProducts();
       } else {
-        setToast({ show: true, message: 'Gagal menghapus produk: ' + response.error });
+        setToast({ show: true, message: 'Gagal menghapus produk' });
       }
-      */
     } catch (err) {
       setToast({ show: true, message: 'Error: ' + err.message });
     } finally {
       setLoading(false);
     }
   };
-
-  // TEMPORARY: Get stats from localStorage
-  const stats = getDummyStats();
-  
-  // Check if seller has any products
-  const checkIfNewSeller = () => {
-    try {
-      const products = localStorage.getItem('seller_products');
-      return !products || JSON.parse(products).length === 0;
-    } catch (e) {
-      return true;
-    }
+  const stats = {
+    total: pagination.total || 0,
+    active: products.filter(p => p.status === 'active').length,
+    inactive: products.filter(p => p.status === 'inactive').length,
+    outOfStock: products.filter(p => p.stock === 0).length,
+    lowStock: products.filter(p => p.stock > 0 && p.stock <= 5).length,
   };
-  
-  // Show empty state for new sellers
-  if (checkIfNewSeller()) {
-    return (
-      <SellerSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen}>
-        <div className="min-h-screen bg-gray-50">
-          <div className="container mx-auto px-4 py-12">
-            <EmptyState
-              title="Belum Ada Produk"
-              description="Anda belum menambahkan produk. Mulai tambahkan produk pertama Anda untuk mulai berjualan."
-              actionLabel="Tambah Produk"
-              onAction={() => navigate('/seller/product/add')}
-              icon="box"
-            />
-          </div>
-        </div>
-      </SellerSidebar>
-    );
-  }
 
   return (
     <SellerSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen}>
@@ -413,10 +306,22 @@ export default function ProductPage() {
             products.map((product) => {
               const statusBadge = getProductStatusColor(product.status);
               const stockStatus = getStockStatus(product.stock);
-              
-              // TEMPORARY: Handle localStorage images (base64) or API images
-              const primaryImage = product.primary_image || product.images?.[0];
-              const isBase64 = typeof primaryImage === 'string' && primaryImage.startsWith('data:');
+              const getImageValue = (img) => {
+                if (!img) return '';
+                if (typeof img === 'string') return img;
+                if (typeof img === 'object') return img.image_url || img.url || img.path || img.src || img.image || img.imageUrl || '';
+                return '';
+              };
+
+              const primaryImageUrl = getImageValue(product.primary_image)
+                || getImageValue(product.image)
+                || getImageValue(product.image_url)
+                || getImageValue(product.thumbnail)
+                || getImageValue(product.cover_image)
+                || getImageValue(product.images?.find?.(img => img.is_primary))
+                || getImageValue(product.images?.[0]);
+
+              const isBase64 = typeof primaryImageUrl === 'string' && primaryImageUrl.startsWith('data:');
               
               return (
                 <Card key={product.product_id || product.id} className="shadow-lg hover:shadow-xl transition-shadow">
@@ -424,9 +329,9 @@ export default function ProductPage() {
                     <div className="flex gap-6">
                       {/* Product Image */}
                       <div className="flex-shrink-0">
-                        {primaryImage ? (
+                        {primaryImageUrl ? (
                           <img
-                            src={isBase64 ? primaryImage : getProductImageUrl(primaryImage)}
+                            src={isBase64 ? primaryImageUrl : getProductImageUrl(primaryImageUrl)}
                             alt={product.name}
                             className="w-32 h-32 object-cover rounded-lg"
                             onError={(e) => handleImageError(e, 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="128" height="128"%3E%3Crect fill="%23e5e7eb" width="128" height="128"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-size="48"%3E📦%3C/text%3E%3C/svg%3E')}
