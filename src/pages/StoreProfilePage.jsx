@@ -135,19 +135,21 @@ export default function StoreProfilePage(){
         <div className="mb-4">
           <Button variant="ghost" onClick={() => navigate(-1)} className="px-3">← Kembali</Button>
         </div>
-        <div className="bg-white rounded-lg p-6 flex items-center gap-4">
-          <div style={{width:80,height:80,borderRadius:999,overflow:'hidden',background:'#f3f4f6',display:'flex',alignItems:'center',justifyContent:'center'}}>
-            {sellerPhoto ? (
-              <img src={getImageUrl(sellerPhoto)} alt={sellerDisplayName} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={(e)=>e.target.style.display='none'} />
-            ) : (
-              <div style={{fontWeight:700,fontSize:24}}>{(sellerDisplayName||'T').slice(0,2).toUpperCase()}</div>
-            )}
-          </div>
-          <div>
-            <h1 style={{fontSize:24,fontWeight:700}}>{sellerDisplayName}</h1>
-            <div style={{color:'#6b7280'}}>Toko • Menjual {storeProducts.length} produk</div>
-          </div>
-        </div>
+        <Card className="mb-4">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div style={{width:80,height:80,borderRadius:999,overflow:'hidden',background:'#f3f4f6',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              {sellerPhoto ? (
+                <img src={getImageUrl(sellerPhoto)} alt={sellerDisplayName} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={(e)=>e.target.style.display='none'} />
+              ) : (
+                <div style={{fontWeight:700,fontSize:24}}>{(sellerDisplayName||'T').slice(0,2).toUpperCase()}</div>
+              )}
+            </div>
+            <div>
+              <h1 style={{fontSize:24,fontWeight:700}}>{sellerDisplayName}</h1>
+              <div style={{color:'#6b7280'}}>Toko • Menjual {storeProducts.length} produk</div>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="mt-6">
           <div className="flex flex-col lg:flex-row gap-8">
