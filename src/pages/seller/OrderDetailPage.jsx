@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -25,6 +26,11 @@ export default function OrderDetailPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [order, setOrder] = useState(null);
   const [showPaymentProof, setShowPaymentProof] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState(null);
+  const [proofFile, setProofFile] = useState(null);
+  const [proofPreview, setProofPreview] = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     // Load order from localStorage
@@ -105,6 +111,81 @@ export default function OrderDetailPage() {
       </SellerSidebar>
     );
   }
+
+  const handleFileChange = (e) => {
+    const f = e.target.files[0];
+    if (f) {
+      setProofFile(f);
+      const url = URL.createObjectURL(f);
+      setProofPreview(url);
+    } else {
+      setProofFile(null);
+      setProofPreview(null);
+    }
+  };
+
+  const handleSubmitComplete = async () => {
+    try {
+      const fd = new FormData();
+      fd.append('status', selectedStatus);
+      if (proofFile) fd.append('order_proof', proofFile);
+
+      // Try common token keys
+      const tokenKeys = ['token', 'auth_token', 'access_token', 'ecom_token'];
+      let token = null;
+      for (const k of tokenKeys) {
+        const t = localStorage.getItem(k) || sessionStorage.getItem(k);
+        if (t) {
+          token = t;
+          break;
+        }
+      }
+
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      const apiBase = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
+      const apiOrderId = order.order_id || order.id || order.orderId || orderId;
+
+      const res = await fetch(`${apiBase}/api/ecommerce/seller/orders/${apiOrderId}/status`, {
+        method: 'PUT',
+        headers,
+        body: fd,
+      });
+
+      let text = null;
+      try {
+        text = await res.text();
+      } catch (e) {
+        console.error('Failed reading response body', e);
+      }
+
+      if (res.ok) {
+        // try parse json
+        try {
+          const json = JSON.parse(text);
+          setOrder(prev => ({ ...prev, status: json.data?.order_status || selectedStatus }));
+        } catch (e) {
+          setOrder(prev => ({ ...prev, status: selectedStatus }));
+        }
+        setShowCompleteModal(false);
+        return;
+      }
+
+      // Non-ok response: show details
+      console.error('Update status failed', res.status, text);
+      let serverMessage = 'Gagal mengubah status pesanan';
+      try {
+        const json = JSON.parse(text || '{}');
+        serverMessage = json.message || json.error || serverMessage;
+      } catch (e) {
+        if (text) serverMessage = text;
+      }
+      alert(serverMessage);
+    } catch (err) {
+      console.error('Network or unexpected error while updating status', err);
+      alert('Terjadi kesalahan saat mengirim perubahan status. Lihat console untuk detail.');
+    }
+  };
 
   const statusInfo = getStatusBadge(order.status);
   const StatusIcon = statusInfo.icon;
@@ -374,6 +455,18 @@ export default function OrderDetailPage() {
                     <DocumentTextIcon className="h-4 w-4 mr-2" />
                     Cetak Invoice
                   </Button>
+                  <Button
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                    onClick={() => {
+                      setSelectedStatus(order.status);
+                      setProofFile(null);
+                      setProofPreview(null);
+                      setShowCompleteModal(true);
+                    }}
+                  >
+                    <CheckCircleIcon className="h-4 w-4 mr-2" />
+                    Selesaikan Pesanan
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -417,6 +510,65 @@ export default function OrderDetailPage() {
                 <p className="text-sm text-gray-600">
                   <strong>Diunggah pada:</strong> {formatDate(order.paymentProof?.uploadedAt || order.orderDate)}
                 </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Complete / Update Status Modal */}
+      {showCompleteModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowCompleteModal(false)}
+        >
+          <div className="relative max-w-2xl w-full bg-white rounded-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
+              <h3 className="text-lg font-bold text-gray-900">Ubah Status Pesanan - {order.orderNumber}</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCompleteModal(false)}
+              >
+                <XCircleIcon className="h-5 w-5" />
+              </Button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Ubah Status Pesanan</label>
+                <select
+                  value={selectedStatus || ''}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="w-full border rounded p-2"
+                >
+                  <option value="pending">Menunggu Pembayaran</option>
+                  <option value="paid">Sudah Dibayar</option>
+                  <option value="processing">Diproses</option>
+                  <option value="shipped">Dikirim</option>
+                  <option value="delivered">Selesai (Diterima)</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Dibatalkan</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Bukti (gambar)</label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="w-full"
+                />
+                {proofPreview && (
+                  <div className="mt-3">
+                    <img src={proofPreview} alt="preview" className="w-full max-h-64 object-contain rounded-lg border" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setShowCompleteModal(false)}>Batal</Button>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSubmitComplete}>Simpan</Button>
               </div>
             </div>
           </div>

@@ -111,9 +111,9 @@ export default function MyOrdersPage() {
         icon: ClockIcon 
       },
       paid: { 
-        label: 'Menunggu Konfirmasi', 
-        color: 'bg-blue-100 text-blue-800 border-blue-300',
-        icon: ClockIcon 
+        label: 'Sudah Dibayar', 
+        color: 'bg-green-100 text-green-800 border-green-300',
+        icon: CheckCircleIcon 
       },
       processing: { 
         label: 'Diproses', 
