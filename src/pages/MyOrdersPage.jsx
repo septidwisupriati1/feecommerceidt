@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import BuyerNavbar from "../components/BuyerNavbar";
 import Footer from "../components/Footer";
 import { Button } from "../components/ui/button";
@@ -21,7 +21,8 @@ import {
 
 export default function MyOrdersPage() {
   const navigate = useNavigate();
-  const location = useLocation();
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [modalOrder, setModalOrder] = useState(null);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,8 +33,6 @@ export default function MyOrdersPage() {
     total: 0,
     total_pages: 0
   });
-  const [targetOrderId, setTargetOrderId] = useState(null);
-  const orderRefs = useRef({});
   
   // TODO: Temporarily disabled due to import issue
   // const newBuyer = isNewBuyer();
@@ -64,12 +63,6 @@ export default function MyOrdersPage() {
   useEffect(() => {
     fetchOrders();
   }, [selectedFilter, pagination.page]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const orderIdParam = params.get('order_id');
-    setTargetOrderId(orderIdParam);
-  }, [location.search]);
 
   const fetchOrders = async () => {
     try {
@@ -109,24 +102,6 @@ export default function MyOrdersPage() {
     }
   };
 
-  useEffect(() => {
-    if (loading) return;
-    if (!targetOrderId) return;
-    const ref = orderRefs.current[targetOrderId];
-    if (ref) {
-      const headerOffset = 120; // adjust to navbar height
-      const rect = ref.getBoundingClientRect();
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const targetTop = rect.top + scrollTop - headerOffset;
-      window.scrollTo({ top: targetTop, behavior: 'smooth' });
-
-      ref.classList.add('ring-2', 'ring-yellow-400', 'bg-yellow-50');
-      setTimeout(() => {
-        ref.classList.remove('ring-2', 'ring-yellow-400', 'bg-yellow-50');
-      }, 2000);
-    }
-  }, [loading, orders, targetOrderId]);
-
   // Status badges
   const getStatusBadge = (status) => {
     const badges = {
@@ -136,9 +111,9 @@ export default function MyOrdersPage() {
         icon: ClockIcon 
       },
       paid: { 
-        label: 'Sudah Dibayar', 
-        color: 'bg-green-100 text-green-800 border-green-300',
-        icon: CheckCircleIcon 
+        label: 'Menunggu Konfirmasi', 
+        color: 'bg-blue-100 text-blue-800 border-blue-300',
+        icon: ClockIcon 
       },
       processing: { 
         label: 'Diproses', 
@@ -417,15 +392,9 @@ export default function MyOrdersPage() {
 
               return (
                 <Card 
-                  key={order.order_id} 
-                  ref={(el) => {
-                    if (el) {
-                      orderRefs.current[order.order_id] = el;
-                    }
-                  }}
-                  className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
-                  onClick={() => navigate(`/pesanan/${order.order_id}`)}
-                >
+                      key={order.order_id} 
+                      className="overflow-hidden"
+                    >
                   <CardContent className="p-0">
                     {/* Order Header */}
                     <div className="bg-gradient-to-r from-blue-50 to-white p-4 border-b">
@@ -710,9 +679,10 @@ export default function MyOrdersPage() {
                           variant="outline"
                           onClick={(e) => {
                             e.stopPropagation(); // Prevent card click
-                            navigate(`/pesanan/${order.order_id}`);
+                            setModalOrder(order);
+                            setShowDetailModal(true);
                           }}
-                          className="w-full md:w-auto"
+                          className="w-full md:w-auto hover:cursor-pointer"
                         >
                           📋 Lihat Detail Lengkap
                         </Button>
@@ -724,6 +694,71 @@ export default function MyOrdersPage() {
             })
           )}
         </div>
+
+        {/* Detail Modal */}
+        {showDetailModal && modalOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black opacity-50" onClick={() => setShowDetailModal(false)}></div>
+            <div className="relative w-full max-w-4xl mx-4">
+              <Card>
+                <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-4">
+                    <h3 className="text-lg font-bold">Detail Pesanan - {modalOrder.order_number}</h3>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" onClick={() => setShowDetailModal(false)} className="hover:cursor-pointer">Tutup</Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 max-h-[60vh] overflow-auto pr-2">
+                    <div className="space-y-3">
+                      {modalOrder.items?.map((item) => (
+                        <div key={item.order_item_id} className="flex gap-4 pb-4 border-b last:border-0">
+                          <img
+                            src={item.product_image || 'https://via.placeholder.com/100'}
+                            alt={item.product_name}
+                            className="w-20 h-20 object-cover rounded-lg border"
+                          />
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900 mb-1">{item.product_name}</h4>
+                            {item.variant && <p className="text-xs text-gray-500 mb-1">{item.variant}</p>}
+                            <p className="text-sm text-gray-600">{item.quantity} x {formatPrice(item.price)}</p>
+                            <p className="text-sm font-semibold text-red-600">Subtotal: {formatPrice(item.subtotal || (item.quantity * item.price))}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                      <div>
+                        <h4 className="font-semibold">Informasi Pengiriman</h4>
+                        <p className="text-sm text-gray-600 mt-1">{modalOrder.shipping_address?.recipient_name}</p>
+                        <p className="text-sm text-gray-600">{modalOrder.shipping_address?.full_address || modalOrder.shipping_address}</p>
+                        <p className="text-sm text-gray-600">{modalOrder.shipping_address?.recipient_phone}</p>
+                        <div className="mt-2">
+                          <p className="text-sm text-gray-600">Kurir: {modalOrder.tracking?.shipping_courier || modalOrder.shipping_courier || '-'}</p>
+                          {modalOrder.tracking?.tracking_number && (
+                            <p className="text-sm text-gray-600">Resi: {modalOrder.tracking.tracking_number}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold">Pembayaran & Ringkasan</h4>
+                        <p className="text-sm text-gray-600 mt-1">Metode: {getPaymentLabel(modalOrder.payment_method)}</p>
+                        <p className="text-sm text-gray-600">Status Pembayaran: {modalOrder.payment_status}</p>
+                        <div className="mt-3 bg-blue-50 p-3 rounded">
+                          <div className="flex justify-between text-sm"><span>Subtotal</span><span>{formatPrice(modalOrder.subtotal)}</span></div>
+                          <div className="flex justify-between text-sm"><span>Ongkir</span><span>{formatPrice(modalOrder.shipping_cost)}</span></div>
+                          <div className="flex justify-between font-bold pt-2 border-t"><span>Total</span><span className="text-red-600">{formatPrice(modalOrder.total_amount)}</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
 
         {/* Pagination */}
         {pagination.total_pages > 1 && (
