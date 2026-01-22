@@ -24,6 +24,21 @@ import {
 
 export default function NotificationPage() {
   const navigate = useNavigate();
+  const BUYER_ALLOWED_TYPES = [
+    'SYSTEM_WELCOME',
+    'ORDER_PLACED',
+    'ORDER_STATUS_UPDATED',
+    'ORDER_SHIPPED',
+    'ORDER_DELIVERED',
+    'ORDER_CANCELED',
+    'PAYMENT_CONFIRMED',
+    'PAYMENT_FAILED',
+    'REFUND_PROCESSED',
+    'ADMIN_BROADCAST',
+    'ADMIN_DIRECT',
+    'SYSTEM_MAINTENANCE',
+  ];
+  
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);

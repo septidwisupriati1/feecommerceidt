@@ -75,6 +75,7 @@ import AdminKebijakanPrivasiPage from './pages/admin/KebijakanPrivasiPage';
 import AdminFAQPage from './pages/admin/FAQPage';
 import ProfilSTPPage from './pages/admin/ProfilSTPPage';
 import AdminProfilePage from './pages/admin/ProfilePage';
+import StoreProfilePage from './pages/StoreProfilePage';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -167,6 +168,8 @@ function App() {
           <Route path="/admin/faq" element={<ProtectedRoute requiredRole="admin"><AdminFAQPage /></ProtectedRoute>} />
           <Route path="/admin/profil-stp" element={<ProtectedRoute requiredRole="admin"><ProfilSTPPage /></ProtectedRoute>} />
           <Route path="/admin/profile" element={<ProtectedRoute requiredRole="admin"><AdminProfilePage /></ProtectedRoute>} />
+          {/* Public store profile by store name (placed last to avoid clashing with other routes) */}
+          <Route path="/:storeName" element={<StoreProfilePage />} />
         </Routes>
         
         {/* Debug Panel - Only shows in development */}
