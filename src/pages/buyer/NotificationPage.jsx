@@ -24,21 +24,6 @@ import {
 
 export default function NotificationPage() {
   const navigate = useNavigate();
-  const BUYER_ALLOWED_TYPES = [
-    'SYSTEM_WELCOME',
-    'ORDER_PLACED',
-    'ORDER_STATUS_UPDATED',
-    'ORDER_SHIPPED',
-    'ORDER_DELIVERED',
-    'ORDER_CANCELED',
-    'PAYMENT_CONFIRMED',
-    'PAYMENT_FAILED',
-    'REFUND_PROCESSED',
-    'ADMIN_BROADCAST',
-    'ADMIN_DIRECT',
-    'SYSTEM_MAINTENANCE',
-  ];
-  
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -54,7 +39,7 @@ export default function NotificationPage() {
       const params = {
         page: currentPage,
         pageSize: 20,
-        allowedTypes: BUYER_ALLOWED_TYPES,
+        // Show all notification types so badge and list stay aligned
       };
 
       const data = await getNotifications(params);
@@ -78,7 +63,7 @@ export default function NotificationPage() {
   // Fetch unread count
   const fetchUnreadCount = async () => {
     try {
-      const count = await getUnreadCount(null, { allowedTypes: BUYER_ALLOWED_TYPES });
+      const count = await getUnreadCount();
       setUnreadCount(count);
     } catch (error) {
       console.error('Error fetching unread count:', error);

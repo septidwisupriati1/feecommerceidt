@@ -54,12 +54,9 @@ const BUYER_ALLOWED_TYPES = [
 
 const filterNotificationsByRole = (items, allowedTypes) => {
   const notifications = items || [];
-  const role = getUserRole();
+  // If caller passes allowedTypes, respect it; otherwise return everything
   if (allowedTypes?.length) {
     return notifications.filter(n => allowedTypes.includes(n.type));
-  }
-  if (role === 'buyer') {
-    return notifications.filter(n => BUYER_ALLOWED_TYPES.includes(n.type));
   }
   return notifications;
 };
@@ -117,6 +114,12 @@ export const getNotifications = async (params = {}) => {
 export const getUnreadCount = async (type = null, options = {}) => {
   const { allowedTypes } = options;
   try {
+    // If caller specifies allowedTypes, align badge with the same client-side filter as the list
+    if (allowedTypes && allowedTypes.length > 0) {
+      const list = await getNotifications({ unread: true, type, allowedTypes, pageSize: 100 });
+      return (list.items || []).length;
+    }
+
     const queryParams = type ? `?type=${type}` : '';
     
     const response = await fetch(
