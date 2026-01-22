@@ -15,6 +15,7 @@ import {
 } from '../components/ui/select'
 import { Loader2 } from 'lucide-react'
 import { browseProducts, getCategories } from '../services/productAPI'
+import BuyerNavbar from '../components/BuyerNavbar'
 
 function slugify(name){
   if(!name) return ''
@@ -130,7 +131,9 @@ export default function StoreProfilePage(){
   const sellerPhoto = storeProducts[0]?.seller?.store_photo || storeProducts[0]?.seller_photo || storeProducts[0]?.store_photo || ''
 
   return (
-    <div style={{minHeight:'100vh', paddingTop:40, paddingBottom:80}}>
+    <>
+      <BuyerNavbar />
+      <div style={{minHeight:'100vh', paddingTop:40, paddingBottom:80}}>
       <div className="container mx-auto px-4">
         <div className="mb-4">
           <Button variant="ghost" onClick={() => navigate(-1)} className="px-3">← Kembali</Button>
@@ -267,6 +270,7 @@ export default function StoreProfilePage(){
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }
