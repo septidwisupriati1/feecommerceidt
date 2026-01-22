@@ -5,13 +5,17 @@ import { DocumentTextIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/rea
 import syaratKetentuanData from '../../data/syaratKetentuanData';
 
 const SyaratKetentuanPage = () => {
-  const [expandedSection, setExpandedSection] = useState(null);
+  const [expandedSections, setExpandedSections] = useState([]);
 
   // Ambil data dari file terpisah
   const { lastUpdated, introduction, sections, contact, agreement, note } = syaratKetentuanData;
 
   const toggleSection = (id) => {
-    setExpandedSection(expandedSection === id ? null : id);
+    setExpandedSections((prev) =>
+      prev.includes(id)
+        ? prev.filter((sectionId) => sectionId !== id)
+        : [...prev, id]
+    );
   };
 
   return (
@@ -59,13 +63,13 @@ const SyaratKetentuanPage = () => {
                 className="w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors"
               >
                 <h3 className="text-lg font-semibold text-gray-800 text-left">{section.title}</h3>
-                {expandedSection === section.id ? (
+                {expandedSections.includes(section.id) ? (
                   <ChevronUpIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />
                 ) : (
                   <ChevronDownIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />
                 )}
               </button>
-              {expandedSection === section.id && (
+              {expandedSections.includes(section.id) && (
                 <div className="px-6 pb-6">
                   <ul className="space-y-3">
                     {section.items.map((item, index) => (
