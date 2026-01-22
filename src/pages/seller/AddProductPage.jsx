@@ -13,7 +13,7 @@ import {
   InformationCircleIcon,
   Bars3Icon
 } from '@heroicons/react/24/outline';
-import { createProduct, getCategories as fetchCategoriesApi } from '../../services/sellerProductAPI';
+import { createProduct, getCategories as fetchCategoriesApi, uploadProductImages } from '../../services/sellerProductAPI';
 import CartSuccessToast from '../../components/CartSuccessToast';
 
 export default function AddProductPage() {
@@ -75,14 +75,14 @@ export default function AddProductPage() {
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files);
     
-    if (imagePreviews.length + files.length > 5) {
-      alert('Maksimal 5 gambar');
+    if (imagePreviews.length + files.length > 3) {
+      alert('Maksimal 3 gambar');
       return;
     }
 
     files.forEach(file => {
-      if (file.size > 2 * 1024 * 1024) {
-        alert('Ukuran file maksimal 2MB');
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Ukuran file maksimal 5MB');
         return;
       }
 
@@ -129,21 +129,21 @@ export default function AddProductPage() {
       newErrors.category_id = 'Kategori harus dipilih';
     }
 
-    // Opsional: berat & dimensi, hanya validasi jika diisi
-    if (formData.weight && parseFloat(formData.weight) <= 0) {
-      newErrors.weight = 'Berat harus lebih dari 0 jika diisi';
+    // Shipping info are REQUIRED by backend
+    if (!formData.weight || parseFloat(formData.weight) <= 0) {
+      newErrors.weight = 'Berat harus diisi dan lebih dari 0';
     }
 
-    if (formData.length && parseFloat(formData.length) <= 0) {
-      newErrors.length = 'Panjang harus lebih dari 0 jika diisi';
+    if (!formData.length || parseFloat(formData.length) <= 0) {
+      newErrors.length = 'Panjang harus diisi dan lebih dari 0';
     }
 
-    if (formData.width && parseFloat(formData.width) <= 0) {
-      newErrors.width = 'Lebar harus lebih dari 0 jika diisi';
+    if (!formData.width || parseFloat(formData.width) <= 0) {
+      newErrors.width = 'Lebar harus diisi dan lebih dari 0';
     }
 
-    if (formData.height && parseFloat(formData.height) <= 0) {
-      newErrors.height = 'Tinggi harus lebih dari 0 jika diisi';
+    if (!formData.height || parseFloat(formData.height) <= 0) {
+      newErrors.height = 'Tinggi harus diisi dan lebih dari 0';
     }
 
     if (formData.images.length === 0) {
@@ -165,6 +165,15 @@ export default function AddProductPage() {
     setLoading(true);
 
     try {
+      // First upload images to backend and get URLs
+      const uploadRes = await uploadProductImages(formData.images);
+      let uploadedImages = [];
+      if (uploadRes && uploadRes.success && uploadRes.data && Array.isArray(uploadRes.data.images)) {
+        uploadedImages = uploadRes.data.images.map(img => ({ url: img.url }));
+      } else if (uploadRes && Array.isArray(uploadRes.images)) {
+        uploadedImages = uploadRes.images.map(img => ({ url: img.url }));
+      }
+
       const payload = {
         name: formData.name,
         description: formData.description,
@@ -172,12 +181,12 @@ export default function AddProductPage() {
         stock: parseInt(formData.stock),
         category_id: parseInt(formData.category_id),
         status: 'active',
-        weight: formData.weight ? parseFloat(formData.weight) : undefined,
+        weight: parseFloat(formData.weight),
         weight_unit: formData.weight_unit || 'gram',
-        length: formData.length ? parseFloat(formData.length) : undefined,
-        width: formData.width ? parseFloat(formData.width) : undefined,
-        height: formData.height ? parseFloat(formData.height) : undefined,
-        images: imagePreviews.map((url) => ({ url })),
+        length: parseFloat(formData.length),
+        width: parseFloat(formData.width),
+        height: parseFloat(formData.height),
+        images: uploadedImages,
         variants: [],
       };
 

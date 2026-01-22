@@ -224,6 +224,7 @@ export default function ProductDetailPage() {
   const sellerPhoto = buildImageUrl(product?.seller_photo);
   const sellerName = product?.seller_name || 'Toko';
 
+  const toSlug = (name) => String(name || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
   const handleChatSeller = () => {
     if (!sellerUserId) {
       alert('ID penjual tidak ditemukan. Coba muat ulang halaman.');
@@ -467,7 +468,14 @@ export default function ProductDetailPage() {
                           <ChatBubbleLeftIcon className="h-5 w-5 mr-1" />
                           Chat
                         </Button>
-                        <Button variant="outline" className="bg-red-600 text-white hover:bg-red-700 border-none cursor-pointer">
+                        <Button
+                          variant="outline"
+                          className="bg-red-600 text-white hover:bg-red-700 border-none cursor-pointer"
+                          onClick={() => {
+                            const slug = toSlug(sellerName || product.seller_name || product.store_name || 'toko')
+                            navigate(`/${encodeURIComponent(slug)}`)
+                          }}
+                        >
                           Profil Toko
                         </Button>
                       </div>

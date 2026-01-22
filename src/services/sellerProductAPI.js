@@ -152,6 +152,42 @@ export const createProduct = async (productData) => {
 };
 
 /**
+ * Upload product images (multipart/form-data)
+ * @param {File[]} filesArray - Array of File objects
+ * @returns {Promise<Object>} Upload response containing image URLs
+ */
+export const uploadProductImages = async (filesArray = []) => {
+  try {
+    const token = getAuthToken();
+    if (!token) throw new Error('Token tidak ditemukan. Silakan login kembali.');
+
+    const formData = new FormData();
+    filesArray.forEach((file) => {
+      formData.append('product_images', file);
+    });
+
+    const response = await fetch(`${API_BASE_URL}/products/images/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || data.message || 'Gagal mengupload gambar produk');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error uploading product images:', error);
+    throw error;
+  }
+};
+
+/**
  * Update product
  * @param {number} productId - Product ID
  * @param {Object} productData - Updated product data
