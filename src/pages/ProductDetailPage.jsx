@@ -31,6 +31,8 @@ export default function ProductDetailPage() {
   const [selectedImage, setSelectedImage] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [selectedTab, setSelectedTab] = useState('deskripsi');
+  const [reviewsList, setReviewsList] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
   const [cartToast, setCartToast] = useState({ show: false, message: '' });
   const [inWishlist, setInWishlist] = useState(false);
 
@@ -126,10 +128,34 @@ export default function ProductDetailPage() {
           seller_photo: buildImageUrl(normalized.seller_photo),
         });
         setSelectedImage(normalized.primary_image);
+        // fetch reviews for the product after setting
+        fetchReviews(normalized.product_id);
         setInWishlist(isInWishlist(normalized.product_id));
         setQuantity(normalized.stock > 0 ? 1 : 0);
         return true;
       };
+
+    const fetchReviews = async (productId) => {
+      if (!productId) return;
+      try {
+        setReviewsLoading(true);
+        const apiBase = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || '';
+        const origin = apiBase ? new URL(apiBase).origin : '';
+        const res = await fetch(`${origin}/api/ecommerce/products/${productId}/reviews?page=1&limit=20`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json?.success && json.data?.reviews) {
+          setReviewsList(json.data.reviews.map(r => ({
+            ...r,
+            review_image: r.review_image ? (r.review_image.startsWith('http') ? r.review_image : `${origin}${r.review_image}`) : null
+          })));
+        }
+      } catch (err) {
+        console.warn('Failed to load reviews', err);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
 
       // Primary: buyer endpoint (langsung data seller)
       try {
@@ -543,17 +569,34 @@ export default function ProductDetailPage() {
                         </div>
                       </div>
                       <div className="space-y-4">
-                        {[1, 2, 3].map((i) => (
-                          <div key={i} className="border-b pb-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="font-semibold">User {i}</span>
-                              <span className="text-yellow-400">⭐⭐⭐⭐⭐</span>
+                        {reviewsLoading ? (
+                          <div className="text-gray-600">Memuat ulasan...</div>
+                        ) : reviewsList.length === 0 ? (
+                          <div className="text-gray-600">Belum ada ulasan untuk produk ini.</div>
+                        ) : (
+                          reviewsList.map((r) => (
+                            <div key={r.review_id} className="border-b pb-4">
+                              <div className="flex items-center gap-3 mb-2">
+                                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                                  {r.reviewer_picture ? (
+                                    <img src={r.reviewer_picture} alt={r.reviewer_name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <span className="text-sm font-semibold text-gray-700">{(r.reviewer_name || 'U').slice(0,2).toUpperCase()}</span>
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="font-semibold">{r.reviewer_name || 'Anonymous'}</div>
+                                  <div className="text-sm text-yellow-400">{'⭐'.repeat(r.rating || 0)}</div>
+                                </div>
+                                <div className="ml-auto text-sm text-gray-500">{new Date(r.created_at).toLocaleDateString('id-ID')}</div>
+                              </div>
+                              <p className="text-gray-700 whitespace-pre-wrap mb-2">{r.review_text}</p>
+                              {r.review_image && (
+                                <img src={r.review_image} alt="review" className="w-48 h-48 object-cover rounded-md mt-2" />
+                              )}
                             </div>
-                            <p className="text-gray-700">
-                              Produk sangat bagus, sesuai deskripsi. Pengiriman cepat dan packing rapi. Recommended!
-                            </p>
-                          </div>
-                        ))}
+                          ))
+                        )}
                       </div>
                     </div>
                   )}

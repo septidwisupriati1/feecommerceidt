@@ -4,6 +4,7 @@
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/ecommerce';
+import sellerProductAPI from './sellerProductAPI';
 
 /**
  * Get seller's product reviews
@@ -28,29 +29,121 @@ export const getSellerReviews = async (params = {}) => {
     if (params.status) queryParams.append('status', params.status);
     if (params.sort) queryParams.append('sort', params.sort);
 
-    const response = await fetch(
-      `${API_BASE_URL}/seller/reviews?${queryParams.toString()}`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    const response = await fetch(`${API_BASE_URL}/seller/reviews?${queryParams.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const contentType = response.headers.get('content-type') || '';
+
+    // If backend returns non-json (e.g. HTML 404 page) or not ok, treat as failure
+    if (!response.ok || !contentType.includes('application/json')) {
+      const bodyPreview = await response.text().then(t => t.slice(0, 400));
+      console.warn('getSellerReviews: unexpected response', { status: response.status, bodyPreview });
+      throw new Error(`Unexpected response from /seller/reviews: ${response.status}`);
+    }
 
     const result = await response.json();
 
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to fetch reviews');
+    if (!result || result.success === false) {
+      throw new Error(result?.error || 'Failed to fetch reviews');
     }
 
     return result;
   } catch (error) {
-    console.warn('Backend unavailable, using fallback mode:', error.message);
-    
-    // FALLBACK MODE: Return dummy data
-    return getFallbackReviews(params);
+    console.warn('getSellerReviews: backend unavailable or endpoint missing, attempting product-level aggregation:', error.message);
+
+    // Try fallback aggregation: fetch seller products then get /products/:id/reviews
+    try {
+      const prodRes = await sellerProductAPI.getProducts({ page: 1, limit: 200 });
+      // Normalize product list from various possible shapes
+      let products = [];
+      try {
+        if (prodRes) {
+          if (Array.isArray(prodRes.data)) products = prodRes.data;
+          else if (Array.isArray(prodRes.data?.data)) products = prodRes.data.data;
+          else if (Array.isArray(prodRes.data?.products)) products = prodRes.data.products;
+          else if (Array.isArray(prodRes.data?.items)) products = prodRes.data.items;
+          else if (Array.isArray(prodRes)) products = prodRes;
+        }
+      } catch (e) {
+        products = [];
+      }
+
+      const tokenInner = localStorage.getItem('token');
+      const authHeaders = tokenInner ? { 'Authorization': `Bearer ${tokenInner}` } : {};
+
+      const fetches = products.map(async (p) => {
+        try {
+          const prodId = p.product_id || p.id || p.productId;
+          const resp = await fetch(`${API_BASE_URL}/products/${prodId}/reviews?page=1&limit=200`, { method: 'GET', headers: authHeaders });
+          const ct = resp.headers.get('content-type') || '';
+          if (!resp.ok || !ct.includes('application/json')) return [];
+          const j = await resp.json();
+          // product info may be inside j.data.product
+          const productFromResponse = j.data?.product || {};
+          const productNameFromResponse = productFromResponse?.name || p.name || p.title || p.product_name || `Product ${prodId}`;
+          const productImageFromResponse = productFromResponse?.images?.[0]?.image_url || p.images?.[0]?.image_url || p.product_image || null;
+
+          return (j.data?.reviews || j.data || []).map(r => ({
+            review_id: r.review_id || r.id || r.reviewId,
+            product_id: Number(r.product_id || r.productId || productFromResponse?.product_id || prodId),
+            product_name: productNameFromResponse,
+            product_image: r.review_image || r.product_image || r.image_url || productImageFromResponse || null,
+            reviewer_name: r.reviewer_name || r.reviewer || r.reviewer?.name || r.user_fullname || r.user_full_name || r.user?.full_name || r.user?.fullName || r.user?.name || r.buyer?.full_name || r.buyer?.name || (r.is_guest ? 'Guest' : null) || null,
+            reviewer_picture: r.reviewer_picture || r.reviewer?.picture || r.reviewer?.avatar || r.user?.avatar || r.user?.picture || null,
+            reviewer_type: (r.is_guest === true || r.is_guest === 'true') ? 'guest' : (r.reviewer_type || r.type || (r.user ? 'registered' : 'registered')),
+            rating: Number(r.rating || r.rate || 0),
+            review_text: r.review_text || r.comment || r.text || '',
+            status: r.status || 'approved',
+            created_at: r.created_at || r.createdAt || new Date().toISOString(),
+            seller_reply: r.seller_reply || r.reply || null
+          }));
+        } catch (e) {
+          return [];
+        }
+      });
+
+      const results = await Promise.all(fetches);
+      const all = results.flat();
+
+      // Apply same filters/sorting/pagination as fallback
+      const fallbackParams = Object.assign({}, params);
+      const page = parseInt(fallbackParams.page) || 1;
+      const limit = parseInt(fallbackParams.limit) || 10;
+
+      let filtered = [...all];
+      if (fallbackParams.product_id) filtered = filtered.filter(r => r.product_id === parseInt(fallbackParams.product_id));
+      if (fallbackParams.rating) filtered = filtered.filter(r => r.rating === parseInt(fallbackParams.rating));
+      if (fallbackParams.status) filtered = filtered.filter(r => r.status === fallbackParams.status);
+
+      if (fallbackParams.sort === 'oldest') filtered.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      else if (fallbackParams.sort === 'highest') filtered.sort((a, b) => b.rating - a.rating);
+      else if (fallbackParams.sort === 'lowest') filtered.sort((a, b) => a.rating - b.rating);
+      else filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      const startIndex = (page - 1) * limit;
+      const paginated = filtered.slice(startIndex, startIndex + limit);
+
+      return {
+        success: true,
+        data: {
+          reviews: paginated,
+          pagination: {
+            current_page: page,
+            total_pages: Math.ceil(filtered.length / limit),
+            total_reviews: filtered.length,
+            limit: limit
+          }
+        }
+      };
+    } catch (aggErr) {
+      console.error('getSellerReviews: aggregation fallback failed, returning static fallback:', aggErr.message);
+      return getFallbackReviews(params);
+    }
   }
 };
 
@@ -77,25 +170,41 @@ export const getSellerReviewStats = async () => {
 
     return result;
   } catch (error) {
-    console.warn('Backend unavailable, using fallback mode:', error.message);
-    
-    // FALLBACK MODE
-    return {
-      success: true,
-      data: {
-        total_reviews: 127,
-        average_rating: 4.6,
-        rating_breakdown: {
-          5: 85,
-          4: 28,
-          3: 10,
-          2: 3,
-          1: 1
-        },
-        recent_reviews: 12,
-        pending_reviews: 5
-      }
-    };
+    console.warn('getSellerReviewStats: failed to fetch stats, attempting aggregation from product reviews:', error.message);
+
+    // Try compute stats by aggregating product reviews
+    try {
+      const agg = await getSellerReviews({ page: 1, limit: 1000 });
+      const all = (agg && agg.data && agg.data.reviews) || [];
+      const total = all.length;
+      const breakdown = {1:0,2:0,3:0,4:0,5:0};
+      let sum = 0;
+      all.forEach(r => { const rt = parseInt(r.rating) || 0; if (rt>=1 && rt<=5) { breakdown[rt]++; sum += rt; } });
+      const avg = total ? (sum / total) : 0;
+
+      return {
+        success: true,
+        data: {
+          total_reviews: total,
+          average_rating: Number(avg.toFixed(2)),
+          rating_breakdown: breakdown,
+          recent_reviews: Math.min(10, total),
+          pending_reviews: all.filter(r => r.status === 'pending').length
+        }
+      };
+    } catch (e) {
+      console.error('getSellerReviewStats: aggregation failed, returning default stats:', e.message);
+      return {
+        success: true,
+        data: {
+          total_reviews: 0,
+          average_rating: 0,
+          rating_breakdown: {1:0,2:0,3:0,4:0,5:0},
+          recent_reviews: 0,
+          pending_reviews: 0
+        }
+      };
+    }
   }
 };
 

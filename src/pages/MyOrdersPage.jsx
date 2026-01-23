@@ -7,6 +7,7 @@ import { Card, CardContent } from "../components/ui/card";
 import EmptyState from "../components/EmptyState";
 import { isNewBuyer } from '../utils/buyerStatus';
 import buyerTransactionAPI from '../services/buyerTransactionAPI';
+import { getUser } from '../utils/auth';
 import CourierLogo, { CourierBadge } from '../components/CourierLogo';
 import { formatPrice } from "../data/products";
 import { 
@@ -265,6 +266,21 @@ export default function MyOrdersPage() {
         fd.append('rating', Number(reviewRating));
         fd.append('review_text', reviewText);
         if (reviewFile) fd.append('review_image', reviewFile);
+
+        // Attach logged-in user info so backend can store reviewer details
+        try {
+          const currentUser = getUser() || {};
+          const reviewerName = currentUser.full_name || currentUser.fullName || currentUser.name || currentUser.username || null;
+          const reviewerEmail = currentUser.email || currentUser.email_address || null;
+          const reviewerPicture = currentUser.profile_picture || currentUser.profilePhoto || currentUser.avatar || currentUser.picture || null;
+
+          if (reviewerName) fd.append('reviewer_name', reviewerName);
+          if (reviewerEmail) fd.append('reviewer_email', reviewerEmail);
+          if (reviewerPicture) fd.append('reviewer_picture', reviewerPicture);
+        } catch (e) {
+          // fail gracefully if local user data is malformed
+          console.warn('submitReview: failed to read local user data', e);
+        }
 
         // try common token keys
         const tokenKeys = ['token', 'auth_token', 'access_token', 'ecom_token'];

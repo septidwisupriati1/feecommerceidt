@@ -1,72 +1,109 @@
-export default function SellerReviews() {
-  const reviews = [
-    {
-      id: 1,
-      product: 'Sepatu Sneakers Putih',
-      buyer: 'Ahmad Fauzi',
-      rating: 5,
-      comment: 'Barang bagus, sesuai deskripsi. Packing rapi dan pengiriman cepat!',
-      date: '22 Okt 2025',
-      avatar: '👨'
-    },
-    {
-      id: 2,
-      product: 'Tas Ransel Laptop',
-      buyer: 'Siti Nurhaliza',
-      rating: 4,
-      comment: 'Kualitas oke, tapi warna sedikit berbeda dari foto. Overall recommended.',
-      date: '21 Okt 2025',
-      avatar: '👩'
-    },
-    {
-      id: 3,
-      product: 'Jaket Denim Pria',
-      buyer: 'Budi Santoso',
-      rating: 5,
-      comment: 'Mantap! Bahan tebal dan nyaman dipakai. Seller responsif.',
-      date: '20 Okt 2025',
-      avatar: '👨‍💼'
-    },
-    {
-      id: 4,
-      product: 'Celana Jeans Slim Fit',
-      buyer: 'Dewi Lestari',
-      rating: 5,
-      comment: 'Ukuran pas, jahitan rapi. Puas banget belanja di sini!',
-      date: '19 Okt 2025',
-      avatar: '👩‍💼'
-    },
-    {
-      id: 5,
-      product: 'Kemeja Flanel Kotak',
-      buyer: 'Eko Prasetyo',
-      rating: 4,
-      comment: 'Bagus tapi agak kekecilan. Mungkin size chart kurang akurat.',
-      date: '18 Okt 2025',
-      avatar: '🧑'
-    },
-  ]
+import React, { useEffect, useState } from 'react';
+import sellerReviewAPI from '../../services/sellerReviewAPI';
+import sellerProductAPI from '../../services/sellerProductAPI';
 
-  const stats = {
-    averageRating: 4.6,
-    totalReviews: reviews.length,
-    fiveStar: 4,
-    fourStar: 1,
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/ecommerce';
+
+export default function SellerReviews() {
+  const [reviews, setReviews] = useState([]);
+  const [stats, setStats] = useState({
+    averageRating: 0,
+    totalReviews: 0,
+    fiveStar: 0,
+    fourStar: 0,
     threeStar: 0,
     twoStar: 0,
     oneStar: 0
-  }
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // First get seller's products
+        const prodRes = await sellerProductAPI.getProducts({ page: 1, limit: 100 });
+        if (!prodRes || !prodRes.success) throw new Error(prodRes?.message || 'Gagal mengambil produk penjual');
+
+        const products = prodRes.data?.products || prodRes.data || [];
+
+        // For each product, fetch product reviews (public endpoint)
+        const reviewsByProduct = await Promise.all(products.map(async (p) => {
+          try {
+            const resp = await fetch(`${API_BASE_URL}/products/${p.product_id}/reviews?page=1&limit=20`, { method: 'GET' });
+            if (!resp.ok) return [];
+            const json = await resp.json();
+            const productFromResponse = json.data?.product || {};
+            const productName = productFromResponse?.name || p.name || p.product_name || productFromResponse?.product_name || `Product ${p.product_id}`;
+
+            return (json.data?.reviews || json.data || []).map(r => ({
+              review_id: r.review_id || r.reviewId || r.id,
+              product_name: productName,
+              reviewer_name: r.reviewer_name || r.reviewer || r.user_fullname || r.user?.full_name || r.buyer?.name || 'Anonymous',
+              reviewer_picture: r.reviewer_picture || r.reviewer?.picture || r.user?.avatar || null,
+              rating: r.rating,
+              review_text: r.review_text || r.comment,
+              created_at: r.created_at
+            }));
+          } catch (e) {
+            return [];
+          }
+        }));
+
+        const merged = reviewsByProduct.flat();
+
+        const mapped = merged.map(r => ({
+          id: r.review_id,
+          product: r.product_name,
+          buyer: r.reviewer_name,
+          rating: r.rating,
+          comment: r.review_text,
+          date: sellerReviewAPI.formatDate ? sellerReviewAPI.formatDate(r.created_at) : new Date(r.created_at).toLocaleDateString('id-ID'),
+          avatar: r.reviewer_picture ? '🖼️' : ((r.reviewer_name && r.reviewer_name.charAt(0)) || '👤')
+        }));
+
+        if (mounted) setReviews(mapped);
+
+        // Try to compute basic stats locally if server stats endpoint not available
+        const total = mapped.length;
+        const breakdown = [0,0,0,0,0,0];
+        mapped.forEach(m => { if (m.rating >=1 && m.rating<=5) breakdown[m.rating]++; });
+        if (mounted) setStats({
+          averageRating: total ? (mapped.reduce((s, it) => s + (it.rating||0), 0) / total).toFixed(1) : 0,
+          totalReviews: total,
+          fiveStar: breakdown[5],
+          fourStar: breakdown[4],
+          threeStar: breakdown[3],
+          twoStar: breakdown[2],
+          oneStar: breakdown[1]
+        });
+      } catch (err) {
+        console.error(err);
+        if (mounted) setError(err.message || String(err));
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    load();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <div style={{ padding: '2rem 0' }}>
       <h1 style={{ marginBottom: '1.5rem' }}>Ulasan Produk</h1>
 
       {/* Rating Overview */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-        gap: '1.5rem', 
-        marginBottom: '2rem' 
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gap: '1.5rem',
+        marginBottom: '2rem'
       }}>
         <div style={{
           background: 'var(--surface-strong)',
@@ -77,7 +114,7 @@ export default function SellerReviews() {
           textAlign: 'center'
         }}>
           <div style={{ fontSize: '3rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '.5rem' }}>
-            {stats.averageRating}
+            {loading ? '—' : stats.averageRating}
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '.25rem', marginBottom: '.5rem' }}>
             {[1, 2, 3, 4, 5].map(star => (
@@ -87,7 +124,7 @@ export default function SellerReviews() {
             ))}
           </div>
           <div style={{ color: 'var(--muted)', fontSize: '.9rem' }}>
-            Dari {stats.totalReviews} ulasan
+            Dari {loading ? '—' : stats.totalReviews} ulasan
           </div>
         </div>
 
@@ -109,10 +146,10 @@ export default function SellerReviews() {
             <div key={stars} style={{ display: 'flex', alignItems: 'center', gap: '.75rem', marginBottom: '.5rem' }}>
               <div style={{ fontSize: '.85rem', minWidth: '50px' }}>{stars} Bintang</div>
               <div style={{ flex: 1, height: '8px', background: '#e5e7eb', borderRadius: '999px', overflow: 'hidden' }}>
-                <div style={{ 
-                  width: `${(count / stats.totalReviews) * 100}%`, 
-                  height: '100%', 
-                  background: '#fbbf24' 
+                <div style={{
+                  width: `${stats.totalReviews ? (count / stats.totalReviews) * 100 : 0}%`,
+                  height: '100%',
+                  background: '#fbbf24'
                 }} />
               </div>
               <div style={{ fontSize: '.85rem', minWidth: '30px', textAlign: 'right', color: 'var(--muted)' }}>
@@ -132,7 +169,10 @@ export default function SellerReviews() {
         boxShadow: 'var(--shadow)'
       }}>
         <h2 style={{ marginTop: 0, marginBottom: '1.5rem' }}>Semua Ulasan</h2>
-        
+
+        {loading && <div style={{ padding: '1rem' }}>Memuat ulasan...</div>}
+        {error && <div style={{ padding: '1rem', color: 'red' }}>Error: {error}</div>}
+
         <div style={{ display: 'grid', gap: '1rem' }}>
           {reviews.map(review => (
             <div key={review.id} style={{
@@ -168,8 +208,8 @@ export default function SellerReviews() {
                   ))}
                 </div>
               </div>
-              
-              <div style={{ 
+
+              <div style={{
                 padding: '.75rem',
                 background: '#fff',
                 borderRadius: '.5rem',
