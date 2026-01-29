@@ -5,6 +5,13 @@ import Footer from '../../components/Footer';
 import { UsersIcon, ShoppingBagIcon, CurrencyDollarIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon } from '@heroicons/react/24/outline';
 import { adminDashboardAPI, formatCurrency, formatNumber } from '../../services/adminAPI';
 
+const apiOrigin = import.meta.env.VITE_API_BASE_URL ? new URL(import.meta.env.VITE_API_BASE_URL).origin : '';
+const buildImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return apiOrigin ? `${apiOrigin}${url}` : url;
+};
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -287,27 +294,45 @@ const AdminDashboard = () => {
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                {topSellers.map((seller, index) => (
-                  <div key={seller.seller_id} className="flex items-center justify-between p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-all hover:scale-105">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                        #{index + 1}
+                {topSellers.map((seller, index) => {
+                  const photoUrl = buildImageUrl(seller.store_photo);
+                  const initials = (seller.store_name || 'Toko').slice(0, 2).toUpperCase();
+
+                  return (
+                    <div key={seller.seller_id || index} className="flex items-center justify-between p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-all hover:scale-105">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold text-blue-700">#{index + 1}</span>
+                        <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center text-sm font-semibold text-gray-600" data-fallback>
+                          <span className={photoUrl ? 'hidden' : ''}>{initials}</span>
+                          {photoUrl && (
+                            <img
+                              src={photoUrl}
+                              alt={seller.store_name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const fallback = e.currentTarget.parentElement?.querySelector('[data-fallback] span');
+                                if (fallback) fallback.classList.remove('hidden');
+                              }}
+                            />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-800">{seller.store_name}</p>
+                          <p className="text-xs text-gray-500">{formatNumber(seller.total_orders)} pesanan</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-800">{seller.store_name}</p>
-                        <p className="text-xs text-gray-500">{formatNumber(seller.total_orders)} pesanan</p>
+                      <div className="text-right">
+                        <p className="font-bold text-gray-800">{formatCurrency(seller.total_sales || seller.revenue || 0)}</p>
+                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                          <span className="text-yellow-600">⭐ {seller.rating || '4.8'}</span>
+                          {seller.trend === 'up' && <span className="text-green-600">↗ {seller.growth_percentage || 0}%</span>}
+                          {seller.trend === 'down' && <span className="text-red-600">↘ {Math.abs(seller.growth_percentage || 0)}%</span>}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-gray-800">{formatCurrency(seller.total_sales)}</p>
-                      <div className="flex items-center gap-1 text-xs">
-                        <span className="text-yellow-600">⭐ {seller.rating}</span>
-                        {seller.trend === 'up' && <span className="text-green-600">↗ {seller.growth_percentage}%</span>}
-                        {seller.trend === 'down' && <span className="text-red-600">↘ {Math.abs(seller.growth_percentage)}%</span>}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
