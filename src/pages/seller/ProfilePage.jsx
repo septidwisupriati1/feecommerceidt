@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import SellerSidebar from '../../components/SellerSidebar';
 import Footer from '../../components/Footer';
 import { getCurrentUser } from '../../services/authAPI';
+import { logout } from '../../services/authAPI';
 import { 
   CameraIcon, 
   ShoppingBagIcon, 
@@ -122,12 +123,17 @@ const ProfilePage = () => {
       onClick: () => navigate('/seller/pengaturan'),
       hasArrow: true
     },
-    { 
-      label: "Keluar", 
-      icon: ArrowRightOnRectangleIcon, 
-      onClick: () => {
-        if (window.confirm('Apakah Anda yakin ingin keluar?')) {
-          navigate('/');
+    {
+      label: "Logout",
+      icon: ArrowRightOnRectangleIcon,
+      onClick: async () => {
+        if (!window.confirm('Anda yakin ingin logout?')) return;
+        try {
+          await logout();
+        } catch (e) {
+          console.error('Logout failed:', e);
+        } finally {
+          navigate('/login', { replace: true });
         }
       },
       hasArrow: false,

@@ -1,12 +1,12 @@
 // API Base Configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/ecommerce';
-const USE_MOCK_ADMIN = import.meta.env.VITE_USE_MOCK_ADMIN_DASHBOARD === 'true';
+const USE_MOCK_ADMIN = import.meta.env.VITE_USE_MOCK_ADMIN_DASHBOARD === 'false';
 // Short timeout so fallback/mock cepat saat backend lambat/mati
 const REQUEST_TIMEOUT_MS = Number(import.meta.env.VITE_ADMIN_REQUEST_TIMEOUT_MS || 1200);
 
 // Helper function to get auth token
 const getAuthToken = () => {
-  return localStorage.getItem('admin_token') || '';
+  return localStorage.getItem('admin_token') || localStorage.getItem('token') || '';
 };
 
 // Helper function for API requests
@@ -51,101 +51,86 @@ export const adminDashboardAPI = {
     try {
       return await apiRequest('/admin/dashboard/statistics');
     } catch (error) {
-      // Return mock data if API not available
-      if (!USE_MOCK_ADMIN) {
+      if (USE_MOCK_ADMIN) {
         console.warn('Using mock dashboard statistics data');
-      }
-      return {
-        success: true,
-        data: {
-          users: {
-            total: 1250,
-            active: 1100,
-            new_this_month: 45,
-            by_role: {
-              admin: 5,
-              seller: 450,
-              buyer: 795
+        return {
+          success: true,
+          data: {
+            users: {
+              total: 1250,
+              active: 1100,
+              new_this_month: 45,
+              by_role: {
+                admin: 5,
+                seller: 450,
+                buyer: 795
+              }
+            },
+            orders: {
+              total: 3420,
+              pending: 125,
+              processing: 89,
+              completed: 3150,
+              cancelled: 56,
+              revenue_total: 4250000000,
+              revenue_this_month: 450000000
+            },
+            products: {
+              total: 850,
+              active: 780,
+              inactive: 70,
+              low_stock: 25,
+              out_of_stock: 8
+            },
+            transactions: {
+              total: 3420,
+              this_month: 245,
+              today: 12,
+              average_value: 1242424
             }
-          },
-          orders: {
-            total: 3420,
-            pending: 125,
-            processing: 89,
-            completed: 3150,
-            cancelled: 56,
-            revenue_total: 4250000000,
-            revenue_this_month: 450000000
-          },
-          products: {
-            total: 850,
-            active: 780,
-            inactive: 70,
-            low_stock: 25,
-            out_of_stock: 8
-          },
-          transactions: {
-            total: 3420,
-            this_month: 245,
-            today: 12,
-            average_value: 1242424
           }
-        }
-      };
+        };
+      }
+      throw error;
     }
   },
 
   // Get recent orders
   getRecentOrders: async (limit = 10) => {
-    if (USE_MOCK_ADMIN) {
-      return {
-        success: true,
-        data: {
-          orders: mockRecentOrders,
-          total: mockRecentOrders.length
-        }
-      };
-    }
-
     try {
       return await apiRequest(`/admin/dashboard/recent-orders?limit=${limit}`);
     } catch (error) {
-      console.warn('Using mock recent orders data');
-      return {
-        success: true,
-        data: {
-          orders: mockRecentOrders,
-          total: mockRecentOrders.length
-        }
-      };
+      if (USE_MOCK_ADMIN) {
+        console.warn('Using mock recent orders data');
+        return {
+          success: true,
+          data: {
+            orders: mockRecentOrders,
+            total: mockRecentOrders.length
+          }
+        };
+      }
+      throw error;
     }
   },
 
   // Get top sellers
   getTopSellers: async (limit = 5, period = 'month') => {
-    if (USE_MOCK_ADMIN) {
-      return {
-        success: true,
-        data: {
-          sellers: mockTopSellers,
-          period,
-          total: mockTopSellers.length
-        }
-      };
-    }
-
     try {
       return await apiRequest(`/admin/dashboard/top-sellers?limit=${limit}&period=${period}`);
     } catch (error) {
-      console.warn('Using mock top sellers data');
-      return {
-        success: true,
-        data: {
-          sellers: mockTopSellers,
-          period: period,
-          total: mockTopSellers.length
-        }
-      };
+      if (USE_MOCK_ADMIN) {
+        console.warn('Using mock top sellers data');
+        return {
+          success: true,
+          data: {
+            sellers: mockTopSellers,
+            period: period,
+            total: mockTopSellers.length
+          }
+        };
+      }
+      throw error;
     }
   }
 };

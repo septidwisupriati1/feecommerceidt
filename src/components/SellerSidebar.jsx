@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getCurrentUser, logout } from '../services/authAPI';
 import NotificationDropdown from './NotificationDropdown';
@@ -25,9 +25,11 @@ import {
 export default function SellerSidebar({ isOpen, setIsOpen, children }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => getCurrentUser());
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const navScrollRef = useRef(null);
+  const scrollStoreKey = 'sellerSidebarScrollTop';
 
   const apiOrigin = import.meta.env.VITE_API_BASE_URL ? new URL(import.meta.env.VITE_API_BASE_URL).origin : '';
   const buildImageUrl = (url) => {
@@ -38,7 +40,7 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
 
   useEffect(() => {
     const currentUser = getCurrentUser();
-    setUser(currentUser);
+    setUser((prev) => prev || currentUser);
     
     // Load initial unread count
     updateUnreadCount();
@@ -71,11 +73,30 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
     };
   }, []);
 
-  // Reset scroll position to top whenever route changes so new pages don't inherit previous scroll.
+  // Persist sidebar scroll position across route changes
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    const el = navScrollRef.current;
+    if (!el) return;
+
+    const restore = () => {
+      const saved = sessionStorage.getItem(scrollStoreKey);
+      if (saved !== null) {
+        const val = parseInt(saved, 10);
+        if (!Number.isNaN(val)) el.scrollTop = val;
+      }
+    };
+
+    const handleScroll = () => {
+      sessionStorage.setItem(scrollStoreKey, el.scrollTop.toString());
+    };
+
+    restore();
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', handleScroll);
+    };
   }, [location.pathname]);
-  
+
   const updateUnreadCount = async () => {
     try {
       const res = await chatAPI.getConversations({ role: 'seller' });
@@ -206,7 +227,7 @@ export default function SellerSidebar({ isOpen, setIsOpen, children }) {
           </div>
 
           {/* Menu Items */}
-          <nav className="flex-1 overflow-y-auto px-4 pb-4">
+          <nav ref={navScrollRef} className="flex-1 overflow-y-auto px-4 pb-4">
             <ul className="space-y-2">
               {menuItems.map((item) => {
                 const Icon = item.icon;
