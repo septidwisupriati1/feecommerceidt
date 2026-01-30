@@ -125,7 +125,6 @@ export default function ProfilePage() {
   };
   
   const [isEditing, setIsEditing] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [profileData, setProfileData] = useState({
     name: 'User',
     email: '',
@@ -145,44 +144,17 @@ export default function ProfilePage() {
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
-
-    // show preview immediately
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (isEditing) {
-        setEditData({ ...editData, avatar: reader.result });
-      } else {
-        setProfileData({ ...profileData, avatar: reader.result });
-      }
-    };
-    reader.readAsDataURL(file);
-
-    // upload to backend and persist in database
-    (async () => {
-      try {
-        setUploadingPhoto(true);
-        const response = await profileAPI.uploadProfilePicture(file);
-
-        if (response?.success && response.data) {
-          const token = localStorage.getItem('token') || '';
-          const mergedUser = { ...(getCurrentUser() || {}), ...response.data };
-          saveAuth(token, mergedUser);
-          setUser(mergedUser);
-          const mapped = mapUserToProfileState(mergedUser);
-          setProfileData(mapped);
-          setEditData(mapped);
-          setProfileToast({ show: true, message: 'Foto profil berhasil diperbarui.', variant: 'success' });
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (isEditing) {
+          setEditData({ ...editData, avatar: reader.result });
         } else {
-          setProfileToast({ show: true, message: response?.error || 'Gagal mengunggah foto profil.', variant: 'error' });
+          setProfileData({ ...profileData, avatar: reader.result });
         }
-      } catch (error) {
-        console.error('Upload profile picture error:', error);
-        setProfileToast({ show: true, message: error.response?.data?.error || error.message || 'Gagal mengunggah foto profil.', variant: 'error' });
-      } finally {
-        setUploadingPhoto(false);
-      }
-    })();
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleEdit = () => {
@@ -349,10 +321,7 @@ export default function ProfilePage() {
                     
                     {/* Camera Button */}
                     <button
-                      onClick={() => !uploadingPhoto && fileInputRef.current?.click()}
-                      disabled={uploadingPhoto}
-                      aria-busy={uploadingPhoto}
-                      title={uploadingPhoto ? 'Mengunggah foto...' : 'Ganti foto profil'}
+                      onClick={() => fileInputRef.current?.click()}
                       style={{
                         position: 'absolute',
                         bottom: 0,
@@ -363,12 +332,11 @@ export default function ProfilePage() {
                         borderRadius: '50%',
                         boxShadow: '0 4px 6px rgba(251, 191, 36, 0.3)',
                         border: 'none',
-                        cursor: uploadingPhoto ? 'not-allowed' : 'pointer',
-                        transition: 'all 0.3s',
-                        opacity: uploadingPhoto ? 0.7 : 1,
+                        cursor: 'pointer',
+                        transition: 'all 0.3s'
                       }}
                     >
-                      <CameraIcon className={`w-5 h-5 ${uploadingPhoto ? 'animate-spin' : ''}`} />
+                      <CameraIcon className="w-5 h-5" />
                     </button>
                     
                     <input

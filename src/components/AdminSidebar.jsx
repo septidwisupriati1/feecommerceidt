@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getCurrentUser, logout } from '../services/authAPI';
@@ -37,11 +37,25 @@ function AdminSidebar({ children }) {
   const location = useLocation();
   const [user, setUser] = useState(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const profileRef = useRef(null);
 
   useEffect(() => {
     const currentUser = getCurrentUser();
     setUser(currentUser);
   }, []);
+
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (showProfileDropdown && profileRef.current && !profileRef.current.contains(e.target)) {
+        setShowProfileDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [showProfileDropdown]);
 
   const getUserInitials = () => {
     if (!user) return 'A';
@@ -253,23 +267,44 @@ function AdminSidebar({ children }) {
                     <p className="text-sm font-semibold text-gray-900">{getUserName()}</p>
                     <p className="text-xs text-gray-500">{getUserEmail()}</p>
                   </div>
-                  <button
-                    onClick={() => navigate('/admin/profile')}
-                    className="relative"
-                    aria-label="Profil"
-                  >
-                    {user?.profile_picture ? (
-                      <img
-                        src={user.profile_picture}
-                        alt={getUserName()}
-                        className="h-10 w-10 rounded-full object-cover border-2 border-blue-500"
-                      />
-                    ) : (
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold border-2 border-blue-500">
-                        {getUserInitials()}
+
+                  <div className="relative" ref={profileRef}>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowProfileDropdown((s) => !s); }}
+                      className="relative rounded-full focus:outline-none cursor-pointer transition-transform duration-150 ease-in-out hover:scale-105"
+                      aria-label="Profil"
+                      aria-expanded={showProfileDropdown}
+                    >
+                      {user?.profile_picture ? (
+                        <img
+                          src={user.profile_picture}
+                          alt={getUserName()}
+                          className="h-10 w-10 rounded-full object-cover border-2 border-blue-500 cursor-pointer"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold border-2 border-blue-500 cursor-pointer">
+                          {getUserInitials()}
+                        </div>
+                      )}
+                    </button>
+
+                    {showProfileDropdown && (
+                      <div className="absolute right-0 mt-2 w-44 bg-white rounded-lg shadow-lg ring-1 ring-black/5 z-50 py-1" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => { setShowProfileDropdown(false); navigate('/admin/profile'); }}
+                          className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 rounded-md cursor-pointer"
+                        >
+                          Profil
+                        </button>
+                        <button
+                          onClick={() => { setShowProfileDropdown(false); setShowLogoutModal(true); }}
+                          className="w-full text-left px-4 py-2 hover:bg-red-50 hover:text-red-600 text-sm text-gray-700 rounded-md cursor-pointer"
+                        >
+                          Logout
+                        </button>
                       </div>
                     )}
-                  </button>
+                  </div>
                 </div>
               </div>
             </div>
