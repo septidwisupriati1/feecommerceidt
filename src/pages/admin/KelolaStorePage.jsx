@@ -9,8 +9,16 @@ import {
   updateReportStatus,
   getStoresFallback,
   getStoreReportsFallback,
-  getReportStatisticsFallback
+  getReportStatisticsFallback,
+  getStoreStatistics
 } from '../../services/adminStoreAPI';
+
+const apiOrigin = import.meta.env.VITE_API_BASE_URL ? new URL(import.meta.env.VITE_API_BASE_URL).origin : '';
+const buildImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return apiOrigin ? `${apiOrigin}${url}` : url;
+};
 
 const KelolaStorePagePage = () => {
   const [activeTab, setActiveTab] = useState('stores'); // 'stores' or 'reports'
@@ -51,6 +59,7 @@ const KelolaStorePagePage = () => {
   useEffect(() => {
     if (activeTab === 'stores') {
       fetchStores();
+      fetchStoreStatistics();
     } else {
       fetchReports();
       fetchReportStatistics();
@@ -71,9 +80,14 @@ const KelolaStorePagePage = () => {
     const result = await getStores(params);
     setStores(result.data);
     setStorePagination(result.pagination);
-    setStoreStats(result.stats);
+    // Keep stats sourced from the dedicated stats endpoint to avoid mixing fallback/list responses
     setFallbackMode(!!result.message?.includes('FALLBACK'));
     setStoresLoading(false);
+  };
+
+  const fetchStoreStatistics = async () => {
+    const result = await getStoreStatistics();
+    setStoreStats(result.data);
   };
 
   const fetchReports = async () => {
@@ -340,11 +354,23 @@ const KelolaStorePagePage = () => {
                               <tr key={store.seller_id} className="hover:bg-gray-50">
                                 <td className="px-6 py-4">
                                   <div className="flex items-center">
-                                    <img 
-                                      src={store.store_photo} 
-                                      alt={store.store_name}
-                                      className="h-10 w-10 rounded-full object-cover"
-                                    />
+                                    <div className="h-10 w-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">
+                                      <span className={!buildImageUrl(store.store_photo) ? '' : 'hidden'}>
+                                        {(store.store_name || 'Toko').slice(0, 2).toUpperCase()}
+                                      </span>
+                                      {buildImageUrl(store.store_photo) && (
+                                        <img
+                                          src={buildImageUrl(store.store_photo)}
+                                          alt={store.store_name}
+                                          className="h-full w-full object-cover"
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = 'none';
+                                            const fallback = e.currentTarget.parentElement?.querySelector('span');
+                                            if (fallback) fallback.classList.remove('hidden');
+                                          }}
+                                        />
+                                      )}
+                                    </div>
                                     <div className="ml-3">
                                       <div className="text-sm font-medium text-gray-900">{store.store_name}</div>
                                       <div className="text-xs text-gray-500">ID: {store.seller_id}</div>

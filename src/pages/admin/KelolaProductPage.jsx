@@ -10,7 +10,7 @@ import {
   getProductStatistics,
   exportProductsToExcel
 } from '../../services/adminProductAPI';
-import { getProductImageUrl, handleImageError } from '../../utils/imageHelper';
+import { handleImageError } from '../../utils/imageHelper';
 import {
   MagnifyingGlassIcon,
   PlusIcon,
@@ -51,6 +51,26 @@ export default function KelolaProductPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
+  const apiOrigin = import.meta.env.VITE_API_BASE_URL ? new URL(import.meta.env.VITE_API_BASE_URL).origin : '';
+  const buildImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('data:') || url.startsWith('blob:')) return url; // already usable
+    if (url.startsWith('http')) return url;
+    const clean = url.startsWith('/') ? url : `/${url}`;
+    return apiOrigin ? `${apiOrigin}${clean}` : clean;
+  };
+  const getProductImageSrc = (product) => {
+    const candidate =
+      product?.primary_image ||
+      product?.images?.[0]?.image_url ||
+      product?.images?.[0]?.url ||
+      product?.images?.[0] ||
+      product?.image_url ||
+      product?.image;
+    return candidate ? buildImageUrl(candidate) : 'https://placehold.co/120x120?text=No+Image';
+  };
+  const renderCategoryIcon = () => null; // Hide category icon to avoid placeholder/error images
   
   // Form data
   const [formData, setFormData] = useState({
@@ -469,7 +489,7 @@ export default function KelolaProductPage() {
                           <div className="flex-shrink-0 h-12 w-12">
                             <img 
                               className="h-12 w-12 rounded-lg object-cover" 
-                              src={getProductImageUrl(product.images?.[0]?.image_url)} 
+                              src={getProductImageSrc(product)} 
                               alt={product.name}
                               onError={(e) => handleImageError(e)}
                             />
@@ -481,7 +501,9 @@ export default function KelolaProductPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{product.category?.icon} {product.category?.name || '-'}</div>
+                        <div className="text-sm text-gray-900 flex items-center">
+                          <span>{product.category?.name || '-'}</span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{product.seller?.store_name || '-'}</div>
@@ -818,10 +840,10 @@ export default function KelolaProductPage() {
             
             <div className="p-5 md:p-6 space-y-4">
               {/* Product Image */}
-              {selectedProduct.images && selectedProduct.images.length > 0 && (
+              {getProductImageSrc(selectedProduct) && (
                 <div className="flex justify-center">
                   <img 
-                    src={getProductImageUrl(selectedProduct.images[0].image_url)} 
+                    src={getProductImageSrc(selectedProduct)} 
                     alt={selectedProduct.name}
                     className="h-48 w-auto rounded-xl object-cover"
                     onError={(e) => handleImageError(e)}
@@ -852,7 +874,9 @@ export default function KelolaProductPage() {
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-xs md:text-sm text-gray-500 mb-1">Kategori</p>
-                  <p className="font-semibold text-gray-900">{selectedProduct.category?.icon} {selectedProduct.category?.name || '-'}</p>
+                  <p className="font-semibold text-gray-900 flex items-center">
+                    <span>{selectedProduct.category?.name || '-'}</span>
+                  </p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-xs md:text-sm text-gray-500 mb-1">Status</p>

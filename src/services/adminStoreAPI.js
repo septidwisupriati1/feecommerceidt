@@ -2,7 +2,11 @@
  * Admin Store Management API Service
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/ecommerce';
+// Align base URL with other admin APIs so we hit the same backend and avoid fallback stats
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/ecommerce';
+
+// Prefer admin token, then user token
+const getAuthToken = () => localStorage.getItem('admin_token') || localStorage.getItem('token');
 
 /**
  * Get all stores with filters
@@ -18,7 +22,7 @@ export const getStores = async (params = {}) => {
     if (params.sort_by) queryParams.append('sort_by', params.sort_by);
     if (params.sort_order) queryParams.append('sort_order', params.sort_order);
     
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     const response = await fetch(
       `${API_BASE_URL}/admin/stores?${queryParams}`,
       {
@@ -48,7 +52,7 @@ export const getStores = async (params = {}) => {
  */
 export const getStoreDetail = async (sellerId) => {
   try {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     const response = await fetch(
       `${API_BASE_URL}/admin/stores/${sellerId}`,
       {
@@ -80,7 +84,7 @@ export const getStoreDetail = async (sellerId) => {
  */
 export const updateStoreStatus = async (sellerId, status, reason = '') => {
   try {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     const response = await fetch(
       `${API_BASE_URL}/admin/stores/${sellerId}/status`,
       {
@@ -128,7 +132,7 @@ export const getStoreReports = async (params = {}) => {
     if (params.sort_by) queryParams.append('sort_by', params.sort_by);
     if (params.sort_order) queryParams.append('sort_order', params.sort_order);
     
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     const response = await fetch(
       `${API_BASE_URL}/admin/store-reports?${queryParams}`,
       {
@@ -158,7 +162,7 @@ export const getStoreReports = async (params = {}) => {
  */
 export const getReportStatistics = async () => {
   try {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     const response = await fetch(
       `${API_BASE_URL}/admin/store-reports/statistics`,
       {
@@ -188,7 +192,7 @@ export const getReportStatistics = async () => {
  */
 export const updateReportStatus = async (reportId, status, adminNotes = '') => {
   try {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     const response = await fetch(
       `${API_BASE_URL}/admin/store-reports/${reportId}/status`,
       {
@@ -215,6 +219,41 @@ export const updateReportStatus = async (reportId, status, adminNotes = '') => {
       message: 'Status laporan berhasil diubah (FALLBACK MODE)',
       data: { report_id: reportId, status, admin_notes: adminNotes, updated_at: new Date().toISOString() },
       _fallback: true
+    };
+  }
+};
+
+/**
+ * Get store statistics (counts and aggregates)
+ */
+export const getStoreStatistics = async () => {
+  try {
+    const token = getAuthToken();
+    const response = await fetch(
+      `${API_BASE_URL}/admin/stores/stats`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || 'Gagal mengambil statistik toko');
+    }
+
+    return result;
+  } catch (error) {
+    console.warn('Backend not available, using fallback data:', error.message);
+    const fallback = getStoresFallback();
+    return {
+      success: true,
+      message: 'Store statistics retrieved successfully (FALLBACK MODE)',
+      data: fallback.stats,
     };
   }
 };
@@ -458,6 +497,7 @@ export default {
   getStoreReports,
   getReportStatistics,
   updateReportStatus,
+  getStoreStatistics,
   getStoresFallback,
   getStoreReportsFallback,
   getReportStatisticsFallback
