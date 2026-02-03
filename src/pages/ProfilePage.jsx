@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import BuyerNavbar from "../components/BuyerNavbar";
@@ -9,6 +9,7 @@ import authAPI from '../services/authAPI';
 import profileAPI from '../services/profileAPI';
 import { saveAuth } from '../utils/auth';
 import buyerTransactionAPI from '../services/buyerTransactionAPI';
+import { getPublicFAQs } from '../services/faqAPI';
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Input } from "../components/ui/input";
@@ -28,6 +29,9 @@ import {
   CheckCircleIcon,
   HeartIcon,
   ChatBubbleLeftIcon,
+  QuestionMarkCircleIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline';
 
@@ -50,6 +54,10 @@ export default function ProfilePage() {
   const [recentOrders, setRecentOrders] = useState([]);
   const [profileToast, setProfileToast] = useState({ show: false, message: '' });
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [buyerFaqs, setBuyerFaqs] = useState([]);
+  const [faqExpandedId, setFaqExpandedId] = useState(null);
+  const [faqLoading, setFaqLoading] = useState(false);
+  const [buyerFaqCategory, setBuyerFaqCategory] = useState('all');
 
   const mapUserToProfileState = (userData = {}) => ({
     name: userData.full_name || userData.username || 'User',
@@ -76,7 +84,36 @@ export default function ProfilePage() {
     }
     refreshProfileFromApi();
     fetchDashboardData();
+    fetchBuyerFaqs();
   }, []);
+
+  const fetchBuyerFaqs = async () => {
+    try {
+      setFaqLoading(true);
+      const data = await getPublicFAQs({ limit: 100, audience: 'buyer' });
+      const filtered = (data || []).filter((faq) => {
+        const category = (faq.category || '').toLowerCase();
+        return category !== 'penjual' && category !== 'seller';
+      });
+      setBuyerFaqs(filtered);
+    } catch (error) {
+      console.warn('Gagal memuat FAQ pembeli:', error.message || error);
+    } finally {
+      setFaqLoading(false);
+    }
+  };
+
+  const buyerCategories = useMemo(() => {
+    const unique = Array.from(new Set((buyerFaqs || []).map((f) => f.category || 'Umum')));
+    return [{ id: 'all', label: 'Semua' }, ...unique.map((c) => ({ id: c, label: c }))];
+  }, [buyerFaqs]);
+
+  const filteredBuyerFaqs = useMemo(() => {
+    return (buyerFaqs || []).filter((faq) => {
+      const matchCategory = buyerFaqCategory === 'all' || (faq.category || '') === buyerFaqCategory;
+      return matchCategory;
+    });
+  }, [buyerFaqs, buyerFaqCategory]);
 
   const refreshProfileFromApi = async () => {
     try {
@@ -792,6 +829,78 @@ export default function ProfilePage() {
                     </div>
                   )}
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* FAQ Pembeli - berada dalam kolom konten kanan */}
+            <Card className="border border-gray-200 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center border border-red-100">
+                    <QuestionMarkCircleIcon className="h-6 w-6 text-red-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">FAQ Pembeli</h2>
+                    <p className="text-sm text-gray-600">Pertanyaan umum untuk pembeli, dikelola dari panel admin.</p>
+                  </div>
+                </div>
+
+                {/* Category filter pills */}
+                {!faqLoading && buyerFaqs.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {buyerCategories.map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => setBuyerFaqCategory(cat.id)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          buyerFaqCategory === cat.id
+                            ? 'bg-red-600 text-white'
+                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {faqLoading ? (
+                  <div className="py-8 text-center text-gray-500">Memuat FAQ...</div>
+                ) : filteredBuyerFaqs.length === 0 ? (
+                  <div className="py-8 text-center text-gray-500">Belum ada FAQ yang dapat ditampilkan.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredBuyerFaqs.map((faq) => {
+                      const faqId = faq.faq_id ?? faq.id;
+                      const isOpen = faqExpandedId === faqId;
+                      return (
+                        <div key={faqId} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                          <button
+                            className="w-full flex items-start justify-between p-4 hover:bg-gray-50 transition-colors text-left"
+                            onClick={() => setFaqExpandedId(isOpen ? null : faqId)}
+                          >
+                            <div className="flex items-start gap-3 flex-1">
+                              <QuestionMarkCircleIcon className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="font-semibold text-gray-900">{faq.question}</p>
+                              </div>
+                            </div>
+                            {isOpen ? (
+                              <ChevronUpIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                            ) : (
+                              <ChevronDownIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                            )}
+                          </button>
+                          {isOpen && (
+                            <div className="px-4 pb-4 pt-1 text-gray-700 leading-relaxed">
+                              {faq.answer}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

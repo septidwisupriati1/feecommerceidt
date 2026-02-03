@@ -5,6 +5,29 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/ecommerce';
 
+// Public (no-auth) endpoint for seller/buyer FAQ view
+export const getPublicFAQs = async (params = {}) => {
+  try {
+    const queryParams = new URLSearchParams();
+    if (params.category) queryParams.append('category', params.category);
+    if (params.audience) queryParams.append('audience', params.audience);
+    if (params.limit) queryParams.append('limit', params.limit);
+
+    const url = `${API_BASE_URL}/faqs${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    const response = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.data.faqs || [];
+  } catch (error) {
+    console.warn('Failed to fetch public FAQs, using fallback:', error);
+    return getFallbackFAQs();
+  }
+};
+
 /**
  * Get authentication token from localStorage
  */
@@ -28,6 +51,7 @@ export const getAllFAQs = async (params = {}) => {
     
     if (params.status) queryParams.append('status', params.status);
     if (params.category) queryParams.append('category', params.category);
+    if (params.audience) queryParams.append('audience', params.audience);
     if (params.page) queryParams.append('page', params.page);
     if (params.limit) queryParams.append('limit', params.limit);
     
@@ -302,7 +326,7 @@ const getFallbackFAQs = () => {
       created_at: '2025-01-12T00:00:00.000Z',
       updated_at: '2025-01-12T00:00:00.000Z'
     }
-  ];
+  ].map((faq) => ({ ...faq, audience: faq.audience || 'both' }));
 };
 
 export default {

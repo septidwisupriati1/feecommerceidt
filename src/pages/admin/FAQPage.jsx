@@ -16,6 +16,7 @@ import { getAllFAQs, createFAQ, updateFAQ, deleteFAQ } from '../../services/faqA
 const FAQPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [audienceMode, setAudienceMode] = useState('seller');
   const [expandedId, setExpandedId] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -25,7 +26,8 @@ const FAQPage = () => {
   const [formData, setFormData] = useState({
     question: '',
     answer: '',
-    category: 'Umum'
+    category: 'Umum',
+    audience: 'buyer'
   });
 
   const categories = [
@@ -38,15 +40,15 @@ const FAQPage = () => {
     { value: 'Pengiriman', label: 'Pengiriman' }
   ];
 
-  // Fetch FAQs on component mount
+  // Fetch FAQs on component mount & when mode changes
   useEffect(() => {
-    fetchFAQs();
-  }, []);
+    fetchFAQs(audienceMode);
+  }, [audienceMode]);
 
-  const fetchFAQs = async () => {
+  const fetchFAQs = async (audMode = 'seller') => {
     setLoading(true);
     try {
-      const data = await getAllFAQs({ limit: 100 });
+      const data = await getAllFAQs({ limit: 100, audience: audMode });
       setFaqs(data);
     } catch (error) {
       console.error('Error fetching FAQs:', error);
@@ -55,7 +57,9 @@ const FAQPage = () => {
     }
   };
 
-  const filteredFAQs = faqs.filter(faq => {
+  const visibleFaqs = faqs.filter(faq => audienceMode === 'all' || faq.audience === 'both' || faq.audience === audienceMode);
+
+  const filteredFAQs = visibleFaqs.filter(faq => {
     const matchCategory = selectedCategory === 'all' || faq.category === selectedCategory;
     const matchSearch = faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
                        faq.answer.toLowerCase().includes(searchQuery.toLowerCase());
@@ -73,14 +77,15 @@ const FAQPage = () => {
           question: formData.question,
           answer: formData.answer,
           category: formData.category,
+          audience: formData.audience,
           status: 'active'
         });
         
         // Refresh FAQ list
-        await fetchFAQs();
+        await fetchFAQs(audienceMode);
         
         setShowAddModal(false);
-        setFormData({ question: '', answer: '', category: 'Umum' });
+        setFormData({ question: '', answer: '', category: 'Umum', audience: audienceMode || 'buyer' });
         alert('FAQ berhasil ditambahkan!');
       } catch (error) {
         alert('Gagal menambahkan FAQ: ' + error.message);
@@ -94,15 +99,16 @@ const FAQPage = () => {
         await updateFAQ(selectedFAQ.faq_id, {
           question: formData.question,
           answer: formData.answer,
-          category: formData.category
+          category: formData.category,
+          audience: formData.audience
         });
         
         // Refresh FAQ list
-        await fetchFAQs();
+        await fetchFAQs(audienceMode);
         
         setShowEditModal(false);
         setSelectedFAQ(null);
-        setFormData({ question: '', answer: '', category: 'Umum' });
+        setFormData({ question: '', answer: '', category: 'Umum', audience: audienceMode || 'buyer' });
         alert('FAQ berhasil diperbarui!');
       } catch (error) {
         alert('Gagal memperbarui FAQ: ' + error.message);
@@ -116,7 +122,7 @@ const FAQPage = () => {
         await deleteFAQ(id);
         
         // Refresh FAQ list
-        await fetchFAQs();
+        await fetchFAQs(audienceMode);
         
         alert('FAQ berhasil dihapus!');
       } catch (error) {
@@ -130,7 +136,8 @@ const FAQPage = () => {
     setFormData({
       question: faq.question,
       answer: faq.answer,
-      category: faq.category
+      category: faq.category,
+      audience: faq.audience || 'both'
     });
     setShowEditModal(true);
   };
@@ -170,6 +177,24 @@ const FAQPage = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Search and Filter */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+          <div className="flex flex-wrap gap-3 mb-4">
+            {[
+              { id: 'buyer', label: 'Mode FAQ Pembeli' },
+              { id: 'seller', label: 'Mode FAQ Penjual' }
+            ].map((mode) => (
+              <button
+                key={mode.id}
+                onClick={() => setAudienceMode(mode.id)}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors border ${
+                  audienceMode === mode.id
+                    ? 'bg-blue-600 text-white border-blue-600 shadow'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
@@ -193,7 +218,10 @@ const FAQPage = () => {
               </select>
             </div>
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={() => {
+                setFormData({ question: '', answer: '', category: 'Umum', audience: audienceMode || 'buyer' });
+                setShowAddModal(true);
+              }}
               className="flex items-center justify-center gap-2 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors whitespace-nowrap"
             >
               <PlusIcon className="h-5 w-5" />
@@ -206,13 +234,13 @@ const FAQPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <div className="bg-white rounded-xl shadow-sm p-6">
             <p className="text-sm text-gray-600 mb-1">Total FAQ</p>
-            <p className="text-3xl font-bold text-blue-600">{faqs.length}</p>
+            <p className="text-3xl font-bold text-blue-600">{visibleFaqs.length}</p>
           </div>
           {categories.slice(1, 4).map(cat => (
             <div key={cat.value} className="bg-white rounded-xl shadow-sm p-6">
               <p className="text-sm text-gray-600 mb-1">{cat.label}</p>
               <p className="text-3xl font-bold text-gray-800">
-                {faqs.filter(faq => faq.category === cat.value).length}
+                {visibleFaqs.filter(faq => faq.category === cat.value).length}
               </p>
             </div>
           ))}
@@ -234,6 +262,9 @@ const FAQPage = () => {
                       <div className="flex items-center gap-3 mb-2">
                         <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
                           {getCategoryLabel(faq.category)}
+                        </span>
+                        <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                          {faq.audience === 'seller' ? 'Penjual' : faq.audience === 'buyer' ? 'Pembeli' : 'Keduanya'}
                         </span>
                       </div>
                       <button
@@ -312,6 +343,20 @@ const FAQPage = () => {
                     {categories.filter(cat => cat.value !== 'all').map(cat => (
                       <option key={cat.value} value={cat.value}>{cat.label}</option>
                     ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Taruh FAQ ke Penjual / Pembeli <span className="text-red-600">*</span>
+                  </label>
+                  <select
+                    value={formData.audience}
+                    onChange={(e) => setFormData({ ...formData, audience: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="buyer">Pembeli</option>
+                    <option value="seller">Penjual</option>
+                    <option value="both">Keduanya</option>
                   </select>
                 </div>
                 <div>
