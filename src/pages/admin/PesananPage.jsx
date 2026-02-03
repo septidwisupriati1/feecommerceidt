@@ -19,6 +19,7 @@ const PesananPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -78,9 +79,17 @@ const PesananPage = () => {
     fetchOrders(newPage);
   };
 
-  const handleViewDetail = (order) => {
-    setSelectedOrder(order);
-    setShowDetailModal(true);
+  const handleViewDetail = async (order) => {
+    try {
+      setDetailLoading(true);
+      const result = await adminOrderAPI.getOrderDetail(order.order_id);
+      setSelectedOrder(result.data);
+      setShowDetailModal(true);
+    } catch (err) {
+      setError(err.message || 'Gagal memuat detail pesanan');
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -318,9 +327,10 @@ const PesananPage = () => {
                         </span>
                         <button
                           onClick={() => handleViewDetail(order)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold whitespace-nowrap"
+                          disabled={detailLoading}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                          Lihat Detail
+                          {detailLoading ? 'Memuat...' : 'Lihat Detail'}
                         </button>
                       </div>
                     </div>
@@ -414,15 +424,15 @@ const PesananPage = () => {
 
       {/* Detail Modal */}
       {showDetailModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/10 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="bg-red-600 text-white p-6 rounded-t-xl">
+            <div className="bg-blue-600 text-white p-6 rounded-t-xl">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Detail Pesanan</h2>
                 <button
                   onClick={() => setShowDetailModal(false)}
-                  className="text-white hover:bg-red-700 p-1 rounded transition-colors"
+                  className="text-white hover:bg-blue-700 p-1 rounded transition-colors"
                 >
                   <XMarkIcon className="h-6 w-6" />
                 </button>
@@ -434,31 +444,41 @@ const PesananPage = () => {
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-500 mb-1">Menunggu Pembayaran</h3>
-                    <div className="flex items-center gap-2">
-                      <span className="text-blue-600">Tanya Pembeli</span>
+                    <h3 className="text-sm font-semibold text-gray-500 mb-1">{getStatusBadge(selectedOrder.order_status)}</h3>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <span>Pembeli: {selectedOrder.buyer_name}</span>
+                      <span className="mx-2">•</span>
+                      <span>Penjual: {selectedOrder.seller_name}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <p className="text-sm text-gray-600">No. Invoice</p>
-                    <p className="font-semibold text-gray-800">{selectedOrder.orderNumber}</p>
+                    <p className="text-sm text-gray-600">No. Order</p>
+                    <p className="font-semibold text-gray-800">{selectedOrder.order_number}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Tanggal Pesanan</p>
-                    <p className="font-semibold text-gray-800">{selectedOrder.dateTime}</p>
+                    <p className="font-semibold text-gray-800">{formatDate(selectedOrder.created_at)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Metode Pembayaran</p>
+                    <p className="font-semibold text-gray-800">{selectedOrder.payment_method || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Status Pembayaran</p>
+                    {getPaymentStatusBadge(selectedOrder.payment_status)}
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="font-semibold text-gray-800 mb-2">Detail Produk</h4>
+                  <h4 className="font-semibold text-gray-800 mb-2">Produk</h4>
                   <div className="space-y-2">
-                    {selectedOrder.products.map((product, index) => (
-                      <div key={index} className="flex justify-between items-center">
-                        <span className="text-gray-700">{product.name}</span>
-                        <span className="font-semibold text-gray-800">Total Harga</span>
+                    {(selectedOrder.items || []).map((item) => (
+                      <div key={item.order_item_id} className="flex justify-between items-center">
+                        <span className="text-gray-700">{item.product_name}</span>
+                        <span className="font-semibold text-gray-800">{formatCurrency(item.subtotal)}</span>
                       </div>
                     ))}
                   </div>
@@ -468,14 +488,33 @@ const PesananPage = () => {
               {/* Shipping Info */}
               <div className="mb-6">
                 <h4 className="font-semibold text-gray-800 mb-3">Info Pengiriman</h4>
-                <div className="space-y-2">
+                <div className="space-y-2 text-sm text-gray-700">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">No. Resi</span>
-                    <span className="font-semibold text-gray-800">: {selectedOrder.shipping.receiptNumber}</span>
+                    <span>No. Resi</span>
+                    <span className="font-semibold text-gray-800">{selectedOrder.shipping?.tracking_number || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Alamat Pengiriman</span>
-                    <span className="font-semibold text-gray-800">: {selectedOrder.shipping.address}</span>
+                    <span>Kurir</span>
+                    <span className="font-semibold text-gray-800">{selectedOrder.shipping?.courier_name || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Penerima</span>
+                    <span className="font-semibold text-gray-800">{selectedOrder.shipping?.recipient_name || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Telepon</span>
+                    <span className="font-semibold text-gray-800">{selectedOrder.shipping?.recipient_phone || '-'}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-gray-600">Alamat</span>
+                    <span className="font-semibold text-gray-800">
+                      {selectedOrder.shipping?.address || '-'}
+                    </span>
+                    <span className="text-gray-700">
+                      {[selectedOrder.shipping?.district, selectedOrder.shipping?.village, selectedOrder.shipping?.regency, selectedOrder.shipping?.province]
+                        .filter(Boolean)
+                        .join(', ')} {selectedOrder.shipping?.postal_code || ''}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -484,7 +523,7 @@ const PesananPage = () => {
               <div className="flex justify-end">
                 <button
                   onClick={() => setShowDetailModal(false)}
-                  className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors font-semibold"
+                  className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-semibold"
                 >
                   Tutup
                 </button>
