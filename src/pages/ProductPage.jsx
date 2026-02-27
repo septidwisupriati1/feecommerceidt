@@ -15,6 +15,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { browseProducts, getCategories, formatCurrency } from "../services/productAPI";
 import { products as staticProducts } from "../data/products";
+import { getProductImageUrl, handleImageError } from "../utils/imageHelper";
 
 export default function ProductPage() {
   const navigate = useNavigate();
@@ -354,13 +355,10 @@ export default function ProductPage() {
                         <div className={`aspect-square bg-gradient-to-br ${getCategoryGradient(product.category.name)} flex items-center justify-center overflow-hidden`}>
                           {product.primary_image ? (
                             <img 
-                              src={product.primary_image} 
+                              src={getProductImageUrl(product.primary_image)} 
                               alt={product.name}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              onError={(e) => {
-                                // Fallback ke placeholder jika gambar error
-                                e.target.src = 'https://via.placeholder.com/400x400?text=No+Image';
-                              }}
+                              onError={(e) => handleImageError(e, 'https://via.placeholder.com/400x400?text=No+Image')}
                             />
                           ) : (
                             // Gambar default jika tidak ada - bisa diubah icon/emoji di sini

@@ -101,15 +101,21 @@ export const CartProvider = ({ children }) => {
     setCartItems(prevItems => {
       const existingItem = prevItems.find(item => item.id === normalizedProduct.id);
       if (existingItem) {
-        const updated = prevItems.map(item =>
-          item.id === normalizedProduct.id
-            ? { ...item, quantity: item.quantity + normalizedQuantity }
-            : item
-        );
+        const updated = prevItems.map(item => {
+          if (item.id !== normalizedProduct.id) return item;
+          const newQty = item.quantity + normalizedQuantity;
+          // Use the latest stock info from the product being added
+          const stock = Number.isFinite(normalizedProduct.stock) && normalizedProduct.stock > 0
+            ? normalizedProduct.stock
+            : (Number.isFinite(item.stock) && item.stock > 0 ? item.stock : Infinity);
+          return { ...item, quantity: Math.min(newQty, stock), stock: normalizedProduct.stock ?? item.stock };
+        });
         return sanitizeCartItems(updated);
       }
 
-      return sanitizeCartItems([...prevItems, { ...normalizedProduct, quantity: normalizedQuantity }]);
+      const stock = Number.isFinite(normalizedProduct.stock) && normalizedProduct.stock > 0 ? normalizedProduct.stock : Infinity;
+      const clampedQty = Math.min(normalizedQuantity, stock);
+      return sanitizeCartItems([...prevItems, { ...normalizedProduct, quantity: clampedQty }]);
     });
   };
 
@@ -127,9 +133,13 @@ export const CartProvider = ({ children }) => {
     }
     
     setCartItems(prevItems =>
-      prevItems.map(item =>
-        item.id === productId ? { ...item, quantity: safeQty } : item
-      )
+      prevItems.map(item => {
+        if (item.id !== productId) return item;
+        // Enforce stock limit: never exceed available stock
+        const maxStock = Number.isFinite(item.stock) && item.stock > 0 ? item.stock : Infinity;
+        const clampedQty = Math.min(safeQty, maxStock);
+        return { ...item, quantity: Math.max(1, clampedQty) };
+      })
     );
   };
 

@@ -188,22 +188,36 @@ export default function CartPage() {
                           <TrashIcon className="h-5 w-5" />
                         </button>
 
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="w-8 h-8 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100 cursor-pointer"
-                          >
-                            <MinusIcon className="h-4 w-4" />
-                          </button>
-                          <span className="w-12 text-center font-semibold">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="w-8 h-8 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100 cursor-pointer"
-                          >
-                            <PlusIcon className="h-4 w-4" />
-                          </button>
+                        <div className="flex flex-col items-end gap-1">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              className="w-8 h-8 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100 cursor-pointer"
+                            >
+                              <MinusIcon className="h-4 w-4" />
+                            </button>
+                            <span className="w-12 text-center font-semibold">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              disabled={Number.isFinite(item.stock) && item.stock > 0 && item.quantity >= item.stock}
+                              className={`w-8 h-8 border border-gray-300 rounded flex items-center justify-center cursor-pointer ${
+                                Number.isFinite(item.stock) && item.stock > 0 && item.quantity >= item.stock
+                                  ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                                  : 'hover:bg-gray-100'
+                              }`}
+                            >
+                              <PlusIcon className="h-4 w-4" />
+                            </button>
+                          </div>
+                          {Number.isFinite(item.stock) && item.stock > 0 && (
+                            <span className={`text-xs ${
+                              item.quantity >= item.stock ? 'text-red-500 font-semibold' : 'text-gray-400'
+                            }`}>
+                              {item.quantity >= item.stock ? 'Maks. stok tercapai' : `Stok: ${item.stock}`}
+                            </span>
+                          )}
                         </div>
 
                         <div className="text-right">
